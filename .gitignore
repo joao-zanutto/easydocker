@@ -1,0 +1,13 @@
+bin/
+dist/
+coverage.out
+*.log
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*.tmp
+*.test
+*.out
