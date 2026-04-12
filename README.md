@@ -1,57 +1,36 @@
 # EasyDocker
 
-EasyDocker is a terminal UI for Docker built with Charmbracelet and the Docker client SDK.
+![easydocker usage](./docs/tui.gif)
+
+<div align="center">EasyDocker is a TUI for Docker inspired by legendary projects lazydocker and k9s, while leveraging beautiful graphics from BubbleTea</div>
 
 ## Features
 
-- Browse containers, images, networks, and volumes in one terminal application.
-- Keep the UI live with automatic refresh every second.
-- Open a focused container view with live logs plus CPU and memory monitors.
-- Inspect the selected resource in a framed details pane.
+This project is under development but already has the following functionalities implemented:
 
-## Requirements
+- Browse containers, images, networks, and volumes .
+- View live container logs that loads as you scroll up.
+- Individual and aggregated container resource usage metrics.
+- Runs in really small terminal screens
 
-- Go 1.25+
-- Docker daemon running locally or reachable through the standard Docker environment variables
-- Permission to access the Docker socket or remote API
+## Installation
 
-## Run
+### Linux/macOS (sh):
 
 ```bash
-go run ./cmd/easydocker
+curl -fsSL https://raw.githubusercontent.com/joao-zanutto/easydocker/main/install/install.sh | sh
 ```
 
-## Docker Image
+### Windows (PowerShell):
 
-Build the image:
-
-```bash
-docker build -t easydocker .
+```powershell
+irm https://raw.githubusercontent.com/joao-zanutto/easydocker/main/install/install.ps1 | iex
 ```
 
-Run it against the local Docker daemon:
+### Docker
 
 ```bash
 docker run --rm -it \
 	-v /var/run/docker.sock:/var/run/docker.sock \
-	easydocker
+	joaozanutto2/easydocker:latest
 ```
-
-If you use a remote Docker host, pass the relevant Docker environment variables to the container as well.
-
-## Controls
-
-- `up` / `down`: move selection
-- `tab`: switch between containers, images, networks, and volumes
-- `a`: toggle between all and running containers in the containers tab
-- `enter`: open live logs and CPU/memory monitors for the selected container
-- `esc`: leave the live container view
-- `q`: quit
-
-## Notes
-
-This starter focuses on read-only inspection with a live operational view for containers. It is a solid base for follow-up actions such as starting, stopping, or removing containers, and for adding logs, stats, or compose-aware views.
-
-## Refactor Handoff
-
-See `docs/refactor-handoff.md` for the completed refactor architecture summary and symbol migration map.
