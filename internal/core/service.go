@@ -12,43 +12,90 @@ type Repository interface {
 	LoadContainerLiveData(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error)
 }
 
+type ServiceConfig struct {
+	RequestTimeout              time.Duration
+	LiveDataMediumTailThreshold int
+	LiveDataMediumTailTimeout   time.Duration
+	LiveDataLargeTailThreshold  int
+	LiveDataLargeTailTimeout    time.Duration
+}
+
+func DefaultServiceConfig() ServiceConfig {
+	return ServiceConfig{
+		RequestTimeout:              5 * time.Second,
+		LiveDataMediumTailThreshold: 500,
+		LiveDataMediumTailTimeout:   20 * time.Second,
+		LiveDataLargeTailThreshold:  2000,
+		LiveDataLargeTailTimeout:    60 * time.Second,
+	}
+}
+
+func (c ServiceConfig) normalized() ServiceConfig {
+	defaults := DefaultServiceConfig()
+	if c.RequestTimeout <= 0 {
+		c.RequestTimeout = defaults.RequestTimeout
+	}
+	if c.LiveDataMediumTailThreshold <= 0 {
+		c.LiveDataMediumTailThreshold = defaults.LiveDataMediumTailThreshold
+	}
+	if c.LiveDataMediumTailTimeout <= 0 {
+		c.LiveDataMediumTailTimeout = defaults.LiveDataMediumTailTimeout
+	}
+	if c.LiveDataLargeTailThreshold <= 0 {
+		c.LiveDataLargeTailThreshold = defaults.LiveDataLargeTailThreshold
+	}
+	if c.LiveDataLargeTailTimeout <= 0 {
+		c.LiveDataLargeTailTimeout = defaults.LiveDataLargeTailTimeout
+	}
+	return c
+}
+
 type Service struct {
-	repo    Repository
-	timeout time.Duration
+	repo   Repository
+	config ServiceConfig
 }
 
 func NewService(repo Repository) *Service {
-	return &Service{repo: repo, timeout: 5 * time.Second}
+	return NewServiceWithConfig(repo, DefaultServiceConfig())
+}
+
+func NewServiceWithConfig(repo Repository, config ServiceConfig) *Service {
+	return &Service{repo: repo, config: config.normalized()}
 }
 
 func (s *Service) LoadContainerRows() ([]ContainerRow, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
 	defer cancel()
 	return s.repo.LoadContainerRows(ctx)
 }
 
 func (s *Service) LoadSupportingResources() (Snapshot, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
 	defer cancel()
 	return s.repo.LoadSupportingResources(ctx)
 }
 
 func (s *Service) LoadContainerMetrics(rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
 	defer cancel()
 	return s.repo.LoadContainerMetrics(ctx, rows)
 }
 
 func (s *Service) LoadContainerLiveData(containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error) {
-	timeout := s.timeout
-	if tail == 0 || tail > 2000 {
-		timeout = 60 * time.Second
-	} else if tail > 500 {
-		timeout = 20 * time.Second
-	}
+	timeout := s.liveDataTimeoutForTail(tail)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return s.repo.LoadContainerLiveData(ctx, containerID, previousCPU, previousMem, tail)
+}
+
+func (s *Service) liveDataTimeoutForTail(tail int) time.Duration {
+	if tail == 0 || tail > s.config.LiveDataLargeTailThreshold {
+		return s.config.LiveDataLargeTailTimeout
+	}
+	if tail > s.config.LiveDataMediumTailThreshold {
+		return s.config.LiveDataMediumTailTimeout
+	}
+	return s.config.RequestTimeout
 }
 
 func (s *Service) LoadSnapshot() (Snapshot, error) {

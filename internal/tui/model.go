@@ -4,6 +4,9 @@ import (
 	"time"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/loading"
+	"easydocker/internal/tui/logs"
+	"easydocker/internal/tui/theme"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -16,10 +19,10 @@ const (
 
 	pollInterval = time.Second
 
-	loadStageIdle = iota
-	loadStageContainers
-	loadStageResources
-	loadStageMetrics
+	loadStageIdle       = int(loading.StageIdle)
+	loadStageContainers = int(loading.StageContainers)
+	loadStageResources  = int(loading.StageResources)
+	loadStageMetrics    = int(loading.StageMetrics)
 )
 
 type screenMode int
@@ -53,28 +56,6 @@ type loadResultMsg struct {
 	err      error
 }
 
-type logsResultMsg struct {
-	containerID string
-	sessionID   int
-	data        core.ContainerLiveData
-	err         error
-	tail        int
-	src         string
-}
-
-type logsState struct {
-	containerID string
-	sessionID   int
-	data        core.ContainerLiveData
-	tailLines   int
-	initialLoad bool
-	historyDone bool
-	historyLoad bool
-	scrollX     int
-	scrollY     int
-	follow      bool
-}
-
 type model struct {
 	service         *core.Service
 	width           int
@@ -89,9 +70,9 @@ type model struct {
 	networkCursor   int
 	volumeCursor    int
 	screen          screenMode
-	logs            logsState
+	logs            logs.State
 	loadingStage    int
-	styles          styles
+	styles          theme.Set
 }
 
 func New(service *core.Service) tea.Model {
@@ -102,11 +83,15 @@ func New(service *core.Service) tea.Model {
 		loading:      true,
 		screen:       screenModeBrowse,
 		loadingStage: loadStageContainers,
-		logs:         logsState{follow: true},
+		logs:         logs.NewState(),
 		styles:       defaultStyles(),
 	}
 }
 
 func (m model) Init() tea.Cmd {
 	return tea.Batch(m.loadContainersCmd(), tickCmd())
+}
+
+func defaultStyles() theme.Set {
+	return theme.Default()
 }

@@ -1,4 +1,4 @@
-package tui
+package logs
 
 import (
 	"reflect"
@@ -82,7 +82,7 @@ func TestMergePolledLogs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotOverlap := mergePolledLogs(tt.previous, tt.polled, tt.maxLines)
+			got, gotOverlap := MergePolledLogs(tt.previous, tt.polled, tt.maxLines)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("mergePolledLogs() logs = %v, want %v", got, tt.want)
 			}
