@@ -1,8 +1,10 @@
-# EasyDocker
+# EasyDocker 🐋
 
-![easydocker usage](./docs/tui.gif)
+EasyDocker is a TUI for Docker inspired by lazydocker and k9s while leveraging beautiful graphics from BubbleTea
 
-<div align="center">EasyDocker is a TUI for Docker inspired by legendary projects lazydocker and k9s, while leveraging beautiful graphics from BubbleTea</div>
+![easydocker usage](./docs/example.gif)
+
+<div align="center">Troubleshoot your containers with style 😎</div>
 
 ## Features
 
@@ -13,7 +15,7 @@ This project is under development but already has the following functionalities 
 - Individual and aggregated container resource usage metrics.
 - Runs in really small terminal screens
 
-## Installation
+## Install and Run
 
 ### Linux/macOS (sh):
 
@@ -25,6 +27,14 @@ curl -fsSL https://raw.githubusercontent.com/joao-zanutto/easydocker/main/instal
 
 ```powershell
 irm https://raw.githubusercontent.com/joao-zanutto/easydocker/main/install/install.ps1 | iex
+```
+
+---
+
+### Run
+
+```bash
+easydocker
 ```
 
 ### Docker
