@@ -66,13 +66,13 @@ func TestRenderScopeBadge_FallbackByWidth(t *testing.T) {
 
 func TestRenderHeaderAndFooter(t *testing.T) {
 	header := RenderHeader(HeaderInput{
-		Width:           220,
-		Title:           "EasyDocker",
-		TotalsText:      "CPU 1.0%  MEM 2.0%",
+		Width:            220,
+		Title:            "EasyDocker",
+		TotalsText:       "CPU 1.0%  MEM 2.0%",
 		LoadingStageText: "loading resources",
-		ActiveTab:       0,
-		ShowAll:         true,
-		Err:             nil,
+		ActiveTab:        0,
+		ShowAll:          true,
+		Err:              nil,
 		Tabs: []TabSpec{
 			{Tab: 0, Icon: "🐳", Name: "Containers", Count: 2},
 			{Tab: 1, Icon: "💿", Name: "Images", Count: 2},
@@ -91,7 +91,7 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 	}
 
 	footer := RenderFooter(FooterInput{
-		Width: 220,
+		Width:     220,
 		HelpSpecs: FooterHelpSpecs(false, true),
 		Styles: FooterStyles{
 			Footer:  lipgloss.NewStyle(),

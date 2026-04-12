@@ -39,22 +39,22 @@ type FooterStyles struct {
 }
 
 type HeaderInput struct {
-	Width           int
-	Title           string
-	TotalsText      string
+	Width            int
+	Title            string
+	TotalsText       string
 	LoadingStageText string
-	ActiveTab       int
-	ShowAll         bool
-	Err             error
-	Tabs            []TabSpec
-	Styles          HeaderStyles
-	RenderTab       func(tab int, label string) string
+	ActiveTab        int
+	ShowAll          bool
+	Err              error
+	Tabs             []TabSpec
+	Styles           HeaderStyles
+	RenderTab        func(tab int, label string) string
 }
 
 type FooterInput struct {
-	Width     int
-	HelpSpecs []FooterHelpSpec
-	Styles    FooterStyles
+	Width          int
+	HelpSpecs      []FooterHelpSpec
+	Styles         FooterStyles
 	RenderHelpItem func(key, description string) string
 }
 
