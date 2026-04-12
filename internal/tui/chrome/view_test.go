@@ -109,7 +109,21 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 
 func TestRenderTotalsLabel(t *testing.T) {
 	snapshot := core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048}
-	if got := RenderTotalsLabel(snapshot, 0, 1, 3); !strings.Contains(got, "CPU") || !strings.Contains(got, "MEM") {
+	if got := RenderTotalsLabel(snapshot, 0, 1, 3, true, ""); !strings.Contains(got, "CPU") || !strings.Contains(got, "MEM") {
 		t.Fatalf("RenderTotalsLabel() = %q, want CPU/MEM text", got)
+	}
+}
+
+func TestRenderTotalsLabel_UsesIndicatorOnlyBeforeFirstMetricsLoad(t *testing.T) {
+	snapshot := core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048}
+
+	loading := RenderTotalsLabel(snapshot, 3, 0, 3, false, "⠋")
+	if !strings.Contains(loading, "CPU ⠋") || !strings.Contains(loading, "MEM ⠋") {
+		t.Fatalf("pre-metrics totals should show spinner indicator, got %q", loading)
+	}
+
+	stale := RenderTotalsLabel(snapshot, 3, 0, 3, true, "⠋")
+	if strings.Contains(stale, "⠋") {
+		t.Fatalf("post-metrics totals should keep stale numbers, got %q", stale)
 	}
 }

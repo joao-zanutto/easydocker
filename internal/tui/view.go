@@ -95,7 +95,7 @@ func (m model) renderHeader() string {
 	return chrome.RenderHeader(chrome.HeaderInput{
 		Width:            m.width,
 		Title:            "EasyDocker",
-		TotalsText:       chrome.RenderTotalsLabel(m.snapshot, m.loadingStage, loadStageIdle, loadStageMetrics),
+		TotalsText:       chrome.RenderTotalsLabel(m.snapshot, m.loadingStage, loadStageIdle, loadStageMetrics, m.metricsLoaded, m.metricsLoadingIndicator()),
 		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, loadStageContainers, loadStageResources, loadStageMetrics),
 		ActiveTab:        m.activeTab,
 		ShowAll:          m.showAll,
@@ -163,6 +163,7 @@ func (m model) renderBrowseContent(width, height int) string {
 		Loading:   m.loading,
 		Snapshot:  m.snapshot,
 		ActiveTab: m.activeTab,
+		MetricsLoadingIndicator: m.metricsLoadingIndicator(),
 		Width:     safeContentWidth,
 		Height:    height,
 		Styles: browse.ViewStyles{
@@ -172,6 +173,13 @@ func (m model) renderBrowseContent(width, height int) string {
 		},
 		Selections: m.browseSelections(),
 	}, m.renderResourceList(safeContentWidth, browse.ListHeight(height)), m.browseDetailRenderer())
+}
+
+func (m model) metricsLoadingIndicator() string {
+	if !m.shouldAnimateMetricsLoadingIndicator() {
+		return ""
+	}
+	return strings.TrimSpace(m.metricsSpinner.View())
 }
 
 func (m model) browseSelections() browse.SelectionSet {
@@ -223,7 +231,7 @@ func (m model) stateStyle(state string) lipgloss.Style {
 func (m model) renderResourceList(width, height int) string {
 	switch m.activeTab {
 	case tabContainers:
-		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers)
+		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers, m.metricsLoadingIndicator())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
 		spec := tables.BuildImageSpec(width, m.imageCursor, m.snapshot.Images)

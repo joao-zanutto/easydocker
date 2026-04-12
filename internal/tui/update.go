@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"time"
 
 	"easydocker/internal/core"
@@ -8,6 +9,7 @@ import (
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/mode"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -31,6 +33,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleLogsResultMsg(msg)
 	case tickMsg:
 		return m.handleTickMsg(msg)
+	case spinner.TickMsg:
+		return m.handleSpinnerTickMsg(msg)
 	}
 
 	return m, nil
@@ -207,7 +211,7 @@ func (m model) handleContainersResultMsg(msg containersResultMsg) (tea.Model, te
 		return m.respond(noSideEffect())
 	}
 
-	m.snapshot.Containers = msg.containers
+	m.snapshot.Containers = preserveRunningContainerMetrics(msg.containers, m.snapshot.Containers)
 	m.beginLoadingStage(loadStageResources)
 	return m.respond(withSideEffect(m.loadResourcesCmd()))
 }
@@ -235,6 +239,7 @@ func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd)
 	m.snapshot.TotalCPU = msg.totalCPU
 	m.snapshot.TotalMem = msg.totalMem
 	m.snapshot.Timestamp = time.Now()
+	m.metricsLoaded = true
 	m.clampCursors()
 	return m.respond(noSideEffect())
 }
@@ -266,4 +271,49 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.loadLogsDataCmd(m.logs.ContainerID, m.logs.SessionID, m.logs.Data.CPUHistory, m.logs.Data.MemHistory, tail, logs.SourcePoll))
 	}
 	return m.respond(withSideEffect(tea.Batch(cmds...)))
+}
+
+func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
+	if !m.shouldAnimateMetricsLoadingIndicator() {
+		return m.respond(noSideEffect())
+	}
+
+	var cmd tea.Cmd
+	m.metricsSpinner, cmd = m.metricsSpinner.Update(msg)
+	return m.respond(withSideEffect(cmd))
+}
+
+func (m model) shouldAnimateMetricsLoadingIndicator() bool {
+	return !m.metricsLoaded && m.loadingStage != loadStageIdle
+}
+
+func preserveRunningContainerMetrics(currentRows, previousRows []core.ContainerRow) []core.ContainerRow {
+	if len(currentRows) == 0 || len(previousRows) == 0 {
+		return currentRows
+	}
+
+	previousByID := make(map[string]core.ContainerRow, len(previousRows))
+	for _, row := range previousRows {
+		previousByID[row.FullID] = row
+	}
+
+	merged := make([]core.ContainerRow, len(currentRows))
+	copy(merged, currentRows)
+	for index, row := range merged {
+		if !strings.EqualFold(row.State, "running") {
+			continue
+		}
+		previous, ok := previousByID[row.FullID]
+		if !ok || previous.MemoryUsage == "-" || previous.MemoryUsage == "loading" {
+			continue
+		}
+		merged[index].CPUPercent = previous.CPUPercent
+		merged[index].MemoryPercent = previous.MemoryPercent
+		merged[index].MemoryUsage = previous.MemoryUsage
+		merged[index].MemoryLimit = previous.MemoryLimit
+		merged[index].MemoryUsageBytes = previous.MemoryUsageBytes
+		merged[index].MemoryLimitBytes = previous.MemoryLimitBytes
+	}
+
+	return merged
 }

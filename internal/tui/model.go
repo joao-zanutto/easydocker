@@ -8,6 +8,7 @@ import (
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/theme"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -73,9 +74,13 @@ type model struct {
 	logs            logs.State
 	loadingStage    int
 	styles          theme.Set
+	metricsLoaded   bool
+	metricsSpinner  spinner.Model
 }
 
 func New(service *core.Service) tea.Model {
+	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
+
 	return model{
 		service:      service,
 		activeTab:    tabContainers,
@@ -85,11 +90,16 @@ func New(service *core.Service) tea.Model {
 		loadingStage: loadStageContainers,
 		logs:         logs.NewState(),
 		styles:       defaultStyles(),
+		metricsSpinner: metricsSpinner,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(m.loadContainersCmd(), tickCmd())
+	cmds := []tea.Cmd{m.loadContainersCmd(), tickCmd()}
+	if m.shouldAnimateMetricsLoadingIndicator() {
+		cmds = append(cmds, m.metricsSpinner.Tick)
+	}
+	return tea.Batch(cmds...)
 }
 
 func defaultStyles() theme.Set {

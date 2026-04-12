@@ -7,6 +7,7 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/logs"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -18,6 +19,7 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 		showAll:   true,
 		styles:    defaultStyles(),
 		logs:      logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
 		snapshot: core.Snapshot{
 			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 		},
@@ -63,6 +65,7 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 		screen:    screenModeBrowse,
 		styles:    defaultStyles(),
 		logs:      logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
 		snapshot: core.Snapshot{
 			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", Image: "nginx", Status: "Up"}},
 		},
@@ -91,6 +94,7 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 		loadingStage: loadStageContainers,
 		styles:       defaultStyles(),
 		logs:         logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
 	}
 
 	updated, cmd := m.Update(containersResultMsg{containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}})
@@ -115,5 +119,73 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 	}
 	if current.snapshot.TotalCPU != 12.5 || current.snapshot.TotalMem != 10 {
 		t.Fatalf("totals not applied")
+	}
+	if !current.metricsLoaded {
+		t.Fatalf("metricsLoaded = false, want true after first metrics result")
+	}
+}
+
+func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
+	m := model{
+		showAll:      true,
+		loading:      false,
+		loadingStage: loadStageIdle,
+		styles:       defaultStyles(),
+		logs:         logs.NewState(),
+		metricsLoaded: true,
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		snapshot: core.Snapshot{
+			Containers: []core.ContainerRow{{
+				FullID:           "ctr-1",
+				Name:             "api",
+				State:            "running",
+				CPUPercent:       12.5,
+				MemoryPercent:    10,
+				MemoryUsage:      "10 MiB",
+				MemoryLimit:      "100 MiB",
+				MemoryUsageBytes: 10,
+				MemoryLimitBytes: 100,
+			}},
+		},
+	}
+
+	updated, _ := m.Update(containersResultMsg{containers: []core.ContainerRow{{
+		FullID:      "ctr-1",
+		Name:        "api",
+		State:       "running",
+		CPUPercent:  -1,
+		MemoryUsage: "loading",
+		MemoryLimit: "-",
+	}}})
+	current := updated.(model)
+
+	container := current.snapshot.Containers[0]
+	if container.CPUPercent != 12.5 || container.MemoryUsage != "10 MiB" {
+		t.Fatalf("running metrics were not preserved during refresh: %+v", container)
+	}
+}
+
+func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
+	m := model{
+		showAll:      true,
+		loading:      true,
+		loadingStage: loadStageMetrics,
+		styles:       defaultStyles(),
+		logs:         logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		snapshot: core.Snapshot{
+			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"}},
+		},
+	}
+
+	before := m.View()
+	if strings.Contains(before, "CPU -") {
+		t.Fatalf("expected pre-initial metrics view to show spinner indicator instead of dash, got %q", before)
+	}
+
+	m.metricsLoaded = true
+	after := m.View()
+	if !strings.Contains(after, "CPU -") {
+		t.Fatalf("expected post-initial metrics view to avoid loading indicator, got %q", after)
 	}
 }

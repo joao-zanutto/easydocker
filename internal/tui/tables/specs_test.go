@@ -112,13 +112,13 @@ func TestSimpleResourceTableSpec_UsesSharedWidthAndFields(t *testing.T) {
 }
 
 func TestContainerTableSpec_EmptyMessageHintByActiveTab(t *testing.T) {
-	withHint := BuildContainerSpec(80, 0, nil, true)
+	withHint := BuildContainerSpec(80, 0, nil, true, "")
 	wantWithHint := "No containers found. Press a to switch between running and all containers."
 	if withHint.EmptyMessage != wantWithHint {
 		t.Fatalf("container empty message = %q, want %q", withHint.EmptyMessage, wantWithHint)
 	}
 
-	withoutHint := BuildContainerSpec(80, 0, nil, false)
+	withoutHint := BuildContainerSpec(80, 0, nil, false, "")
 	if withoutHint.EmptyMessage != "No containers found." {
 		t.Fatalf("container empty message outside containers tab = %q, want %q", withoutHint.EmptyMessage, "No containers found.")
 	}
@@ -137,7 +137,7 @@ func TestContainerTableRow_StateColoringByWidth(t *testing.T) {
 		Status:        "Up 2m",
 	}
 
-	colored := ContainerTableRow(container, 20)
+	colored := ContainerTableRow(container, 20, "")
 	if len(colored) != 6 {
 		t.Fatalf("container row len = %d, want 6", len(colored))
 	}
@@ -145,7 +145,7 @@ func TestContainerTableRow_StateColoringByWidth(t *testing.T) {
 		t.Fatalf("expected ANSI color in state column, got %q", colored[1])
 	}
 
-	plain := ContainerTableRow(container, 1)
+	plain := ContainerTableRow(container, 1, "")
 	if strings.Contains(plain[1], "\x1b[") {
 		t.Fatalf("expected plain state label when width too small, got %q", plain[1])
 	}
