@@ -51,3 +51,7 @@ If you use a remote Docker host, pass the relevant Docker environment variables 
 ## Notes
 
 This starter focuses on read-only inspection with a live operational view for containers. It is a solid base for follow-up actions such as starting, stopping, or removing containers, and for adding logs, stats, or compose-aware views.
+
+## Refactor Handoff
+
+See `docs/refactor-handoff.md` for the completed refactor architecture summary and symbol migration map.

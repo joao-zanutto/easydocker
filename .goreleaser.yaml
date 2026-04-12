@@ -1,0 +1,66 @@
+version: 2
+
+project_name: easydocker
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: easydocker
+    main: ./cmd/easydocker
+    binary: easydocker
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    files:
+      - README.md
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ .Tag }}-{{ .Commit[:7] }}"
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: '^.*?(feat|feature)(\(.+\))?!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\(.+\))?!?:.+$'
+      order: 1
+    - title: "Performance improvements"
+      regexp: '^.*?perf(\(.+\))?!?:.+$'
+      order: 2
+    - title: "Code refactoring"
+      regexp: '^.*?refactor(\(.+\))?!?:.+$'
+      order: 3
+    - title: "Others"
+      order: 999
+
+release:
+  prerelease: auto
+  draft: false

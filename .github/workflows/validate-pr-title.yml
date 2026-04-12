@@ -1,0 +1,34 @@
+name: PR - Validate Conventional Commits
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches:
+      - main
+
+jobs:
+  validate-pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title against conventional commits
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          # Conventional commits pattern:
+          # type(scope?): subject
+          # types: feat, fix, docs, style, refactor, perf, test, chore, ci, revert
+          PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\(.+\))?!?: .+"
+
+          if [[ ! "$PR_TITLE" =~ $PATTERN ]]; then
+            echo "❌ PR title does not follow Conventional Commits pattern"
+            echo ""
+            echo "Expected format: type(scope?): subject"
+            echo "Example: feat(logs): add filtering capability"
+            echo ""
+            echo "Allowed types: feat, fix, docs, style, refactor, perf, test, chore, ci, revert"
+            echo ""
+            echo "Received: $PR_TITLE"
+            exit 1
+          fi
+
+          echo "✅ PR title follows Conventional Commits pattern: $PR_TITLE"

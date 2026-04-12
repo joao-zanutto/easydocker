@@ -1,0 +1,183 @@
+package browse
+
+import (
+	"fmt"
+	"math"
+	"strings"
+
+	"easydocker/internal/core"
+	"easydocker/internal/tui/util"
+
+	"github.com/charmbracelet/lipgloss"
+)
+
+type ViewModel struct {
+	Loading    bool
+	Snapshot   core.Snapshot
+	ActiveTab  int
+	Width      int
+	Height     int
+	Styles     ViewStyles
+	Selections SelectionSet
+}
+
+type ViewStyles struct {
+	Divider lipgloss.Style
+	Muted   lipgloss.Style
+	Section lipgloss.Style
+}
+
+type SelectionSet struct {
+	Container    core.ContainerRow
+	HasContainer bool
+	Image        core.ImageRow
+	HasImage     bool
+	Network      core.NetworkRow
+	HasNetwork   bool
+	Volume       core.VolumeRow
+	HasVolume    bool
+}
+
+type DetailProvider interface {
+	DetailLine(label, value string, width int) string
+	RenderContainerState(container core.ContainerRow) string
+}
+
+func RenderContent(vm ViewModel, list string, detailProvider DetailProvider) string {
+	if ShouldRenderLoading(vm.Loading, vm.Snapshot) {
+		return util.ConstrainLine(vm.Styles.Muted.Render("Loading Docker resources..."), vm.Width)
+	}
+
+	listHeight := ListHeight(vm.Height)
+	detailHeight := max(1, vm.Height-listHeight-1)
+	detail := RenderDetail(vm.ActiveTab, vm.Selections, detailProvider, vm.Styles.Section, vm.Styles.Muted, vm.Width, detailHeight)
+	divider := vm.Styles.Divider.Render(strings.Repeat("─", max(1, vm.Width-2)))
+	return util.JoinSections(list, divider, detail)
+}
+
+func ShouldRenderLoading(loading bool, snapshot core.Snapshot) bool {
+	return loading && !HasResources(snapshot)
+}
+
+func HasResources(snapshot core.Snapshot) bool {
+	return len(snapshot.Containers) > 0 ||
+		len(snapshot.Images) > 0 ||
+		len(snapshot.Networks) > 0 ||
+		len(snapshot.Volumes) > 0
+}
+
+func ListHeight(height int) int {
+	listHeight := int(math.Round(float64(height) * 0.6))
+	if listHeight < 3 {
+		listHeight = 3
+	}
+	if listHeight > height-2 {
+		listHeight = max(1, height-2)
+	}
+	return listHeight
+}
+
+func RenderDetail(activeTab int, selections SelectionSet, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
+	lines := append([]string{sectionStyle.Render("Details")}, activeDetailLines(activeTab, selections, provider, mutedStyle, width)...)
+	return strings.Join(util.ClipLines(util.ConstrainLines(lines, width), height), "\n")
+}
+
+func activeDetailLines(activeTab int, selections SelectionSet, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
+	switch activeTab {
+	case 0:
+		return detailLinesForSelection(selections.Container, selections.HasContainer, "No container selected.", containerDetailLines, provider, mutedStyle, width)
+	case 1:
+		return detailLinesForSelection(selections.Image, selections.HasImage, "No image selected.", imageDetailLines, provider, mutedStyle, width)
+	case 2:
+		return detailLinesForSelection(selections.Network, selections.HasNetwork, "No network selected.", networkDetailLines, provider, mutedStyle, width)
+	default:
+		return detailLinesForSelection(selections.Volume, selections.HasVolume, "No volume selected.", volumeDetailLines, provider, mutedStyle, width)
+	}
+}
+
+func detailLinesForSelection[T any](item T, ok bool, emptyMessage string, buildLines func(T, DetailProvider, int) []string, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
+	if ok {
+		return buildLines(item, provider, width)
+	}
+	return []string{mutedStyle.Render(emptyMessage)}
+}
+
+func containerDetailLines(container core.ContainerRow, provider DetailProvider, width int) []string {
+	return []string{
+		provider.DetailLine("Name", container.Name, width),
+		provider.DetailLine("Image", container.Image, width),
+		provider.DetailLine("State", provider.RenderContainerState(container), width),
+		provider.DetailLine("Status", container.Status, width),
+		provider.DetailLine("CPU", CPUValue(container.CPUPercent), width),
+		provider.DetailLine("Memory", ContainerMemorySummary(container), width),
+		provider.DetailLine("Ports", container.Ports, width),
+		provider.DetailLine("Command", container.Command, width),
+		provider.DetailLine("ID", container.ID, width),
+	}
+}
+
+func imageDetailLines(image core.ImageRow, provider DetailProvider, width int) []string {
+	return []string{
+		provider.DetailLine("Tags", image.Tags, width),
+		provider.DetailLine("Size", image.Size, width),
+		provider.DetailLine("Created", image.Created, width),
+		provider.DetailLine("Containers", fmt.Sprintf("%d", image.Containers), width),
+		provider.DetailLine("ID", image.ID, width),
+	}
+}
+
+func networkDetailLines(network core.NetworkRow, provider DetailProvider, width int) []string {
+	return []string{
+		provider.DetailLine("Name", network.Name, width),
+		provider.DetailLine("Driver", network.Driver, width),
+		provider.DetailLine("Scope", network.Scope, width),
+		provider.DetailLine("Created", network.Created, width),
+		provider.DetailLine("Internal", network.Internal, width),
+		provider.DetailLine("Attachable", network.Attachable, width),
+		provider.DetailLine("Endpoints", fmt.Sprintf("%d", network.Endpoints), width),
+		provider.DetailLine("ID", network.ID, width),
+	}
+}
+
+func volumeDetailLines(volume core.VolumeRow, provider DetailProvider, width int) []string {
+	return []string{
+		provider.DetailLine("Name", volume.Name, width),
+		provider.DetailLine("Driver", volume.Driver, width),
+		provider.DetailLine("Scope", volume.Scope, width),
+		provider.DetailLine("Created", volume.Created, width),
+		provider.DetailLine("Size", volume.Size, width),
+		provider.DetailLine("References", util.RefCountText(volume.RefCount), width),
+		provider.DetailLine("Mountpoint", volume.Mountpoint, width),
+	}
+}
+
+func CPUValue(value float64) string {
+	if value < 0.05 {
+		return "-"
+	}
+	return fmt.Sprintf("%.1f%%", value)
+}
+
+func ContainerMemorySummary(container core.ContainerRow) string {
+	if container.MemoryUsage == "-" {
+		return "-"
+	}
+	if container.MemoryLimit != "" && container.MemoryLimit != "-" {
+		return fmt.Sprintf("%s / %s (%.1f%%)", container.MemoryUsage, container.MemoryLimit, container.MemoryPercent)
+	}
+	return fmt.Sprintf("%s (%.1f%%)", container.MemoryUsage, container.MemoryPercent)
+}
+
+func ContainerStateText(container core.ContainerRow) string {
+	if container.Healthy && container.State == "running" {
+		return "● healthy"
+	}
+	return "● " + container.State
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
