@@ -142,7 +142,7 @@ func (m *model) applyLogsTransition(transition logs.Transition) tea.Cmd {
 		return nil
 	}
 	request := transition.Load
-	return m.loadLogsDataCmd(
+	loadCmd := m.loadLogsDataCmd(
 		request.ContainerID,
 		request.SessionID,
 		request.PrevCPU,
@@ -150,6 +150,10 @@ func (m *model) applyLogsTransition(transition logs.Transition) tea.Cmd {
 		request.Tail,
 		request.Src,
 	)
+	if m.shouldAnimateLogsLoadingIndicator() {
+		return tea.Batch(loadCmd, m.logsSpinner.Tick)
+	}
+	return loadCmd
 }
 
 func (m *model) applyLoadingTransition(transition loading.Transition) {
@@ -249,7 +253,9 @@ func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
 		return m.respond(noSideEffect())
 	}
 
+	previousContainers := m.snapshot.Containers
 	m.snapshot = msg.snapshot
+	m.snapshot.Containers = preserveRunningContainerMetrics(m.snapshot.Containers, previousContainers)
 	if err := m.reconcileLogsSelection(); err != nil {
 		m.err = err
 	}
@@ -274,13 +280,33 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
-	if !m.shouldAnimateMetricsLoadingIndicator() {
+	cmds := make([]tea.Cmd, 0, 2)
+
+	if m.shouldAnimateMetricsLoadingIndicator() {
+		var cmd tea.Cmd
+		m.metricsSpinner, cmd = m.metricsSpinner.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	}
+
+	if m.shouldAnimateLogsLoadingIndicator() {
+		var cmd tea.Cmd
+		m.logsSpinner, cmd = m.logsSpinner.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	}
+
+	if len(cmds) == 0 {
 		return m.respond(noSideEffect())
 	}
 
-	var cmd tea.Cmd
-	m.metricsSpinner, cmd = m.metricsSpinner.Update(msg)
-	return m.respond(withSideEffect(cmd))
+	return m.respond(withSideEffect(tea.Batch(cmds...)))
+}
+
+func (m model) shouldAnimateLogsLoadingIndicator() bool {
+	return m.screen == screenModeLogs && (m.logs.InitialLoad || m.logs.HistoryLoad)
 }
 
 func (m model) shouldAnimateMetricsLoadingIndicator() bool {
@@ -303,9 +329,13 @@ func preserveRunningContainerMetrics(currentRows, previousRows []core.ContainerR
 		if !strings.EqualFold(row.State, "running") {
 			continue
 		}
+		// Only preserve old metrics if current metrics are stale/missing
+		if row.CPUPercent >= 0 && row.MemoryUsage != "-" && row.MemoryUsage != "loading" {
+			continue // Current has real metrics, don't overwrite
+		}
 		previous, ok := previousByID[row.FullID]
 		if !ok || previous.MemoryUsage == "-" || previous.MemoryUsage == "loading" {
-			continue
+			continue // Previous doesn't have good metrics either
 		}
 		merged[index].CPUPercent = previous.CPUPercent
 		merged[index].MemoryPercent = previous.MemoryPercent

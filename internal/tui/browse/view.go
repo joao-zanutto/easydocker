@@ -12,14 +12,14 @@ import (
 )
 
 type ViewModel struct {
-	Loading    bool
-	Snapshot   core.Snapshot
-	ActiveTab  int
+	Loading                 bool
+	Snapshot                core.Snapshot
+	ActiveTab               int
 	MetricsLoadingIndicator string
-	Width      int
-	Height     int
-	Styles     ViewStyles
-	Selections SelectionSet
+	Width                   int
+	Height                  int
+	Styles                  ViewStyles
+	Selections              SelectionSet
 }
 
 type ViewStyles struct {

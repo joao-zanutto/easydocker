@@ -179,13 +179,16 @@ func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, load
 	return fmt.Sprintf("CPU %s  MEM %s", util.RenderPercent(snapshot.TotalCPU), mem)
 }
 
-func RenderLoadingStageLabel(loadingStage, loadStageContainers, loadStageResources, loadStageMetrics int) string {
+func RenderLoadingStageLabel(loadingStage, loadStageContainers, loadStageResources, loadStageMetrics int, metricsLoaded bool) string {
 	switch loadingStage {
 	case loadStageContainers:
 		return "loading containers"
 	case loadStageResources:
 		return "loading resources"
 	case loadStageMetrics:
+		if metricsLoaded {
+			return ""
+		}
 		return "loading metrics"
 	default:
 		return ""

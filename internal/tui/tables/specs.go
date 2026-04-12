@@ -4,8 +4,8 @@ package tables
 var ContainerSchema = []ColumnDef{
 	{Header: "NAME", MinWidth: 10, Desired: proportionalWidth(10, 6)},
 	{Header: "STATE", MinWidth: 12, Desired: fixedWidth(12)},
-	{Header: "CPU", MinWidth: 7, Desired: fixedWidth(7)},
-	{Header: "MEMORY", MinWidth: 20, Desired: fixedWidth(20)},
+	{Header: "CPU", MinWidth: 8, Desired: fixedWidth(8)},
+	{Header: "MEMORY", MinWidth: 18, Desired: fixedWidth(18)},
 	{Header: "IMAGE", MinWidth: 12, Desired: proportionalWidth(12, 5)},
 	{Header: "STATUS", MinWidth: 8, Desired: proportionalWidth(8, 4)},
 }

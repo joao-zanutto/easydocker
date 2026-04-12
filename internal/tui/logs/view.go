@@ -19,11 +19,12 @@ type ViewStyles struct {
 }
 
 type ViewModel struct {
-	State         State
-	ContainerName string
-	Width         int
-	Height        int
-	Styles        ViewStyles
+	State            State
+	ContainerName    string
+	LoadingIndicator string
+	Width            int
+	Height           int
+	Styles           ViewStyles
 }
 
 func RenderContent(vm ViewModel) string {
@@ -71,7 +72,7 @@ func RenderHeader(vm ViewModel, breadcrumb string, total, start, end int) string
 func RenderPanel(vm ViewModel, width, height int) string {
 	contentWidth := max(1, width-2)
 	if vm.State.InitialLoad {
-		return strings.Join(util.ClipAndPadLines([]string{renderLoadingLine(vm.Styles.Muted, contentWidth)}, height, ""), "\n")
+		return strings.Join(util.ClipAndPadLines([]string{renderLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator)}, height, ""), "\n")
 	}
 
 	logList := vm.State.Data.Logs
@@ -81,7 +82,7 @@ func RenderPanel(vm ViewModel, width, height int) string {
 
 	lines := strings.Split(vm.State.Viewport.View(), "\n")
 	if vm.State.HistoryLoad {
-		lines = append([]string{renderHistoryLoadingLine(vm.Styles.Muted, contentWidth)}, lines...)
+		lines = append([]string{renderHistoryLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator)}, lines...)
 	}
 	lines = util.ClipAndPadLines(lines, height, "")
 	return strings.Join(lines, "\n")
@@ -91,12 +92,20 @@ func renderDivider(style lipgloss.Style, width int) string {
 	return style.Render(strings.Repeat("─", max(1, width-2)))
 }
 
-func renderLoadingLine(style lipgloss.Style, width int) string {
-	return util.ClampSingleLine(style.Render("⟳ Loading logs..."), width)
+func renderLoadingLine(style lipgloss.Style, width int, indicator string) string {
+	prefix := strings.TrimSpace(indicator)
+	if prefix != "" {
+		prefix += " "
+	}
+	return util.ClampSingleLine(style.Render(prefix+"Loading logs..."), width)
 }
 
-func renderHistoryLoadingLine(style lipgloss.Style, width int) string {
-	return util.ClampSingleLine(style.Render("⇡ Loading older logs..."), width)
+func renderHistoryLoadingLine(style lipgloss.Style, width int, indicator string) string {
+	prefix := strings.TrimSpace(indicator)
+	if prefix != "" {
+		prefix += " "
+	}
+	return util.ClampSingleLine(style.Render(prefix+"Loading older logs..."), width)
 }
 
 func renderRightPriorityLine(left, right string, width int) string {

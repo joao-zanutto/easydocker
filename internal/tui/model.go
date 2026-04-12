@@ -76,21 +76,24 @@ type model struct {
 	styles          theme.Set
 	metricsLoaded   bool
 	metricsSpinner  spinner.Model
+	logsSpinner     spinner.Model
 }
 
 func New(service *core.Service) tea.Model {
 	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
+	logsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
 
 	return model{
-		service:      service,
-		activeTab:    tabContainers,
-		showAll:      true,
-		loading:      true,
-		screen:       screenModeBrowse,
-		loadingStage: loadStageContainers,
-		logs:         logs.NewState(),
-		styles:       defaultStyles(),
+		service:        service,
+		activeTab:      tabContainers,
+		showAll:        true,
+		loading:        true,
+		screen:         screenModeBrowse,
+		loadingStage:   loadStageContainers,
+		logs:           logs.NewState(),
+		styles:         defaultStyles(),
 		metricsSpinner: metricsSpinner,
+		logsSpinner:    logsSpinner,
 	}
 }
 
