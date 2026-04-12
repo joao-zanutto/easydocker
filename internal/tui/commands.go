@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os/exec"
 	"time"
 
 	"easydocker/internal/core"
@@ -45,6 +46,13 @@ func (m model) loadDockerCmd() tea.Cmd {
 		snapshot, err := svc.LoadSnapshot()
 		return loadResultMsg{snapshot: snapshot, err: err}
 	}
+}
+
+func execTerminalCmd(containerID string) tea.Cmd {
+	return tea.ExecProcess(
+		exec.Command("docker", "exec", "-it", containerID, "sh"),
+		func(err error) tea.Msg { return execDoneMsg{err: err} },
+	)
 }
 
 func (m model) loadLogsDataCmd(containerID string, sessionID int, previousCPU, previousMem []float64, tail int, src logs.Source) tea.Cmd {

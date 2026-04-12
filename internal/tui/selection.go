@@ -33,6 +33,17 @@ func (m *model) enterLogsModeIfContainerSelected() tea.Cmd {
 	return m.enterLogsMode(container)
 }
 
+func (m *model) execTerminalIfContainerSelected() tea.Cmd {
+	if m.activeTab != tabContainers {
+		return nil
+	}
+	container, ok := m.selectedContainer()
+	if !ok {
+		return nil
+	}
+	return execTerminalCmd(container.FullID)
+}
+
 func (m *model) moveCursor(delta int) {
 	sel := m.selectionState()
 	_ = tuistate.MoveCursorForTab(&sel.Cursors, sel.ActiveTab, delta, m.itemCountForTab(sel.ActiveTab))

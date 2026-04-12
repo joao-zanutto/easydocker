@@ -68,6 +68,8 @@ func (Controller) HandleKey(state *State, key string, containersTab int) Transit
 	case "f":
 		state.SetFollow(!state.Follow)
 		return Transition{}
+	case "t":
+		return Transition{LaunchTerminal: true}
 	case "esc", "backspace":
 		return Controller{}.Exit(state, containersTab)
 	case " ", "b", "g", "G", "q", "tab":
