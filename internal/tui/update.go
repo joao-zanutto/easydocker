@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"time"
 
 	"easydocker/internal/core"
@@ -8,6 +9,7 @@ import (
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/mode"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -31,6 +33,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleLogsResultMsg(msg)
 	case tickMsg:
 		return m.handleTickMsg(msg)
+	case spinner.TickMsg:
+		return m.handleSpinnerTickMsg(msg)
 	}
 
 	return m, nil
@@ -138,7 +142,7 @@ func (m *model) applyLogsTransition(transition logs.Transition) tea.Cmd {
 		return nil
 	}
 	request := transition.Load
-	return m.loadLogsDataCmd(
+	loadCmd := m.loadLogsDataCmd(
 		request.ContainerID,
 		request.SessionID,
 		request.PrevCPU,
@@ -146,6 +150,10 @@ func (m *model) applyLogsTransition(transition logs.Transition) tea.Cmd {
 		request.Tail,
 		request.Src,
 	)
+	if m.shouldAnimateLogsLoadingIndicator() {
+		return tea.Batch(loadCmd, m.logsSpinner.Tick)
+	}
+	return loadCmd
 }
 
 func (m *model) applyLoadingTransition(transition loading.Transition) {
@@ -207,7 +215,7 @@ func (m model) handleContainersResultMsg(msg containersResultMsg) (tea.Model, te
 		return m.respond(noSideEffect())
 	}
 
-	m.snapshot.Containers = msg.containers
+	m.snapshot.Containers = preserveRunningContainerMetrics(msg.containers, m.snapshot.Containers)
 	m.beginLoadingStage(loadStageResources)
 	return m.respond(withSideEffect(m.loadResourcesCmd()))
 }
@@ -235,6 +243,7 @@ func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd)
 	m.snapshot.TotalCPU = msg.totalCPU
 	m.snapshot.TotalMem = msg.totalMem
 	m.snapshot.Timestamp = time.Now()
+	m.metricsLoaded = true
 	m.clampCursors()
 	return m.respond(noSideEffect())
 }
@@ -244,7 +253,9 @@ func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
 		return m.respond(noSideEffect())
 	}
 
+	previousContainers := m.snapshot.Containers
 	m.snapshot = msg.snapshot
+	m.snapshot.Containers = preserveRunningContainerMetrics(m.snapshot.Containers, previousContainers)
 	if err := m.reconcileLogsSelection(); err != nil {
 		m.err = err
 	}
@@ -266,4 +277,73 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.loadLogsDataCmd(m.logs.ContainerID, m.logs.SessionID, m.logs.Data.CPUHistory, m.logs.Data.MemHistory, tail, logs.SourcePoll))
 	}
 	return m.respond(withSideEffect(tea.Batch(cmds...)))
+}
+
+func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
+	cmds := make([]tea.Cmd, 0, 2)
+
+	if m.shouldAnimateMetricsLoadingIndicator() {
+		var cmd tea.Cmd
+		m.metricsSpinner, cmd = m.metricsSpinner.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	}
+
+	if m.shouldAnimateLogsLoadingIndicator() {
+		var cmd tea.Cmd
+		m.logsSpinner, cmd = m.logsSpinner.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	}
+
+	if len(cmds) == 0 {
+		return m.respond(noSideEffect())
+	}
+
+	return m.respond(withSideEffect(tea.Batch(cmds...)))
+}
+
+func (m model) shouldAnimateLogsLoadingIndicator() bool {
+	return m.screen == screenModeLogs && (m.logs.InitialLoad || m.logs.HistoryLoad)
+}
+
+func (m model) shouldAnimateMetricsLoadingIndicator() bool {
+	return !m.metricsLoaded && m.loadingStage != loadStageIdle
+}
+
+func preserveRunningContainerMetrics(currentRows, previousRows []core.ContainerRow) []core.ContainerRow {
+	if len(currentRows) == 0 || len(previousRows) == 0 {
+		return currentRows
+	}
+
+	previousByID := make(map[string]core.ContainerRow, len(previousRows))
+	for _, row := range previousRows {
+		previousByID[row.FullID] = row
+	}
+
+	merged := make([]core.ContainerRow, len(currentRows))
+	copy(merged, currentRows)
+	for index, row := range merged {
+		if !strings.EqualFold(row.State, "running") {
+			continue
+		}
+		// Only preserve old metrics if current metrics are stale/missing
+		if row.CPUPercent >= 0 && row.MemoryUsage != "-" && row.MemoryUsage != "loading" {
+			continue // Current has real metrics, don't overwrite
+		}
+		previous, ok := previousByID[row.FullID]
+		if !ok || previous.MemoryUsage == "-" || previous.MemoryUsage == "loading" {
+			continue // Previous doesn't have good metrics either
+		}
+		merged[index].CPUPercent = previous.CPUPercent
+		merged[index].MemoryPercent = previous.MemoryPercent
+		merged[index].MemoryUsage = previous.MemoryUsage
+		merged[index].MemoryLimit = previous.MemoryLimit
+		merged[index].MemoryUsageBytes = previous.MemoryUsageBytes
+		merged[index].MemoryLimitBytes = previous.MemoryLimitBytes
+	}
+
+	return merged
 }

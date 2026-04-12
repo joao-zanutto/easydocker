@@ -32,7 +32,7 @@ func VolumeColumns(tableWidth int) []ColumnDef {
 }
 
 // BuildContainerSpec builds a complete containers table spec.
-func BuildContainerSpec(width, cursor int, items []core.ContainerRow, includeScopeHint bool) Spec[core.ContainerRow] {
+func BuildContainerSpec(width, cursor int, items []core.ContainerRow, includeScopeHint bool, loadingIndicator string) Spec[core.ContainerRow] {
 	tableWidth := ContentWidth(width)
 	columns := ContainerColumns(tableWidth)
 	stateWidth := ContainerStateColumnWidth(columns)
@@ -47,7 +47,7 @@ func BuildContainerSpec(width, cursor int, items []core.ContainerRow, includeSco
 		Items:        items,
 		Columns:      columns,
 		RowBuilder: func(container core.ContainerRow) []string {
-			return ContainerTableRow(container, stateWidth)
+			return ContainerTableRow(container, stateWidth, loadingIndicator)
 		},
 	}
 }
@@ -68,7 +68,7 @@ func BuildVolumeSpec(width, cursor int, items []core.VolumeRow) Spec[core.Volume
 }
 
 // ContainerTableRow builds a single row for the containers table.
-func ContainerTableRow(container core.ContainerRow, stateWidth int) []string {
+func ContainerTableRow(container core.ContainerRow, stateWidth int, loadingIndicator string) []string {
 	state := browse.ContainerStateText(container)
 	if ansi.StringWidth(state) <= stateWidth {
 		state = colorStateLabel(state, container.State)
@@ -77,8 +77,8 @@ func ContainerTableRow(container core.ContainerRow, stateWidth int) []string {
 	return []string{
 		container.Name,
 		state,
-		browse.CPUValue(container.CPUPercent),
-		browse.ContainerMemorySummary(container),
+		browse.ContainerCPUValue(container, loadingIndicator),
+		browse.ContainerMemoryTableValue(container, loadingIndicator),
 		container.Image,
 		container.Status,
 	}

@@ -12,13 +12,14 @@ import (
 )
 
 type ViewModel struct {
-	Loading    bool
-	Snapshot   core.Snapshot
-	ActiveTab  int
-	Width      int
-	Height     int
-	Styles     ViewStyles
-	Selections SelectionSet
+	Loading                 bool
+	Snapshot                core.Snapshot
+	ActiveTab               int
+	MetricsLoadingIndicator string
+	Width                   int
+	Height                  int
+	Styles                  ViewStyles
+	Selections              SelectionSet
 }
 
 type ViewStyles struct {
@@ -50,7 +51,7 @@ func RenderContent(vm ViewModel, list string, detailProvider DetailProvider) str
 
 	listHeight := ListHeight(vm.Height)
 	detailHeight := max(1, vm.Height-listHeight-1)
-	detail := RenderDetail(vm.ActiveTab, vm.Selections, detailProvider, vm.Styles.Section, vm.Styles.Muted, vm.Width, detailHeight)
+	detail := RenderDetail(vm.ActiveTab, vm.Selections, vm.MetricsLoadingIndicator, detailProvider, vm.Styles.Section, vm.Styles.Muted, vm.Width, detailHeight)
 	divider := vm.Styles.Divider.Render(strings.Repeat("─", max(1, vm.Width-2)))
 	return util.JoinSections(list, divider, detail)
 }
@@ -77,15 +78,18 @@ func ListHeight(height int) int {
 	return listHeight
 }
 
-func RenderDetail(activeTab int, selections SelectionSet, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
-	lines := append([]string{sectionStyle.Render("Details")}, activeDetailLines(activeTab, selections, provider, mutedStyle, width)...)
+func RenderDetail(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
+	lines := append([]string{sectionStyle.Render("Details")}, activeDetailLines(activeTab, selections, loadingIndicator, provider, mutedStyle, width)...)
 	return strings.Join(util.ClipLines(util.ConstrainLines(lines, width), height), "\n")
 }
 
-func activeDetailLines(activeTab int, selections SelectionSet, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
+func activeDetailLines(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
 	switch activeTab {
 	case 0:
-		return detailLinesForSelection(selections.Container, selections.HasContainer, "No container selected.", containerDetailLines, provider, mutedStyle, width)
+		builder := func(container core.ContainerRow, p DetailProvider, w int) []string {
+			return containerDetailLines(container, loadingIndicator, p, w)
+		}
+		return detailLinesForSelection(selections.Container, selections.HasContainer, "No container selected.", builder, provider, mutedStyle, width)
 	case 1:
 		return detailLinesForSelection(selections.Image, selections.HasImage, "No image selected.", imageDetailLines, provider, mutedStyle, width)
 	case 2:
@@ -102,14 +106,14 @@ func detailLinesForSelection[T any](item T, ok bool, emptyMessage string, buildL
 	return []string{mutedStyle.Render(emptyMessage)}
 }
 
-func containerDetailLines(container core.ContainerRow, provider DetailProvider, width int) []string {
+func containerDetailLines(container core.ContainerRow, loadingIndicator string, provider DetailProvider, width int) []string {
 	return []string{
 		provider.DetailLine("Name", container.Name, width),
 		provider.DetailLine("Image", container.Image, width),
 		provider.DetailLine("State", provider.RenderContainerState(container), width),
 		provider.DetailLine("Status", container.Status, width),
-		provider.DetailLine("CPU", CPUValue(container.CPUPercent), width),
-		provider.DetailLine("Memory", ContainerMemorySummary(container), width),
+		provider.DetailLine("CPU", ContainerCPUValue(container, loadingIndicator), width),
+		provider.DetailLine("Memory", ContainerMemorySummary(container, loadingIndicator), width),
 		provider.DetailLine("Ports", container.Ports, width),
 		provider.DetailLine("Command", container.Command, width),
 		provider.DetailLine("ID", container.ID, width),
@@ -151,21 +155,50 @@ func volumeDetailLines(volume core.VolumeRow, provider DetailProvider, width int
 	}
 }
 
-func CPUValue(value float64) string {
-	if value < 0.05 {
+func ContainerCPUValue(container core.ContainerRow, loadingIndicator string) string {
+	if container.CPUPercent < 0 {
+		if strings.EqualFold(container.State, "running") {
+			return metricsLoadingValue(loadingIndicator)
+		}
 		return "-"
 	}
-	return fmt.Sprintf("%.1f%%", value)
+	if container.CPUPercent < 0.05 {
+		if strings.EqualFold(container.State, "running") {
+			return "0.0%"
+		}
+		return "-"
+	}
+	return fmt.Sprintf("%.1f%%", container.CPUPercent)
 }
 
-func ContainerMemorySummary(container core.ContainerRow) string {
-	if container.MemoryUsage == "-" {
+func ContainerMemorySummary(container core.ContainerRow, loadingIndicator string) string {
+	if container.MemoryUsage == "-" || strings.EqualFold(container.MemoryUsage, "loading") {
+		if strings.EqualFold(container.State, "running") {
+			return metricsLoadingValue(loadingIndicator)
+		}
 		return "-"
 	}
 	if container.MemoryLimit != "" && container.MemoryLimit != "-" {
 		return fmt.Sprintf("%s / %s (%.1f%%)", container.MemoryUsage, container.MemoryLimit, container.MemoryPercent)
 	}
 	return fmt.Sprintf("%s (%.1f%%)", container.MemoryUsage, container.MemoryPercent)
+}
+
+func ContainerMemoryTableValue(container core.ContainerRow, loadingIndicator string) string {
+	if container.MemoryUsage == "-" || strings.EqualFold(container.MemoryUsage, "loading") {
+		if strings.EqualFold(container.State, "running") {
+			return metricsLoadingValue(loadingIndicator)
+		}
+		return "-"
+	}
+	return fmt.Sprintf("%s (%.1f%%)", container.MemoryUsage, container.MemoryPercent)
+}
+
+func metricsLoadingValue(loadingIndicator string) string {
+	if strings.TrimSpace(loadingIndicator) == "" {
+		return "-"
+	}
+	return loadingIndicator
 }
 
 func ContainerStateText(container core.ContainerRow) string {

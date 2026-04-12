@@ -40,10 +40,11 @@ func (m model) renderMain(height int) string {
 			return m.styles.ErrorText.Render("Selected container is no longer available.")
 		}
 		return logs.RenderContent(logs.ViewModel{
-			State:         m.logs,
-			ContainerName: container.Name,
-			Width:         totalWidth,
-			Height:        totalHeight,
+			State:            m.logs,
+			ContainerName:    container.Name,
+			LoadingIndicator: m.logsLoadingIndicator(),
+			Width:            totalWidth,
+			Height:           totalHeight,
 			Styles: logs.ViewStyles{
 				Breadcrumb:   m.styles.Breadcrumb,
 				FollowOn:     m.styles.FollowOn,
@@ -58,6 +59,13 @@ func (m model) renderMain(height int) string {
 	layout := util.ComputeFrameLayout(totalWidth, totalHeight, m.styles.MainFrame)
 	content := m.renderBrowseContent(layout.ContentWidth, layout.ContentHeight)
 	return util.RenderFramedContent(m.styles.MainFrame, layout, content)
+}
+
+func (m model) logsLoadingIndicator() string {
+	if !m.shouldAnimateLogsLoadingIndicator() {
+		return ""
+	}
+	return strings.TrimSpace(m.logsSpinner.View())
 }
 
 func (m model) logVisibleRows() int {
@@ -95,8 +103,8 @@ func (m model) renderHeader() string {
 	return chrome.RenderHeader(chrome.HeaderInput{
 		Width:            m.width,
 		Title:            "EasyDocker",
-		TotalsText:       chrome.RenderTotalsLabel(m.snapshot, m.loadingStage, loadStageIdle, loadStageMetrics),
-		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, loadStageContainers, loadStageResources, loadStageMetrics),
+		TotalsText:       chrome.RenderTotalsLabel(m.snapshot, m.loadingStage, loadStageIdle, loadStageMetrics, m.metricsLoaded, m.metricsLoadingIndicator()),
+		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, loadStageContainers, loadStageResources, loadStageMetrics, m.metricsLoaded),
 		ActiveTab:        m.activeTab,
 		ShowAll:          m.showAll,
 		Err:              m.err,
@@ -160,11 +168,12 @@ func (m model) detailLineWithWidth(label, value string, width int) string {
 func (m model) renderBrowseContent(width, height int) string {
 	safeContentWidth := max(1, width-2)
 	return browse.RenderContent(browse.ViewModel{
-		Loading:   m.loading,
-		Snapshot:  m.snapshot,
-		ActiveTab: m.activeTab,
-		Width:     safeContentWidth,
-		Height:    height,
+		Loading:                 m.loading,
+		Snapshot:                m.snapshot,
+		ActiveTab:               m.activeTab,
+		MetricsLoadingIndicator: m.metricsLoadingIndicator(),
+		Width:                   safeContentWidth,
+		Height:                  height,
 		Styles: browse.ViewStyles{
 			Divider: m.styles.Divider,
 			Muted:   m.styles.Muted,
@@ -172,6 +181,13 @@ func (m model) renderBrowseContent(width, height int) string {
 		},
 		Selections: m.browseSelections(),
 	}, m.renderResourceList(safeContentWidth, browse.ListHeight(height)), m.browseDetailRenderer())
+}
+
+func (m model) metricsLoadingIndicator() string {
+	if !m.shouldAnimateMetricsLoadingIndicator() {
+		return ""
+	}
+	return strings.TrimSpace(m.metricsSpinner.View())
 }
 
 func (m model) browseSelections() browse.SelectionSet {
@@ -223,7 +239,7 @@ func (m model) stateStyle(state string) lipgloss.Style {
 func (m model) renderResourceList(width, height int) string {
 	switch m.activeTab {
 	case tabContainers:
-		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers)
+		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers, m.metricsLoadingIndicator())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
 		spec := tables.BuildImageSpec(width, m.imageCursor, m.snapshot.Images)

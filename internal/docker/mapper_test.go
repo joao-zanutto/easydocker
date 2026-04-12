@@ -47,8 +47,23 @@ func TestMapContainerRow(t *testing.T) {
 	if !row.Healthy {
 		t.Fatalf("Healthy = false, want true")
 	}
+	if row.CPUPercent != -1 {
+		t.Fatalf("default CPUPercent for running should be -1 but got %v", row.CPUPercent)
+	}
 	if row.MemoryUsage != "-" || row.MemoryLimit != "-" {
-		t.Fatalf("default memory fields should be '-' but got usage=%q limit=%q", row.MemoryUsage, row.MemoryLimit)
+		t.Fatalf("default running memory fields should be -/- but got usage=%q limit=%q", row.MemoryUsage, row.MemoryLimit)
+	}
+}
+
+func TestMapContainerRow_NonRunningDefaults(t *testing.T) {
+	item := types.Container{ID: "sha256:abc", Names: []string{"/api"}, State: "exited"}
+	row := mapContainerRow(item)
+
+	if row.CPUPercent != 0 {
+		t.Fatalf("default CPUPercent for non-running should be 0 but got %v", row.CPUPercent)
+	}
+	if row.MemoryUsage != "-" || row.MemoryLimit != "-" {
+		t.Fatalf("default non-running memory fields should be -/- but got usage=%q limit=%q", row.MemoryUsage, row.MemoryLimit)
 	}
 }
 

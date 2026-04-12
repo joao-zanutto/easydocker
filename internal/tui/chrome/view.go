@@ -164,9 +164,13 @@ func RenderFooter(input FooterInput) string {
 	return input.Styles.Footer.Render(renderCenteredLine(line, innerWidth))
 }
 
-func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, loadStageMetrics int) string {
-	if loadingStage == loadStageMetrics || (loadingStage != loadStageIdle && snapshot.TotalCPU == 0 && snapshot.TotalMem == 0) {
-		return "CPU loading  MEM loading"
+func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, loadStageMetrics int, metricsLoaded bool, loadingIndicator string) string {
+	if !metricsLoaded && (loadingStage == loadStageMetrics || (loadingStage != loadStageIdle && snapshot.TotalCPU == 0 && snapshot.TotalMem == 0)) {
+		indicator := loadingIndicator
+		if strings.TrimSpace(indicator) == "" {
+			indicator = "-"
+		}
+		return fmt.Sprintf("CPU %s  MEM %s", indicator, indicator)
 	}
 	mem := core.HumanBytes(int64(snapshot.TotalMem))
 	if snapshot.TotalLimit > 0 {
@@ -175,13 +179,16 @@ func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, load
 	return fmt.Sprintf("CPU %s  MEM %s", util.RenderPercent(snapshot.TotalCPU), mem)
 }
 
-func RenderLoadingStageLabel(loadingStage, loadStageContainers, loadStageResources, loadStageMetrics int) string {
+func RenderLoadingStageLabel(loadingStage, loadStageContainers, loadStageResources, loadStageMetrics int, metricsLoaded bool) string {
 	switch loadingStage {
 	case loadStageContainers:
 		return "loading containers"
 	case loadStageResources:
 		return "loading resources"
 	case loadStageMetrics:
+		if metricsLoaded {
+			return ""
+		}
 		return "loading metrics"
 	default:
 		return ""

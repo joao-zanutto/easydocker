@@ -15,6 +15,12 @@ import (
 )
 
 func mapContainerRow(item types.Container) core.ContainerRow {
+	memoryUsage := "-"
+	cpuPercent := float64(0)
+	if strings.EqualFold(item.State, "running") {
+		cpuPercent = -1
+	}
+
 	return core.ContainerRow{
 		ID:          shortID(item.ID),
 		FullID:      item.ID,
@@ -25,8 +31,9 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 		Ports:       formatPorts(item.Ports),
 		Command:     cleanCommand(item.Command),
 		CreatedUnix: item.Created,
+		CPUPercent:  cpuPercent,
 		Healthy:     strings.Contains(strings.ToLower(item.Status), "healthy"),
-		MemoryUsage: "-",
+		MemoryUsage: memoryUsage,
 		MemoryLimit: "-",
 	}
 }

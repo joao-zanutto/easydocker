@@ -7,17 +7,20 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/logs"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 	m := model{
-		width:     120,
-		height:    30,
-		activeTab: tabContainers,
-		showAll:   true,
-		styles:    defaultStyles(),
-		logs:      logs.NewState(),
+		width:          120,
+		height:         30,
+		activeTab:      tabContainers,
+		showAll:        true,
+		styles:         defaultStyles(),
+		logs:           logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
 		snapshot: core.Snapshot{
 			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 		},
@@ -56,13 +59,15 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 
 func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 	m := model{
-		width:     100,
-		height:    28,
-		activeTab: tabContainers,
-		showAll:   true,
-		screen:    screenModeBrowse,
-		styles:    defaultStyles(),
-		logs:      logs.NewState(),
+		width:          100,
+		height:         28,
+		activeTab:      tabContainers,
+		showAll:        true,
+		screen:         screenModeBrowse,
+		styles:         defaultStyles(),
+		logs:           logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
 		snapshot: core.Snapshot{
 			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", Image: "nginx", Status: "Up"}},
 		},
@@ -86,11 +91,13 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 
 func TestIntegration_UpdateResultFlow(t *testing.T) {
 	m := model{
-		showAll:      true,
-		loading:      true,
-		loadingStage: loadStageContainers,
-		styles:       defaultStyles(),
-		logs:         logs.NewState(),
+		showAll:        true,
+		loading:        true,
+		loadingStage:   loadStageContainers,
+		styles:         defaultStyles(),
+		logs:           logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
 	}
 
 	updated, cmd := m.Update(containersResultMsg{containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}})
@@ -115,5 +122,80 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 	}
 	if current.snapshot.TotalCPU != 12.5 || current.snapshot.TotalMem != 10 {
 		t.Fatalf("totals not applied")
+	}
+	if !current.metricsLoaded {
+		t.Fatalf("metricsLoaded = false, want true after first metrics result")
+	}
+}
+
+func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
+	m := model{
+		width:          120,
+		height:         30,
+		activeTab:      tabContainers,
+		showAll:        true,
+		loading:        false,
+		loadingStage:   loadStageIdle,
+		styles:         defaultStyles(),
+		logs:           logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
+		snapshot: core.Snapshot{
+			Containers: []core.ContainerRow{{
+				FullID:           "ctr-1",
+				Name:             "api",
+				State:            "running",
+				CPUPercent:       12.5,
+				MemoryPercent:    10,
+				MemoryUsage:      "10 MiB",
+				MemoryLimit:      "100 MiB",
+				MemoryUsageBytes: 10,
+				MemoryLimitBytes: 100,
+			}},
+		},
+	}
+
+	updated, _ := m.Update(containersResultMsg{containers: []core.ContainerRow{{
+		FullID:      "ctr-1",
+		Name:        "api",
+		State:       "running",
+		CPUPercent:  -1,
+		MemoryUsage: "loading",
+		MemoryLimit: "-",
+	}}})
+	current := updated.(model)
+
+	container := current.snapshot.Containers[0]
+	if container.CPUPercent != 12.5 || container.MemoryUsage != "10 MiB" {
+		t.Fatalf("running metrics were not preserved during refresh: %+v", container)
+	}
+}
+
+func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
+	m := model{
+		width:          120,
+		height:         30,
+		activeTab:      tabContainers,
+		showAll:        true,
+		loading:        true,
+		loadingStage:   loadStageMetrics,
+		styles:         defaultStyles(),
+		logs:           logs.NewState(),
+		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
+		snapshot: core.Snapshot{
+			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"}},
+		},
+	}
+
+	before := m.View()
+	if !strings.Contains(before, "loading metrics") {
+		t.Fatalf("expected pre-initial metrics view to include loading stage indicator, got %q", before)
+	}
+
+	m.metricsLoaded = true
+	after := m.View()
+	if strings.Contains(after, "loading metrics") {
+		t.Fatalf("expected post-initial metrics view to avoid loading indicator, got %q", after)
 	}
 }
