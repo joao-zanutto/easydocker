@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/joao-zanutto/easydocker/compare/v1.0.1...v1.0.2) (2026-04-12)
+
+
+### Bug Fixes
+
+* gorelease version ([c773e0c](https://github.com/joao-zanutto/easydocker/commit/c773e0ccdde5a8ccbe58cae53dcb7615d8f893f3))
+
 ## [1.0.1](https://github.com/joao-zanutto/easydocker/compare/v1.0.0...v1.0.1) (2026-04-12)
 
 
