@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"io"
 	"time"
 
 	"easydocker/internal/core"
@@ -45,6 +46,29 @@ func (m model) loadDockerCmd() tea.Cmd {
 		snapshot, err := svc.LoadSnapshot()
 		return loadResultMsg{snapshot: snapshot, err: err}
 	}
+}
+
+type execShellCommand struct {
+	service     *core.Service
+	containerID string
+	stdin       io.Reader
+	stdout      io.Writer
+	stderr      io.Writer
+}
+
+func (e *execShellCommand) SetStdin(r io.Reader)  { e.stdin = r }
+func (e *execShellCommand) SetStdout(w io.Writer) { e.stdout = w }
+func (e *execShellCommand) SetStderr(w io.Writer) { e.stderr = w }
+
+func (e *execShellCommand) Run() error {
+	return e.service.ExecShell(e.containerID, e.stdin, e.stdout, e.stderr)
+}
+
+func (m model) execTerminalCmd(containerID string) tea.Cmd {
+	return tea.Exec(
+		&execShellCommand{service: m.service, containerID: containerID},
+		func(err error) tea.Msg { return execDoneMsg{err: err} },
+	)
 }
 
 func (m model) loadLogsDataCmd(containerID string, sessionID int, previousCPU, previousMem []float64, tail int, src logs.Source) tea.Cmd {

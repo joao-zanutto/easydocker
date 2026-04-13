@@ -76,12 +76,14 @@ var (
 	browseContainerFooterHelp = []FooterHelpSpec{
 		{Key: "a", Description: "toggle running/all"},
 		{Key: "enter", Description: "logs"},
+		{Key: "t", Description: "terminal"},
 	}
 	logsFooterHelp = []FooterHelpSpec{
 		{Key: "← ↑ ↓ →", Description: "navigate"},
 		{Key: "pgup/dn", Description: "jump up/down"},
 		{Key: "home/end", Description: "go to top/bottom"},
 		{Key: "f", Description: "toggle follow"},
+		{Key: "t", Description: "terminal"},
 		{Key: "esc", Description: "back"},
 	}
 )

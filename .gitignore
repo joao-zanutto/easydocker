@@ -1,5 +1,6 @@
 bin/
 dist/
+.worktrees/
 coverage.out
 *.log
 .DS_Store
