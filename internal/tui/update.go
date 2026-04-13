@@ -138,7 +138,7 @@ func (m *model) handleLogsResult(msg logs.ResultMsg) tea.Cmd {
 func (m *model) applyLogsTransition(transition logs.Transition) tea.Cmd {
 	if transition.LaunchTerminal {
 		if container, ok := m.selectedLogsContainer(); ok {
-			return execTerminalCmd(container.FullID)
+			return m.execTerminalCmd(container.FullID)
 		}
 		return nil
 	}

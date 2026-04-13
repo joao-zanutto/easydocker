@@ -41,7 +41,7 @@ func (m *model) execTerminalIfContainerSelected() tea.Cmd {
 	if !ok {
 		return nil
 	}
-	return execTerminalCmd(container.FullID)
+	return m.execTerminalCmd(container.FullID)
 }
 
 func (m *model) moveCursor(delta int) {
