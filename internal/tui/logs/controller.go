@@ -29,59 +29,82 @@ func (Controller) Exit(state *State, containersTab int) Transition {
 }
 
 func (Controller) HandleKey(state *State, msg tea.KeyMsg, keys KeyMap, containersTab int) Transition {
-	msgKey := msg.String()
-
 	switch {
 	case key.Matches(msg, keys.Right):
-		state.SetFollow(false)
-		state.Viewport.ScrollRight(8)
-		return Transition{}
+		return handleHorizontalScroll(state, true)
 	case key.Matches(msg, keys.Left):
-		state.SetFollow(false)
-		state.Viewport.ScrollLeft(8)
-		return Transition{}
+		return handleHorizontalScroll(state, false)
+
 	case key.Matches(msg, keys.Up):
-		state.SetFollow(false)
-		state.Viewport.LineUp(1)
-		return historyTransitionIfNeeded(state)
+		return handleVerticalScroll(state, -1, false)
 	case key.Matches(msg, keys.Down):
-		if state.Viewport.AtBottom() {
-			state.SetFollow(true)
-			return Transition{}
-		}
-		state.SetFollow(false)
-		state.Viewport.LineDown(1)
-		return Transition{}
+		return handleVerticalScroll(state, 1, false)
 	case key.Matches(msg, keys.PageUp):
-		state.SetFollow(false)
-		state.Viewport.PageUp()
-		return historyTransitionIfNeeded(state)
+		return handleVerticalScroll(state, -1, true)
 	case key.Matches(msg, keys.PageDown):
-		if state.Viewport.AtBottom() {
-			state.SetFollow(true)
-			return Transition{}
-		}
-		state.SetFollow(false)
-		state.Viewport.PageDown()
-		return Transition{}
+		return handleVerticalScroll(state, 1, true)
+
 	case key.Matches(msg, keys.Home):
-		state.SetFollow(false)
-		state.Viewport.SetXOffset(0)
-		state.Viewport.GotoTop()
-		return historyTransitionIfNeeded(state)
+		return handleHome(state)
 	case key.Matches(msg, keys.End):
-		state.SetFollow(true)
-		return Transition{}
+		return handleEnd(state)
+
 	case key.Matches(msg, keys.ToggleFollow):
 		state.SetFollow(!state.Follow)
 		return Transition{}
+
 	case key.Matches(msg, keys.Back):
 		return Controller{}.Exit(state, containersTab)
-	case msgKey == " " || msgKey == "b" || msgKey == "g" || msgKey == "G" || msgKey == "q" || msgKey == "tab":
-		return Transition{}
+
 	default:
 		return Transition{}
 	}
+}
+
+func handleHorizontalScroll(state *State, right bool) Transition {
+	state.SetFollow(false)
+	if right {
+		state.Viewport.ScrollRight(8)
+	} else {
+		state.Viewport.ScrollLeft(8)
+	}
+	return Transition{}
+}
+
+func handleVerticalScroll(state *State, direction int, isPage bool) Transition {
+	state.SetFollow(false)
+	if isPage {
+		if direction > 0 {
+			state.Viewport.PageDown()
+		} else {
+			state.Viewport.PageUp()
+		}
+	} else {
+		if direction > 0 {
+			state.Viewport.LineDown(1)
+		} else {
+			state.Viewport.LineUp(1)
+		}
+	}
+
+	// When scrolling down and already at bottom, re-enable follow
+	if direction > 0 && state.Viewport.AtBottom() {
+		state.SetFollow(true)
+	}
+
+	return historyTransitionIfNeeded(state)
+}
+
+func handleHome(state *State) Transition {
+	state.SetFollow(false)
+	state.Viewport.SetXOffset(0)
+	state.Viewport.GotoTop()
+	return historyTransitionIfNeeded(state)
+}
+
+func handleEnd(state *State) Transition {
+	state.SetFollow(true)
+	return Transition{}
 }
 
 func historyTransitionIfNeeded(state *State) Transition {
