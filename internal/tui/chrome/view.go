@@ -7,6 +7,8 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/util"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -15,11 +17,6 @@ type TabSpec struct {
 	Icon  string
 	Name  string
 	Count int
-}
-
-type FooterHelpSpec struct {
-	Key         string
-	Description string
 }
 
 type HeaderStyles struct {
@@ -52,10 +49,9 @@ type HeaderInput struct {
 }
 
 type FooterInput struct {
-	Width          int
-	HelpSpecs      []FooterHelpSpec
-	Styles         FooterStyles
-	RenderHelpItem func(key, description string) string
+	Width  int
+	KeyMap help.KeyMap
+	Styles FooterStyles
 }
 
 type tabLabelVariant int
@@ -68,21 +64,21 @@ const (
 )
 
 var (
-	browseFooterBaseHelp = []FooterHelpSpec{
-		{Key: "↑/↓", Description: "navigate"},
-		{Key: "←/→", Description: "switch tabs"},
-		{Key: "esc", Description: "quit"},
+	browseFooterBaseHelp = []key.Binding{
+		newFooterBinding([]string{"up", "down"}, helpKeyLabel("↑/↓"), "navigate"),
+		newFooterBinding([]string{"left", "right"}, helpKeyLabel("←/→"), "switch tabs"),
+		newFooterBinding([]string{"esc"}, helpKeyLabel("esc"), "quit"),
 	}
-	browseContainerFooterHelp = []FooterHelpSpec{
-		{Key: "a", Description: "toggle running/all"},
-		{Key: "enter", Description: "logs"},
+	browseContainerFooterHelp = []key.Binding{
+		newFooterBinding([]string{"a"}, helpKeyLabel("a"), "toggle running/all"),
+		newFooterBinding([]string{"enter"}, helpKeyLabel("enter"), "logs"),
 	}
-	logsFooterHelp = []FooterHelpSpec{
-		{Key: "← ↑ ↓ →", Description: "navigate"},
-		{Key: "pgup/dn", Description: "jump up/down"},
-		{Key: "home/end", Description: "go to top/bottom"},
-		{Key: "f", Description: "toggle follow"},
-		{Key: "esc", Description: "back"},
+	logsFooterHelp = []key.Binding{
+		newFooterBinding([]string{"left", "up", "down", "right"}, helpKeyLabel("← ↑ ↓ →"), "navigate"),
+		newFooterBinding([]string{"pgup", "pgdn"}, helpKeyLabel("pgup/dn"), "jump up/down"),
+		newFooterBinding([]string{"home", "end"}, helpKeyLabel("home/end"), "go to top/bottom"),
+		newFooterBinding([]string{"f"}, helpKeyLabel("f"), "toggle follow"),
+		newFooterBinding([]string{"esc"}, helpKeyLabel("esc"), "back"),
 	}
 )
 
@@ -111,23 +107,15 @@ func RenderScopeBadge(showAll bool, maxWidth int, renderBadge func(string) strin
 	return renderBadge(scope)
 }
 
-func FooterHelpSpecs(isLogsScreen bool, isContainersTab bool) []FooterHelpSpec {
+func NewFooterKeyMap(isLogsScreen bool, isContainersTab bool) help.KeyMap {
 	if isLogsScreen {
-		return logsFooterHelp
+		return footerKeyMap{bindings: logsFooterHelp}
 	}
-	specs := append([]FooterHelpSpec{}, browseFooterBaseHelp...)
+	bindings := append([]key.Binding{}, browseFooterBaseHelp...)
 	if isContainersTab {
-		specs = append(specs, browseContainerFooterHelp...)
+		bindings = append(bindings, browseContainerFooterHelp...)
 	}
-	return specs
-}
-
-func RenderHelpItems(specs []FooterHelpSpec, helpItem func(key, description string) string) []string {
-	items := make([]string, 0, len(specs))
-	for _, spec := range specs {
-		items = append(items, helpItem(spec.Key, spec.Description))
-	}
-	return items
+	return footerKeyMap{bindings: bindings}
 }
 
 func RenderHeader(input HeaderInput) string {
@@ -158,10 +146,42 @@ func RenderHeader(input HeaderInput) string {
 }
 
 func RenderFooter(input FooterInput) string {
-	items := RenderHelpItems(input.HelpSpecs, input.RenderHelpItem)
 	innerWidth := max(1, input.Width-input.Styles.Footer.GetHorizontalFrameSize())
-	line := util.ConstrainLine(strings.Join(items, "   "), innerWidth)
-	return input.Styles.Footer.Render(renderCenteredLine(line, innerWidth))
+	helpModel := help.New()
+	helpModel.Width = innerWidth
+	helpModel.ShortSeparator = "   "
+	helpModel.Ellipsis = "…"
+	helpModel.Styles = help.Styles{
+		ShortKey:       input.Styles.Key.Padding(0),
+		ShortDesc:      input.Styles.KeyText,
+		ShortSeparator: lipgloss.NewStyle(),
+		FullKey:        input.Styles.Key.Padding(0),
+		FullDesc:       input.Styles.KeyText,
+		FullSeparator:  lipgloss.NewStyle(),
+		Ellipsis:       lipgloss.NewStyle(),
+	}
+	line := util.ConstrainLine(helpModel.View(input.KeyMap), innerWidth)
+	return input.Styles.Footer.Render(lipgloss.PlaceHorizontal(innerWidth, lipgloss.Center, line))
+}
+
+type footerKeyMap struct {
+	bindings []key.Binding
+}
+
+func (m footerKeyMap) ShortHelp() []key.Binding {
+	return m.bindings
+}
+
+func (m footerKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{m.bindings}
+}
+
+func newFooterBinding(keys []string, helpKey, description string) key.Binding {
+	return key.NewBinding(key.WithKeys(keys...), key.WithHelp(helpKey, description))
+}
+
+func helpKeyLabel(label string) string {
+	return " " + label + " "
 }
 
 func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, loadStageMetrics int, metricsLoaded bool, loadingIndicator string) string {

@@ -91,14 +91,13 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 	}
 
 	footer := RenderFooter(FooterInput{
-		Width:     220,
-		HelpSpecs: FooterHelpSpecs(false, true),
+		Width:  220,
+		KeyMap: NewFooterKeyMap(false, true),
 		Styles: FooterStyles{
 			Footer:  lipgloss.NewStyle(),
 			Key:     lipgloss.NewStyle(),
 			KeyText: lipgloss.NewStyle(),
 		},
-		RenderHelpItem: func(key, description string) string { return key + " " + description },
 	})
 	for _, token := range []string{"navigate", "switch tabs", "toggle running/all", "logs"} {
 		if !strings.Contains(util.StripANSI(footer), token) {
