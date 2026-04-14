@@ -5,7 +5,16 @@ import (
 	"testing"
 
 	"easydocker/internal/core"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
+
+func keyMsg(keyType tea.KeyType, runes ...rune) tea.KeyMsg {
+	if keyType != tea.KeyRunes {
+		return tea.KeyMsg{Type: keyType}
+	}
+	return tea.KeyMsg{Type: tea.KeyRunes, Runes: runes}
+}
 
 func TestControllerEnterReturnsInitialLoadTransition(t *testing.T) {
 	controller := Controller{}
@@ -39,7 +48,7 @@ func TestControllerHandleKeyHistoryProducesLoadRequest(t *testing.T) {
 	state.Viewport.SetContent("a\nb\nc")
 	state.Viewport.GotoTop()
 
-	transition := controller.HandleKey(&state, "home", 0)
+	transition := controller.HandleKey(&state, keyMsg(tea.KeyHome), NewKeyMap(), 0)
 	if transition.Load == nil {
 		t.Fatalf("expected history load request")
 	}
@@ -60,7 +69,7 @@ func TestControllerHandleKeyExitRequestsBrowse(t *testing.T) {
 	state.SessionID = 3
 	state.ContainerID = "ctr-1"
 
-	transition := controller.HandleKey(&state, "esc", 2)
+	transition := controller.HandleKey(&state, keyMsg(tea.KeyEsc), NewKeyMap(), 2)
 	if !transition.ExitToBrowse {
 		t.Fatalf("exit transition expected")
 	}

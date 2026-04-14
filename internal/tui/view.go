@@ -127,14 +127,13 @@ func (m model) renderHeader() string {
 
 func (m model) renderFooter() string {
 	return chrome.RenderFooter(chrome.FooterInput{
-		Width:     m.width,
-		HelpSpecs: chrome.FooterHelpSpecs(m.screen == screenModeLogs, m.activeTab == tabContainers),
+		Width:  m.width,
+		KeyMap: m.footerKeyMap(),
 		Styles: chrome.FooterStyles{
 			Footer:  m.styles.Footer,
 			Key:     m.styles.Key,
 			KeyText: m.styles.KeyText,
 		},
-		RenderHelpItem: m.renderFooterHelpItem,
 	})
 }
 
@@ -143,10 +142,6 @@ func (m model) renderChromeTab(tab int, label string) string {
 		return m.styles.ActiveTab.Render(label)
 	}
 	return m.styles.Tab.Render(label)
-}
-
-func (m model) renderFooterHelpItem(key, description string) string {
-	return m.styles.Key.Render(key) + " " + m.styles.KeyText.Render(description)
 }
 
 func (m model) detailLineWithWidth(label, value string, width int) string {

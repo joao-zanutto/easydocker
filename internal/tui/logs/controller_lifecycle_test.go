@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"easydocker/internal/core"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestControllerHandleResult_IgnoresMismatchedMessage(t *testing.T) {
@@ -160,13 +162,13 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 
 	t.Run("f toggles follow", func(t *testing.T) {
 		state := newControllerState(logLines("base", 100))
-		_ = controller.HandleKey(&state, "f", 0)
+		_ = controller.HandleKey(&state, keyMsg(tea.KeyRunes, 'f'), NewKeyMap(), 0)
 		if state.Follow {
 			t.Fatalf("follow should be disabled")
 		}
 
 		state.Viewport.GotoTop()
-		_ = controller.HandleKey(&state, "f", 0)
+		_ = controller.HandleKey(&state, keyMsg(tea.KeyRunes, 'f'), NewKeyMap(), 0)
 		if !state.Follow {
 			t.Fatalf("follow should be enabled")
 		}
@@ -179,7 +181,7 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 		state := newControllerState(logLines("base", 100))
 		state.Follow = true
 
-		tr := controller.HandleKey(&state, "home", 0)
+		tr := controller.HandleKey(&state, keyMsg(tea.KeyHome), NewKeyMap(), 0)
 		if tr.Load == nil || tr.Load.Src != SourceHistory {
 			t.Fatalf("home should request history load")
 		}
@@ -189,7 +191,7 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 
 		state.Follow = false
 		state.Viewport.GotoTop()
-		tr = controller.HandleKey(&state, "end", 0)
+		tr = controller.HandleKey(&state, keyMsg(tea.KeyEnd), NewKeyMap(), 0)
 		if tr != (Transition{}) {
 			t.Fatalf("end should not emit transition, got %#v", tr)
 		}
@@ -206,7 +208,7 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 		state.Follow = true
 		state.Viewport.GotoTop()
 
-		tr := controller.HandleKey(&state, "pgup", 0)
+		tr := controller.HandleKey(&state, keyMsg(tea.KeyPgUp), NewKeyMap(), 0)
 		if tr.Load == nil {
 			t.Fatalf("pgup at top should request history")
 		}
@@ -216,7 +218,7 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 
 		state.Follow = false
 		state.Viewport.GotoBottom()
-		_ = controller.HandleKey(&state, "pgdown", 0)
+		_ = controller.HandleKey(&state, keyMsg(tea.KeyPgDown), NewKeyMap(), 0)
 		if !state.Follow {
 			t.Fatalf("pgdown at bottom should re-enable follow")
 		}
@@ -228,7 +230,7 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 		state.Viewport.GotoTop()
 		before := state.Viewport.YOffset
 
-		_ = controller.HandleKey(&state, "down", 0)
+		_ = controller.HandleKey(&state, keyMsg(tea.KeyDown), NewKeyMap(), 0)
 		if state.Follow {
 			t.Fatalf("follow should be disabled")
 		}
@@ -239,7 +241,7 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 
 	t.Run("esc exits with forced tab", func(t *testing.T) {
 		state := newControllerState(logLines("base", 20))
-		tr := controller.HandleKey(&state, "esc", 3)
+		tr := controller.HandleKey(&state, keyMsg(tea.KeyEsc), NewKeyMap(), 3)
 		if !tr.ExitToBrowse || tr.ForceTab != 3 {
 			t.Fatalf("esc should request exit to browse with tab 3")
 		}
