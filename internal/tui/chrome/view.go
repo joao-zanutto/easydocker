@@ -8,7 +8,6 @@ import (
 	"easydocker/internal/tui/util"
 
 	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -63,25 +62,6 @@ const (
 	tabLabelIconOnly
 )
 
-var (
-	browseFooterBaseHelp = []key.Binding{
-		newFooterBinding([]string{"up", "down"}, helpKeyLabel("↑/↓"), "navigate"),
-		newFooterBinding([]string{"left", "right"}, helpKeyLabel("←/→"), "switch tabs"),
-		newFooterBinding([]string{"esc"}, helpKeyLabel("esc"), "quit"),
-	}
-	browseContainerFooterHelp = []key.Binding{
-		newFooterBinding([]string{"a"}, helpKeyLabel("a"), "toggle running/all"),
-		newFooterBinding([]string{"enter"}, helpKeyLabel("enter"), "logs"),
-	}
-	logsFooterHelp = []key.Binding{
-		newFooterBinding([]string{"left", "up", "down", "right"}, helpKeyLabel("← ↑ ↓ →"), "navigate"),
-		newFooterBinding([]string{"pgup", "pgdn"}, helpKeyLabel("pgup/dn"), "jump up/down"),
-		newFooterBinding([]string{"home", "end"}, helpKeyLabel("home/end"), "go to top/bottom"),
-		newFooterBinding([]string{"f"}, helpKeyLabel("f"), "toggle follow"),
-		newFooterBinding([]string{"esc"}, helpKeyLabel("esc"), "back"),
-	}
-)
-
 func RenderHeaderTabs(specs []TabSpec, maxWidth int, renderTab func(tab int, label string) string) []string {
 	for _, variant := range []tabLabelVariant{tabLabelFullWithParens, tabLabelFullCompact, tabLabelIconWithCount} {
 		tabs := renderHeaderTabsVariant(specs, variant, renderTab)
@@ -105,17 +85,6 @@ func RenderScopeBadge(showAll bool, maxWidth int, renderBadge func(string) strin
 		}
 	}
 	return renderBadge(scope)
-}
-
-func NewFooterKeyMap(isLogsScreen bool, isContainersTab bool) help.KeyMap {
-	if isLogsScreen {
-		return footerKeyMap{bindings: logsFooterHelp}
-	}
-	bindings := append([]key.Binding{}, browseFooterBaseHelp...)
-	if isContainersTab {
-		bindings = append(bindings, browseContainerFooterHelp...)
-	}
-	return footerKeyMap{bindings: bindings}
 }
 
 func RenderHeader(input HeaderInput) string {
@@ -152,36 +121,16 @@ func RenderFooter(input FooterInput) string {
 	helpModel.ShortSeparator = "   "
 	helpModel.Ellipsis = "…"
 	helpModel.Styles = help.Styles{
-		ShortKey:       input.Styles.Key.Padding(0),
+		ShortKey:       input.Styles.Key,
 		ShortDesc:      input.Styles.KeyText,
 		ShortSeparator: lipgloss.NewStyle(),
-		FullKey:        input.Styles.Key.Padding(0),
+		FullKey:        input.Styles.Key,
 		FullDesc:       input.Styles.KeyText,
 		FullSeparator:  lipgloss.NewStyle(),
 		Ellipsis:       lipgloss.NewStyle(),
 	}
 	line := util.ConstrainLine(helpModel.View(input.KeyMap), innerWidth)
 	return input.Styles.Footer.Render(lipgloss.PlaceHorizontal(innerWidth, lipgloss.Center, line))
-}
-
-type footerKeyMap struct {
-	bindings []key.Binding
-}
-
-func (m footerKeyMap) ShortHelp() []key.Binding {
-	return m.bindings
-}
-
-func (m footerKeyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{m.bindings}
-}
-
-func newFooterBinding(keys []string, helpKey, description string) key.Binding {
-	return key.NewBinding(key.WithKeys(keys...), key.WithHelp(helpKey, description))
-}
-
-func helpKeyLabel(label string) string {
-	return " " + label + " "
 }
 
 func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, loadStageMetrics int, metricsLoaded bool, loadingIndicator string) string {
@@ -228,19 +177,6 @@ func renderEdgeAlignedLine(left, right string, width int) string {
 		return util.ClampSingleLine(util.ConstrainLine(left+" "+right, width), width)
 	}
 	return util.ClampSingleLine(left+strings.Repeat(" ", width-leftWidth-rightWidth)+right, width)
-}
-
-func renderCenteredLine(line string, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	line = util.ConstrainLine(line, width)
-	lineWidth := util.DisplayWidth(line)
-	if lineWidth >= width {
-		return util.ClampSingleLine(line, width)
-	}
-	leftPad := (width - lineWidth) / 2
-	return util.ClampSingleLine(strings.Repeat(" ", leftPad)+line, width)
 }
 
 func renderPinnedHeaderLine(leftStyle lipgloss.Style, leftText, right string, width int) string {

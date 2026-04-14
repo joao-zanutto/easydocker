@@ -128,7 +128,7 @@ func (m model) renderHeader() string {
 func (m model) renderFooter() string {
 	return chrome.RenderFooter(chrome.FooterInput{
 		Width:  m.width,
-		KeyMap: chrome.NewFooterKeyMap(m.screen == screenModeLogs, m.activeTab == tabContainers),
+		KeyMap: m.footerKeyMap(),
 		Styles: chrome.FooterStyles{
 			Footer:  m.styles.Footer,
 			Key:     m.styles.Key,

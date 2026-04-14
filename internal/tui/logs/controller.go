@@ -1,6 +1,11 @@
 package logs
 
-import "easydocker/internal/core"
+import (
+	"easydocker/internal/core"
+
+	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 type Controller struct{}
 
@@ -23,21 +28,23 @@ func (Controller) Exit(state *State, containersTab int) Transition {
 	return Transition{ExitToBrowse: true, ForceTab: containersTab}
 }
 
-func (Controller) HandleKey(state *State, key string, containersTab int) Transition {
-	switch key {
-	case "right":
+func (Controller) HandleKey(state *State, msg tea.KeyMsg, keys KeyMap, containersTab int) Transition {
+	msgKey := msg.String()
+
+	switch {
+	case key.Matches(msg, keys.Right):
 		state.SetFollow(false)
 		state.Viewport.ScrollRight(8)
 		return Transition{}
-	case "left":
+	case key.Matches(msg, keys.Left):
 		state.SetFollow(false)
 		state.Viewport.ScrollLeft(8)
 		return Transition{}
-	case "up", "k":
+	case key.Matches(msg, keys.Up):
 		state.SetFollow(false)
 		state.Viewport.LineUp(1)
 		return historyTransitionIfNeeded(state)
-	case "down", "j":
+	case key.Matches(msg, keys.Down):
 		if state.Viewport.AtBottom() {
 			state.SetFollow(true)
 			return Transition{}
@@ -45,11 +52,11 @@ func (Controller) HandleKey(state *State, key string, containersTab int) Transit
 		state.SetFollow(false)
 		state.Viewport.LineDown(1)
 		return Transition{}
-	case "pgup":
+	case key.Matches(msg, keys.PageUp):
 		state.SetFollow(false)
 		state.Viewport.PageUp()
 		return historyTransitionIfNeeded(state)
-	case "pgdown":
+	case key.Matches(msg, keys.PageDown):
 		if state.Viewport.AtBottom() {
 			state.SetFollow(true)
 			return Transition{}
@@ -57,20 +64,20 @@ func (Controller) HandleKey(state *State, key string, containersTab int) Transit
 		state.SetFollow(false)
 		state.Viewport.PageDown()
 		return Transition{}
-	case "home":
+	case key.Matches(msg, keys.Home):
 		state.SetFollow(false)
 		state.Viewport.SetXOffset(0)
 		state.Viewport.GotoTop()
 		return historyTransitionIfNeeded(state)
-	case "end":
+	case key.Matches(msg, keys.End):
 		state.SetFollow(true)
 		return Transition{}
-	case "f":
+	case key.Matches(msg, keys.ToggleFollow):
 		state.SetFollow(!state.Follow)
 		return Transition{}
-	case "esc", "backspace":
+	case key.Matches(msg, keys.Back):
 		return Controller{}.Exit(state, containersTab)
-	case " ", "b", "g", "G", "q", "tab":
+	case msgKey == " " || msgKey == "b" || msgKey == "g" || msgKey == "G" || msgKey == "q" || msgKey == "tab":
 		return Transition{}
 	default:
 		return Transition{}

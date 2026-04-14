@@ -9,6 +9,7 @@ import (
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/mode"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -20,7 +21,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSizeMsg(msg)
 	case tea.KeyMsg:
-		return m.handleKey(msg.String())
+		return m.handleKey(msg)
 	case containersResultMsg:
 		return m.handleContainersResultMsg(msg)
 	case resourcesResultMsg:
@@ -42,27 +43,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 const browseCursorPageStep = 5
 
-func (m model) handleBrowseKey(key string) (tea.Model, tea.Cmd) {
-	switch key {
-	case "right", "l":
+func (m model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	keys := browseKeyMap()
+
+	switch {
+	case key.Matches(msg, keys.TabRight):
 		m.moveActiveTab(1)
-	case "left", "h":
+	case key.Matches(msg, keys.TabLeft):
 		m.moveActiveTab(-1)
-	case "a":
+	case key.Matches(msg, keys.ToggleScope):
 		m.toggleContainerScope()
-	case "up", "k":
+	case key.Matches(msg, keys.MoveUp):
 		m.moveCursor(-1)
-	case "down", "j":
+	case key.Matches(msg, keys.MoveDown):
 		m.moveCursor(1)
-	case "pgup":
+	case key.Matches(msg, keys.PageUp):
 		m.moveCursor(-browseCursorPageStep)
-	case "pgdown":
+	case key.Matches(msg, keys.PageDown):
 		m.moveCursor(browseCursorPageStep)
-	case "enter":
+	case key.Matches(msg, keys.OpenLogs):
 		if cmd := m.enterLogsModeIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}
-	case "esc", "backspace":
+	case key.Matches(msg, keys.Quit):
 		return m, tea.Quit
 	}
 	return m, nil
@@ -77,17 +80,17 @@ func (m model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
-	route := mode.RouteRootKey(key, toModeScreen(m.screen))
+func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	route := mode.RouteRootKey(msg.String(), toModeScreen(m.screen))
 	switch route {
 	case mode.RouteQuit:
 		return m, tea.Quit
 	case mode.RouteNoop:
 		return m, nil
 	case mode.RouteLogs:
-		return m, m.handleLogsKey(key)
+		return m, m.handleLogsKey(msg)
 	case mode.RouteBrowse:
-		return m.handleBrowseKey(key)
+		return m.handleBrowseKey(msg)
 	}
 
 	return m, nil
@@ -107,8 +110,8 @@ func fromModeScreen(screen mode.Screen) screenMode {
 	return screenModeBrowse
 }
 
-func (m *model) handleLogsKey(key string) tea.Cmd {
-	transition := logsController.HandleKey(&m.logs, key, tabContainers)
+func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
+	transition := logsController.HandleKey(&m.logs, msg, logsKeyMap(), tabContainers)
 	return m.applyLogsTransition(transition)
 }
 
