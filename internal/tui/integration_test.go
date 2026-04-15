@@ -199,3 +199,92 @@ func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 		t.Fatalf("expected post-initial metrics view to avoid loading indicator, got %q", after)
 	}
 }
+
+func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
+	m := New(nil).(model)
+	m.width = 100
+	m.height = 30
+	m.screen = screenModeBrowse
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	current := updated.(model)
+	if cmd != nil {
+		t.Fatalf("backspace in browse mode should not trigger a command")
+	}
+	if current.browseFilterActive {
+		t.Fatalf("backspace in browse mode should not activate filter mode")
+	}
+
+	current.browseFilterActive = true
+	current.browseFilterInput.Focus()
+	current.browseFilterInput.SetValue("abc")
+	current.browseFilterQuery = "abc"
+
+	updated, _ = current.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	after := updated.(model)
+	if !after.browseFilterActive {
+		t.Fatalf("backspace in filter mode should not exit filter mode")
+	}
+	if after.browseFilterQuery != "ab" {
+		t.Fatalf("backspace in filter mode should edit text, got %q", after.browseFilterQuery)
+	}
+}
+
+func TestIntegration_FilterPromptIcon(t *testing.T) {
+	m := New(nil).(model)
+	if m.browseFilterInput.Prompt != "🔎︎ " {
+		t.Fatalf("filter prompt = %q, want %q", m.browseFilterInput.Prompt, "🔎︎ ")
+	}
+}
+
+func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
+	m := New(nil).(model)
+	m.screen = screenModeBrowse
+	m.activeTab = tabContainers
+	m.showAll = true
+	m.containerCursor = 0
+	m.browseFilterActive = true
+	m.browseFilterInput.Focus()
+	m.browseFilterInput.SetValue("api")
+	m.browseFilterQuery = "api"
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{
+			{FullID: "ctr-1", Name: "api-1", State: "running"},
+			{FullID: "ctr-2", Name: "api-2", State: "running"},
+		},
+	}
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	after := updated.(model)
+	if after.containerCursor != 1 {
+		t.Fatalf("filter mode down should move cursor to 1, got %d", after.containerCursor)
+	}
+	if !after.browseFilterActive {
+		t.Fatalf("filter mode should remain active while navigating")
+	}
+	if after.browseFilterQuery != "api" {
+		t.Fatalf("filter query should remain unchanged while navigating, got %q", after.browseFilterQuery)
+	}
+}
+
+func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
+	m := New(nil).(model)
+	m.screen = screenModeBrowse
+	m.activeTab = tabContainers
+	m.showAll = true
+	m.browseFilterQuery = "redis"
+	m.browseFilterInput.SetValue("redis")
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	after := updated.(model)
+
+	if after.activeTab != tabImages {
+		t.Fatalf("active tab = %d, want %d", after.activeTab, tabImages)
+	}
+	if after.browseFilterQuery != "" {
+		t.Fatalf("filter query should be cleared on horizontal tab switch, got %q", after.browseFilterQuery)
+	}
+	if after.browseFilterInput.Value() != "" {
+		t.Fatalf("filter input value should be cleared on horizontal tab switch, got %q", after.browseFilterInput.Value())
+	}
+}

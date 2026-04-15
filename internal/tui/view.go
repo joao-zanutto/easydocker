@@ -175,7 +175,11 @@ func (m model) renderBrowseContent(width, height int) string {
 			Section: m.styles.Section,
 		},
 		Selections: m.browseSelections(),
-	}, m.renderResourceList(safeContentWidth, browse.ListHeight(height)), m.browseDetailRenderer())
+		// Add filter state
+		FilterActive: m.browseFilterActive,
+		FilterQuery:  m.browseFilterQuery,
+		FilterInput:  m.browseFilterInput.View(),
+	}, m.renderResourceList(safeContentWidth, browse.ListHeightForContent(height, m.browseFilterActive)), m.browseDetailRenderer())
 }
 
 func (m model) metricsLoadingIndicator() string {
@@ -237,13 +241,13 @@ func (m model) renderResourceList(width, height int) string {
 		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers, m.metricsLoadingIndicator())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
-		spec := tables.BuildImageSpec(width, m.imageCursor, m.snapshot.Images)
+		spec := tables.BuildImageSpec(width, m.imageCursor, m.filteredImages())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabNetworks:
-		spec := tables.BuildNetworkSpec(width, m.networkCursor, m.snapshot.Networks)
+		spec := tables.BuildNetworkSpec(width, m.networkCursor, m.filteredNetworks())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	default:
-		spec := tables.BuildVolumeSpec(width, m.volumeCursor, m.snapshot.Volumes)
+		spec := tables.BuildVolumeSpec(width, m.volumeCursor, m.filteredVolumes())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	}
 }

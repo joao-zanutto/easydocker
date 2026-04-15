@@ -11,6 +11,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const filterHeaderHeight = 2
+
 type ViewModel struct {
 	Loading                 bool
 	Snapshot                core.Snapshot
@@ -20,6 +22,10 @@ type ViewModel struct {
 	Height                  int
 	Styles                  ViewStyles
 	Selections              SelectionSet
+	// Filter mode state
+	FilterActive bool
+	FilterQuery  string
+	FilterInput  string
 }
 
 type ViewStyles struct {
@@ -49,11 +55,22 @@ func RenderContent(vm ViewModel, list string, detailProvider DetailProvider) str
 		return util.ConstrainLine(vm.Styles.Muted.Render("Loading Docker resources..."), vm.Width)
 	}
 
-	listHeight := ListHeight(vm.Height)
-	detailHeight := max(1, vm.Height-listHeight-1)
+	filterHeight, listHeight, detailHeight := contentHeights(vm.Height, vm.FilterActive)
+	listLines := util.ClipAndPadLines(
+		util.ConstrainLines(strings.Split(list, "\n"), vm.Width),
+		listHeight,
+		"",
+	)
+	listBlock := strings.Join(listLines, "\n")
 	detail := RenderDetail(vm.ActiveTab, vm.Selections, vm.MetricsLoadingIndicator, detailProvider, vm.Styles.Section, vm.Styles.Muted, vm.Width, detailHeight)
 	divider := vm.Styles.Divider.Render(strings.Repeat("─", max(1, vm.Width-2)))
-	return util.JoinSections(list, divider, detail)
+
+	var parts []string
+	if filterHeight > 0 {
+		parts = append(parts, RenderFilterHeader(vm.FilterInput, vm.Width, vm.Styles.Divider))
+	}
+	parts = append(parts, listBlock, divider, detail)
+	return util.JoinSections(parts...)
 }
 
 func ShouldRenderLoading(loading bool, snapshot core.Snapshot) bool {
@@ -76,6 +93,43 @@ func ListHeight(height int) int {
 		listHeight = max(1, height-2)
 	}
 	return listHeight
+}
+
+// ListHeightForContent computes table height while preserving a fixed divider position
+// when the filter container is shown above the table.
+func ListHeightForContent(height int, filterActive bool) int {
+	_, listHeight, _ := contentHeights(height, filterActive)
+	return listHeight
+}
+
+func contentHeights(height int, filterActive bool) (int, int, int) {
+	totalHeight := max(1, height)
+	filterHeight := 0
+	if filterActive {
+		filterHeight = filterHeaderHeight
+		// Keep room for list + divider + detail.
+		maxFilterHeight := max(0, totalHeight-3)
+		if filterHeight > maxFilterHeight {
+			filterHeight = maxFilterHeight
+		}
+	}
+
+	listHeight := ListHeight(totalHeight)
+	if filterHeight > 0 {
+		// Shrink table from the top to preserve divider/bottom anchoring.
+		listHeight = max(1, listHeight-filterHeight)
+	}
+
+	detailHeight := totalHeight - filterHeight - listHeight - 1
+	for detailHeight < 1 && listHeight > 1 {
+		listHeight--
+		detailHeight = totalHeight - filterHeight - listHeight - 1
+	}
+	if detailHeight < 1 {
+		detailHeight = 1
+	}
+
+	return filterHeight, listHeight, detailHeight
 }
 
 func RenderDetail(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
@@ -199,6 +253,25 @@ func metricsLoadingValue(loadingIndicator string) string {
 		return "-"
 	}
 	return loadingIndicator
+}
+
+// RenderFilterHeader renders a plain filter input line followed by a divider.
+func RenderFilterHeader(input string, width int, dividerStyle lipgloss.Style) string {
+	if width <= 0 {
+		return ""
+	}
+	inputLine := padVisibleWidth(input, width)
+	divider := dividerStyle.Render(strings.Repeat("─", max(1, width-2)))
+	return util.JoinSections(inputLine, divider)
+}
+
+func padVisibleWidth(line string, width int) string {
+	constrained := util.ConstrainLine(line, width)
+	padding := width - util.DisplayWidth(constrained)
+	if padding <= 0 {
+		return constrained
+	}
+	return constrained + strings.Repeat(" ", padding)
 }
 
 func ContainerStateText(container core.ContainerRow) string {

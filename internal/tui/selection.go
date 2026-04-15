@@ -10,7 +10,16 @@ import (
 )
 
 func (m *model) moveActiveTab(delta int) {
+	previous := m.activeTab
 	m.activeTab = tuistate.MoveActiveTab(m.activeTab, delta, tabContainers, tabVolumes)
+	if m.activeTab != previous {
+		m.clearBrowseFilter()
+	}
+}
+
+func (m *model) clearBrowseFilter() {
+	m.browseFilterQuery = ""
+	m.browseFilterInput.SetValue("")
 }
 
 func (m *model) toggleContainerScope() {
@@ -50,18 +59,31 @@ func (m model) itemCountForTab(tab int) int {
 	case tabContainers:
 		return len(m.filteredContainers())
 	case tabImages:
-		return len(m.snapshot.Images)
+		return len(m.filteredImages())
 	case tabNetworks:
-		return len(m.snapshot.Networks)
+		return len(m.filteredNetworks())
 	case tabVolumes:
-		return len(m.snapshot.Volumes)
+		return len(m.filteredVolumes())
 	default:
 		return 0
 	}
 }
 
 func (m model) filteredContainers() []core.ContainerRow {
-	return core.FilterContainersByScope(m.snapshot.Containers, m.showAll)
+	scoped := core.FilterContainersByScope(m.snapshot.Containers, m.showAll)
+	return core.FilterContainersByQuery(scoped, m.browseFilterQuery)
+}
+
+func (m model) filteredImages() []core.ImageRow {
+	return core.FilterImagesByQuery(m.snapshot.Images, m.browseFilterQuery)
+}
+
+func (m model) filteredNetworks() []core.NetworkRow {
+	return core.FilterNetworksByQuery(m.snapshot.Networks, m.browseFilterQuery)
+}
+
+func (m model) filteredVolumes() []core.VolumeRow {
+	return core.FilterVolumesByQuery(m.snapshot.Volumes, m.browseFilterQuery)
 }
 
 func (m model) findContainerIndexByID(id string) (int, bool) {
@@ -82,15 +104,15 @@ func (m model) selectedLogsContainer() (core.ContainerRow, bool) {
 }
 
 func (m model) selectedImage() (core.ImageRow, bool) {
-	return selectedAt(m.snapshot.Images, m.imageCursor)
+	return selectedAt(m.filteredImages(), m.imageCursor)
 }
 
 func (m model) selectedNetwork() (core.NetworkRow, bool) {
-	return selectedAt(m.snapshot.Networks, m.networkCursor)
+	return selectedAt(m.filteredNetworks(), m.networkCursor)
 }
 
 func (m model) selectedVolume() (core.VolumeRow, bool) {
-	return selectedAt(m.snapshot.Volumes, m.volumeCursor)
+	return selectedAt(m.filteredVolumes(), m.volumeCursor)
 }
 
 func selectedAt[T any](items []T, cursor int) (T, bool) {
