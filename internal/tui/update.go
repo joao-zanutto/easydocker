@@ -134,6 +134,10 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBrowseKey(msg)
 	}
 
+	if m.screen == screenModeLogs && m.logs.FilterActive {
+		return m, m.handleLogsKey(msg)
+	}
+
 	route := mode.RouteRootKey(msg.String(), toModeScreen(m.screen))
 	switch route {
 	case mode.RouteQuit:
@@ -164,6 +168,46 @@ func fromModeScreen(screen mode.Screen) screenMode {
 }
 
 func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
+	keys := logsKeyMap()
+
+	if m.logs.FilterActive {
+		switch {
+		case key.Matches(msg, keys.Back):
+			m.logs.FilterActive = false
+			m.logs.FilterInput.Blur()
+			m.logs.FilterQuery = ""
+			m.logs.FilterInput.SetValue("")
+			m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+			return nil
+		case msg.String() == "enter":
+			m.logs.FilterActive = false
+			m.logs.FilterInput.Blur()
+			return nil
+		case msg.Type == tea.KeyUp,
+			msg.Type == tea.KeyDown,
+			msg.Type == tea.KeyPgUp,
+			msg.Type == tea.KeyPgDown,
+			msg.Type == tea.KeyHome,
+			msg.Type == tea.KeyEnd:
+			transition := logsController.HandleKey(&m.logs, msg, keys, tabContainers)
+			return m.applyLogsTransition(transition)
+		default:
+			var cmd tea.Cmd
+			m.logs.FilterInput, cmd = m.logs.FilterInput.Update(msg)
+			m.logs.FilterQuery = m.logs.FilterInput.Value()
+			m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+			return cmd
+		}
+	}
+
+	if key.Matches(msg, keys.OpenFilter) {
+		m.logs.FilterActive = true
+		m.logs.FilterInput.Focus()
+		m.logs.FilterInput.SetValue(m.logs.FilterQuery)
+		m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+		return nil
+	}
+
 	transition := logsController.HandleKey(&m.logs, msg, logsKeyMap(), tabContainers)
 	return m.applyLogsTransition(transition)
 }

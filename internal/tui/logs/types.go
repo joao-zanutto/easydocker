@@ -3,6 +3,7 @@ package logs
 import (
 	"easydocker/internal/core"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 )
 
@@ -40,20 +41,30 @@ type Transition struct {
 }
 
 type State struct {
-	ContainerID string
-	SessionID   int
-	Data        core.ContainerLiveData
-	TailLines   int
-	InitialLoad bool
-	HistoryDone bool
-	HistoryLoad bool
-	Follow      bool
-	Viewport    viewport.Model
+	ContainerID  string
+	SessionID    int
+	Data         core.ContainerLiveData
+	TailLines    int
+	FilterActive bool
+	FilterQuery  string
+	FilterInput  textinput.Model
+	InitialLoad  bool
+	HistoryDone  bool
+	HistoryLoad  bool
+	Follow       bool
+	Viewport     viewport.Model
 }
 
 func NewState() State {
 	vp := viewport.New(1, 1)
 	vp.SetHorizontalStep(8)
 	vp.SetContent("")
-	return State{Follow: true, Viewport: vp}
+
+	filterInput := textinput.New()
+	filterInput.Prompt = "🔎︎ "
+	filterInput.Placeholder = ""
+	filterInput.CharLimit = 200
+	filterInput.Width = 30
+
+	return State{Follow: true, Viewport: vp, FilterInput: filterInput}
 }

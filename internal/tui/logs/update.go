@@ -82,8 +82,9 @@ func (s *State) SyncViewport(lines []string, visibleWidth, visibleRows int) {
 }
 
 func (s *State) SyncViewportFromData(visibleWidth, visibleRows int) {
-	lines := make([]string, 0, len(s.Data.Logs))
-	for _, line := range s.Data.Logs {
+	logLines := FilterLogLines(s.Data.Logs, s.FilterQuery)
+	lines := make([]string, 0, len(logLines))
+	for _, line := range logLines {
 		lines = append(lines, SanitizeLogRenderLine(line))
 	}
 	s.SyncViewport(lines, visibleWidth, visibleRows)
