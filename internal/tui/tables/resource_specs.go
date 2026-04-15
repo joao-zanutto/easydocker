@@ -7,8 +7,6 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/browse"
 	"easydocker/internal/tui/util"
-
-	"github.com/charmbracelet/x/ansi"
 )
 
 // ContainerColumns resolves container columns for a given table width.
@@ -70,9 +68,10 @@ func BuildVolumeSpec(width, cursor int, items []core.VolumeRow) Spec[core.Volume
 // ContainerTableRow builds a single row for the containers table.
 func ContainerTableRow(container core.ContainerRow, stateWidth int, loadingIndicator string) []string {
 	state := browse.ContainerStateText(container)
-	if ansi.StringWidth(state) <= stateWidth {
-		state = colorStateLabel(state, container.State)
+	if stateWidth > 0 && util.StripANSI(util.TruncateWithEllipsis(state, stateWidth)) == "…" {
+		state = "●"
 	}
+	state = colorStateLabel(state, container.State)
 
 	return []string{
 		container.Name,
