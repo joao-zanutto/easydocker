@@ -58,7 +58,7 @@ func NewKeyMap() KeyMap {
 			key.WithHelp(helpKeyLabel("f"), "toggle follow"),
 		),
 		Back: key.NewBinding(
-			key.WithKeys("esc", "backspace"),
+			key.WithKeys("esc"),
 			key.WithHelp(helpKeyLabel("esc"), "back"),
 		),
 		HelpNavigate: key.NewBinding(

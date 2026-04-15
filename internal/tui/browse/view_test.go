@@ -50,6 +50,73 @@ func TestListHeight(t *testing.T) {
 	}
 }
 
+func TestListHeightForContent_FilterShrinksTableFromTop(t *testing.T) {
+	height := 20
+	base := ListHeight(height)
+	withFilter := ListHeightForContent(height, true)
+
+	if withFilter != base-filterHeaderHeight {
+		t.Fatalf("ListHeightForContent(%d, true) = %d, want %d", height, withFilter, base-filterHeaderHeight)
+	}
+}
+
+func TestRenderFilterHeader_InputAndDivider(t *testing.T) {
+	header := RenderFilterHeader("> abc", 24, lipgloss.NewStyle())
+	lines := strings.Split(header, "\n")
+	if len(lines) != 2 {
+		t.Fatalf("filter header lines = %d, want 2", len(lines))
+	}
+	if util.DisplayWidth(lines[0]) != 24 {
+		t.Fatalf("input line width = %d, want 24 (%q)", util.DisplayWidth(lines[0]), lines[0])
+	}
+	if util.DisplayWidth(lines[1]) != 22 {
+		t.Fatalf("divider line width = %d, want 22 (%q)", util.DisplayWidth(lines[1]), lines[1])
+	}
+	if strings.Contains(lines[0], "┌") || strings.Contains(lines[0], "┐") || strings.Contains(lines[0], "└") || strings.Contains(lines[0], "┘") {
+		t.Fatalf("input line should not render a box: %q", lines[0])
+	}
+}
+
+func TestRenderContent_FilterKeepsDividerAnchored(t *testing.T) {
+	vm := ViewModel{
+		Loading: false,
+		Snapshot: core.Snapshot{
+			Containers: []core.ContainerRow{{Name: "api"}},
+		},
+		ActiveTab: 0,
+		Width:     80,
+		Height:    20,
+		Styles: ViewStyles{
+			Divider: lipgloss.NewStyle(),
+			Muted:   lipgloss.NewStyle(),
+			Section: lipgloss.NewStyle(),
+		},
+	}
+
+	baseList := strings.Join(util.ClipAndPadLines([]string{"row"}, ListHeightForContent(vm.Height, false), ""), "\n")
+	withoutFilter := RenderContent(vm, baseList, fakeProvider{})
+
+	vm.FilterActive = true
+	vm.FilterInput = "> abc"
+	filterList := strings.Join(util.ClipAndPadLines([]string{"row"}, ListHeightForContent(vm.Height, true), ""), "\n")
+	withFilter := RenderContent(vm, filterList, fakeProvider{})
+
+	withoutDetails := lineIndex(withoutFilter, "Details")
+	withDetails := lineIndex(withFilter, "Details")
+	if withoutDetails == -1 || withDetails == -1 {
+		t.Fatalf("could not find details section in rendered output")
+	}
+	if withoutDetails != withDetails {
+		t.Fatalf("details line moved from %d to %d after enabling filter", withoutDetails, withDetails)
+	}
+	if strings.Contains(withFilter, "┌") || strings.Contains(withFilter, "└") {
+		t.Fatalf("rendered output should not include boxed filter borders")
+	}
+	if countLinesContaining(withFilter, "─") < 2 {
+		t.Fatalf("expected divider above table and between table/details")
+	}
+}
+
 func TestRenderDetailEmptyAndSelected(t *testing.T) {
 	muted := lipgloss.NewStyle()
 	section := lipgloss.NewStyle()
@@ -144,4 +211,23 @@ func TestContainerMemoryTableValue_OmitsLimit(t *testing.T) {
 	if afterInitial != "-" {
 		t.Fatalf("running placeholder memory value with no indicator = %q, want -", afterInitial)
 	}
+}
+
+func lineIndex(view, token string) int {
+	for index, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, token) {
+			return index
+		}
+	}
+	return -1
+}
+
+func countLinesContaining(view, token string) int {
+	count := 0
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, token) {
+			count++
+		}
+	}
+	return count
 }

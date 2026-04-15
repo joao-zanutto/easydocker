@@ -17,6 +17,7 @@ type BrowseKeyMap struct {
 	PageDown     key.Binding
 	ToggleScope  key.Binding
 	OpenLogs     key.Binding
+	OpenFilter   key.Binding
 	Quit         key.Binding
 	HelpNavigate key.Binding
 	HelpSwitch   key.Binding
@@ -61,8 +62,12 @@ func newBrowseKeyMap() BrowseKeyMap {
 			key.WithKeys("enter"),
 			key.WithHelp(helpKeyLabel("enter"), "logs"),
 		),
+		OpenFilter: key.NewBinding(
+			key.WithKeys("/"),
+			key.WithHelp(helpKeyLabel("/"), "filter"),
+		),
 		Quit: key.NewBinding(
-			key.WithKeys("esc", "backspace"),
+			key.WithKeys("esc"),
 			key.WithHelp(helpKeyLabel("esc"), "quit"),
 		),
 		HelpNavigate: key.NewBinding(
@@ -94,9 +99,27 @@ func (m model) footerKeyMap() help.KeyMap {
 	}
 
 	browseKeys := browseKeyMap()
+
+	// If filter mode is active, show filter-specific controls
+	if m.browseFilterActive {
+		bindings := []key.Binding{
+			browseKeys.HelpNavigate,
+			key.NewBinding(
+				key.WithKeys("esc"),
+				key.WithHelp(helpKeyLabel("esc"), "clear/exit filter"),
+			),
+			key.NewBinding(
+				key.WithKeys("enter"),
+				key.WithHelp(helpKeyLabel("enter"), "apply/close filter"),
+			),
+		}
+		return footerKeyMap{bindings: bindings}
+	}
+
 	bindings := []key.Binding{
 		browseKeys.HelpNavigate,
 		browseKeys.HelpSwitch,
+		browseKeys.OpenFilter,
 		browseKeys.Quit,
 	}
 	if m.activeTab == tabContainers {

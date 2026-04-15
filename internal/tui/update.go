@@ -46,6 +46,46 @@ const browseCursorPageStep = 5
 func (m model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	keys := browseKeyMap()
 
+	// If filter mode is active, handle filter input first
+	if m.browseFilterActive {
+		switch {
+		case key.Matches(msg, keys.Quit):
+			// Esc exits filter mode and clears query
+			m.browseFilterActive = false
+			m.browseFilterInput.Blur()
+			m.browseFilterQuery = ""
+			m.browseFilterInput.SetValue("")
+			m.clampCursors()
+			return m, nil
+		case msg.String() == "enter":
+			// Enter exits filter mode but keeps query
+			m.browseFilterActive = false
+			m.browseFilterInput.Blur()
+			return m, nil
+		case msg.Type == tea.KeyUp:
+			m.moveCursor(-1)
+			return m, nil
+		case msg.Type == tea.KeyDown:
+			m.moveCursor(1)
+			return m, nil
+		case msg.Type == tea.KeyPgUp:
+			m.moveCursor(-browseCursorPageStep)
+			return m, nil
+		case msg.Type == tea.KeyPgDown:
+			m.moveCursor(browseCursorPageStep)
+			return m, nil
+		default:
+			// All other keys go to filter input
+			var cmd tea.Cmd
+			m.browseFilterInput, cmd = m.browseFilterInput.Update(msg)
+			m.browseFilterQuery = m.browseFilterInput.Value()
+			// Recompute visible lists and clamp cursors to keep selection valid
+			m.clampCursors()
+			return m, cmd
+		}
+	}
+
+	// Normal browse mode key handling
 	switch {
 	case key.Matches(msg, keys.TabRight):
 		m.moveActiveTab(1)
@@ -65,6 +105,11 @@ func (m model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if cmd := m.enterLogsModeIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}
+	case key.Matches(msg, keys.OpenFilter):
+		// Slash opens filter mode
+		m.browseFilterActive = true
+		m.browseFilterInput.Focus()
+		m.browseFilterInput.SetValue(m.browseFilterQuery)
 	case key.Matches(msg, keys.Quit):
 		return m, tea.Quit
 	}
@@ -81,6 +126,14 @@ func (m model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
+
+	if m.screen == screenModeBrowse && m.browseFilterActive {
+		return m.handleBrowseKey(msg)
+	}
+
 	route := mode.RouteRootKey(msg.String(), toModeScreen(m.screen))
 	switch route {
 	case mode.RouteQuit:

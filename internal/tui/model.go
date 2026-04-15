@@ -9,6 +9,7 @@ import (
 	"easydocker/internal/tui/theme"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -77,23 +78,35 @@ type model struct {
 	metricsLoaded   bool
 	metricsSpinner  spinner.Model
 	logsSpinner     spinner.Model
+	// Browse filter mode state
+	browseFilterActive bool
+	browseFilterInput  textinput.Model
+	browseFilterQuery  string
 }
 
 func New(service *core.Service) tea.Model {
 	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
 	logsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
 
+	// Initialize filter input
+	filterInput := textinput.New()
+	filterInput.Prompt = "🔎︎ "
+	filterInput.Placeholder = ""
+	filterInput.CharLimit = 200
+	filterInput.Width = 30
+
 	return model{
-		service:        service,
-		activeTab:      tabContainers,
-		showAll:        true,
-		loading:        true,
-		screen:         screenModeBrowse,
-		loadingStage:   loadStageContainers,
-		logs:           logs.NewState(),
-		styles:         defaultStyles(),
-		metricsSpinner: metricsSpinner,
-		logsSpinner:    logsSpinner,
+		service:           service,
+		activeTab:         tabContainers,
+		showAll:           true,
+		loading:           true,
+		screen:            screenModeBrowse,
+		loadingStage:      loadStageContainers,
+		logs:              logs.NewState(),
+		styles:            defaultStyles(),
+		metricsSpinner:    metricsSpinner,
+		logsSpinner:       logsSpinner,
+		browseFilterInput: filterInput,
 	}
 }
 
