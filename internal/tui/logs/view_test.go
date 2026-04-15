@@ -204,6 +204,15 @@ func TestRenderDivider_FillsRequestedWidth(t *testing.T) {
 	}
 }
 
+func TestDynamicInputWidth_UsesFullLineMinusPrompt(t *testing.T) {
+	if got := dynamicInputWidth("🔎︎ ", 20); got != 17 {
+		t.Fatalf("dynamicInputWidth = %d, want 17", got)
+	}
+	if got := dynamicInputWidth("", 8); got != 8 {
+		t.Fatalf("dynamicInputWidth with empty prompt = %d, want 8", got)
+	}
+}
+
 func hasDividerBetween(view, upperToken, lowerToken string) bool {
 	lines := strings.Split(view, "\n")
 	upper := -1

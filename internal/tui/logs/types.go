@@ -64,7 +64,6 @@ func NewState() State {
 	filterInput.Prompt = "🔎︎ "
 	filterInput.Placeholder = ""
 	filterInput.CharLimit = 200
-	filterInput.Width = 30
 
 	return State{Follow: true, Viewport: vp, FilterInput: filterInput}
 }

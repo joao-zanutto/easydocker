@@ -178,8 +178,14 @@ func (m model) renderBrowseContent(width, height int) string {
 		// Add filter state
 		FilterActive: m.browseFilterActive,
 		FilterQuery:  m.browseFilterQuery,
-		FilterInput:  m.browseFilterInput.View(),
+		FilterInput:  m.renderBrowseFilterInputView(safeContentWidth),
 	}, m.renderResourceList(safeContentWidth, browse.ListHeightForContent(height, m.browseFilterActive)), m.browseDetailRenderer())
+}
+
+func (m model) renderBrowseFilterInputView(lineWidth int) string {
+	input := m.browseFilterInput
+	input.Width = max(1, lineWidth-util.DisplayWidth(input.Prompt))
+	return input.View()
 }
 
 func (m model) metricsLoadingIndicator() string {

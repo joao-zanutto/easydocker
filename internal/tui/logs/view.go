@@ -45,7 +45,9 @@ func RenderContent(vm ViewModel) string {
 	logsPanel := RenderPanel(vm, safeContentWidth, logsHeight)
 
 	if vm.State.FilterActive {
-		filterHeader := renderFilterHeader(vm.State.FilterInput.View(), safeContentWidth, vm.Styles.Divider)
+		filterInput := vm.State.FilterInput
+		filterInput.Width = dynamicInputWidth(filterInput.Prompt, safeContentWidth)
+		filterHeader := renderFilterHeader(filterInput.View(), safeContentWidth, vm.Styles.Divider)
 		return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(headline, filterHeader, logsPanel))
 	}
 
@@ -162,4 +164,8 @@ func renderRightPriorityLine(left, right string, width int) string {
 	leftRenderedWidth := util.DisplayWidth(left)
 	spacing := max(0, width-leftRenderedWidth-rightWidth)
 	return left + strings.Repeat(" ", spacing) + right
+}
+
+func dynamicInputWidth(prompt string, lineWidth int) int {
+	return max(1, lineWidth-util.DisplayWidth(prompt))
 }

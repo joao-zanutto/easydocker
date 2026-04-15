@@ -93,7 +93,6 @@ func New(service *core.Service) tea.Model {
 	filterInput.Prompt = "🔎︎ "
 	filterInput.Placeholder = ""
 	filterInput.CharLimit = 200
-	filterInput.Width = 30
 
 	return model{
 		service:           service,

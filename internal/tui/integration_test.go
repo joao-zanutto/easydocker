@@ -373,3 +373,15 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 		t.Fatalf("logs filter query should remain unchanged while navigating, got %q", after.logs.FilterQuery)
 	}
 }
+
+func TestIntegration_BrowseFilterInputView_UsesDynamicLineWidth(t *testing.T) {
+	m := New(nil).(model)
+	m.browseFilterInput.SetValue("abc")
+	view := m.renderBrowseFilterInputView(20)
+	if !strings.Contains(view, "🔎︎ abc") {
+		t.Fatalf("expected prompt and value in browse filter input view, got %q", view)
+	}
+	if m.browseFilterInput.Width != 0 {
+		t.Fatalf("render helper should not mutate model input width, got %d", m.browseFilterInput.Width)
+	}
+}
