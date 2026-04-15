@@ -79,4 +79,3 @@ func FilterVolumesByQuery(volumes []VolumeRow, query string) []VolumeRow {
 	}
 	return filtered
 }
-
