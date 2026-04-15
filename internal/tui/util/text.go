@@ -26,7 +26,8 @@ func TruncateWithEllipsis(text string, width int) string {
 	if width == 1 {
 		return "…"
 	}
-	return truncate(text, width-1) + "…"
+	prefix, tailANSI := truncateWithANSITail(text, width-1)
+	return prefix + "…" + tailANSI
 }
 
 func ConstrainLine(line string, width int) string {
@@ -51,12 +52,21 @@ func ClampSingleLine(line string, width int) string {
 
 // truncate limits text to a visible display width while preserving ANSI sequences.
 func truncate(text string, width int) string {
+	prefix, tailANSI := truncateWithANSITail(text, width)
+	return prefix + tailANSI
+}
+
+// truncateWithANSITail limits text to visible width and returns:
+// - prefix: the visible segment plus any ANSI encountered before the cut
+// - tailANSI: ANSI-only sequences from the cut tail (typically resets)
+func truncateWithANSITail(text string, width int) (string, string) {
 	if width <= 0 {
-		return ""
+		return "", ""
 	}
 
-	var b strings.Builder
+	var prefix strings.Builder
 	w := 0
+	cutIndex := len(text)
 	for i := 0; i < len(text); {
 		r := rune(text[i])
 		if r == '\x1b' {
@@ -65,7 +75,7 @@ func truncate(text string, width int) string {
 				i++
 				continue
 			}
-			b.WriteString(text[i : i+seqLen])
+			prefix.WriteString(text[i : i+seqLen])
 			i += seqLen
 			continue
 		}
@@ -78,15 +88,44 @@ func truncate(text string, width int) string {
 
 		rw := ansi.StringWidth(string(r))
 		if w+rw > width {
+			cutIndex = i
 			break
 		}
 
-		b.WriteRune(r)
+		prefix.WriteRune(r)
 		w += rw
 		i += size
 	}
 
-	return b.String()
+	if cutIndex >= len(text) {
+		return prefix.String(), ""
+	}
+
+	var tail strings.Builder
+	appendANSISequences(text[cutIndex:], &tail)
+	return prefix.String(), tail.String()
+}
+
+// appendANSISequences keeps only ANSI escapes from the remaining tail.
+// This preserves trailing reset codes so styles don't bleed into following text.
+func appendANSISequences(text string, b *strings.Builder) {
+	for i := 0; i < len(text); {
+		if text[i] == '\x1b' {
+			seqLen := ansiSequenceLen(text[i:])
+			if seqLen > 0 {
+				b.WriteString(text[i : i+seqLen])
+				i += seqLen
+				continue
+			}
+		}
+
+		_, size := utf8.DecodeRuneInString(text[i:])
+		if size <= 0 {
+			i++
+			continue
+		}
+		i += size
+	}
 }
 
 func ansiSequenceLen(s string) int {

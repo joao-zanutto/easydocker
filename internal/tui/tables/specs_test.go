@@ -145,8 +145,19 @@ func TestContainerTableRow_StateColoringByWidth(t *testing.T) {
 		t.Fatalf("expected ANSI color in state column, got %q", colored[1])
 	}
 
-	plain := ContainerTableRow(container, 1, "")
-	if strings.Contains(plain[1], "\x1b[") {
-		t.Fatalf("expected plain state label when width too small, got %q", plain[1])
+	narrow := ContainerTableRow(container, 1, "")
+	if !strings.Contains(narrow[1], "\x1b[") {
+		t.Fatalf("expected ANSI color in state column even when narrow, got %q", narrow[1])
+	}
+	if strings.Contains(narrow[1], "…") {
+		t.Fatalf("expected narrow state to fallback to status circle, got %q", narrow[1])
+	}
+	if !strings.Contains(narrow[1], "●") {
+		t.Fatalf("expected narrow state to include status circle, got %q", narrow[1])
+	}
+
+	medium := ContainerTableRow(container, 3, "")
+	if strings.Contains(medium[1], "●\x1b[39m") {
+		t.Fatalf("expected medium width to keep full state label before table truncation, got %q", medium[1])
 	}
 }
