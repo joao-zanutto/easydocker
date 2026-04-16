@@ -374,6 +374,108 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 	}
 }
 
+func TestIntegration_LogsFilterFooterShowsNavigationHelp(t *testing.T) {
+	m := New(nil).(model)
+	m.width = 120
+	m.height = 34
+	m.screen = screenModeLogs
+	m.activeTab = tabContainers
+	m.logs.FilterActive = true
+	m.logs.FilterInput.Focus()
+
+	view := m.View()
+	if !strings.Contains(view, "navigate") {
+		t.Fatalf("logs filter footer should show navigation help, got %q", view)
+	}
+	if strings.Contains(view, "←") || strings.Contains(view, "→") {
+		t.Fatalf("logs filter footer should only show vertical navigation hints, got %q", view)
+	}
+}
+
+func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
+	m := New(nil).(model)
+	m.width = 120
+	m.height = 34
+	m.screen = screenModeLogs
+	m.activeTab = tabContainers
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
+	}
+	m.logs.ContainerID = "ctr-1"
+
+	lines := make([]string, 0, 300)
+	for i := 0; i < 300; i++ {
+		lines = append(lines, "line-"+strconv.Itoa(i))
+	}
+	m.logs.Data = core.ContainerLiveData{Logs: lines}
+	m.logs.SetFollow(false)
+	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.Viewport.SetYOffset(10)
+
+	beforeRows := m.logVisibleRows()
+	beforeYOffset := m.logs.Viewport.YOffset
+	beforeBottom := beforeYOffset + beforeRows - 1
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	after := updated.(model)
+
+	if !after.logs.FilterActive {
+		t.Fatalf("slash should activate logs filter mode")
+	}
+	afterRows := after.logVisibleRows()
+	afterBottom := after.logs.Viewport.YOffset + afterRows - 1
+	if afterRows >= beforeRows {
+		t.Fatalf("expected fewer visible rows after opening filter, before=%d after=%d", beforeRows, afterRows)
+	}
+	if afterBottom != beforeBottom {
+		t.Fatalf("opening filter should trim rows from top (preserve bottom), beforeBottom=%d afterBottom=%d", beforeBottom, afterBottom)
+	}
+}
+
+func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
+	m := New(nil).(model)
+	m.width = 120
+	m.height = 34
+	m.screen = screenModeLogs
+	m.activeTab = tabContainers
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
+	}
+	m.logs.ContainerID = "ctr-1"
+
+	lines := make([]string, 0, 300)
+	for i := 0; i < 300; i++ {
+		lines = append(lines, "line-"+strconv.Itoa(i))
+	}
+	m.logs.Data = core.ContainerLiveData{Logs: lines}
+	m.logs.SetFollow(false)
+	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.Viewport.SetYOffset(20)
+
+	baseRows := m.logVisibleRows()
+	baseBottom := m.logs.Viewport.YOffset + baseRows - 1
+
+	current := m
+	for i := 0; i < 3; i++ {
+		updated, _ := current.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+		current = updated.(model)
+		if !current.logs.FilterActive {
+			t.Fatalf("cycle %d: slash should activate logs filter mode", i)
+		}
+
+		updated, _ = current.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		current = updated.(model)
+		if current.logs.FilterActive {
+			t.Fatalf("cycle %d: enter should close logs filter mode", i)
+		}
+
+		bottom := current.logs.Viewport.YOffset + current.logVisibleRows() - 1
+		if bottom != baseBottom {
+			t.Fatalf("cycle %d: viewport drift detected, bottom=%d want=%d", i, bottom, baseBottom)
+		}
+	}
+}
+
 func TestIntegration_BrowseFilterInputView_UsesDynamicLineWidth(t *testing.T) {
 	m := New(nil).(model)
 	m.browseFilterInput.SetValue("abc")

@@ -173,15 +173,28 @@ func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
 	if m.logs.FilterActive {
 		switch {
 		case key.Matches(msg, keys.Back):
+			previousRows := m.logVisibleRows()
+			previousYOffset := m.logs.Viewport.YOffset
 			m.logs.FilterActive = false
 			m.logs.FilterInput.Blur()
 			m.logs.FilterQuery = ""
 			m.logs.FilterInput.SetValue("")
-			m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+			newRows := m.logVisibleRows()
+			m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+			if !m.logs.Follow && newRows > previousRows {
+				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
+			}
 			return nil
 		case msg.String() == "enter":
+			previousRows := m.logVisibleRows()
+			previousYOffset := m.logs.Viewport.YOffset
 			m.logs.FilterActive = false
 			m.logs.FilterInput.Blur()
+			newRows := m.logVisibleRows()
+			m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+			if !m.logs.Follow && newRows > previousRows {
+				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
+			}
 			return nil
 		case msg.Type == tea.KeyUp,
 			msg.Type == tea.KeyDown,
@@ -201,10 +214,16 @@ func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
 	}
 
 	if key.Matches(msg, keys.OpenFilter) {
+		previousRows := m.logVisibleRows()
+		previousYOffset := m.logs.Viewport.YOffset
 		m.logs.FilterActive = true
 		m.logs.FilterInput.Focus()
 		m.logs.FilterInput.SetValue(m.logs.FilterQuery)
-		m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+		newRows := m.logVisibleRows()
+		m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+		if !m.logs.Follow && newRows < previousRows {
+			m.logs.Viewport.SetYOffset(previousYOffset + (previousRows - newRows))
+		}
 		return nil
 	}
 

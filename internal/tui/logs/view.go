@@ -126,7 +126,7 @@ func renderFilterHeader(input string, width int, dividerStyle lipgloss.Style) st
 }
 
 func padVisibleWidth(line string, width int) string {
-	constrained := util.ConstrainLine(line, width)
+	constrained := util.ClampSingleLine(line, width)
 	padding := width - util.DisplayWidth(constrained)
 	if padding <= 0 {
 		return constrained
