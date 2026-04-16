@@ -95,6 +95,27 @@ func logsKeyMap() logs.KeyMap {
 
 func (m model) footerKeyMap() help.KeyMap {
 	if m.screen == screenModeLogs {
+		if m.logs.FilterActive {
+			logsKeys := logsKeyMap()
+			logsFilterVerticalNavigate := key.NewBinding(
+				key.WithKeys("up", "down"),
+				key.WithHelp(helpKeyLabel("↑/↓"), "navigate"),
+			)
+			bindings := []key.Binding{
+				logsFilterVerticalNavigate,
+				logsKeys.HelpPage,
+				logsKeys.HelpHomeEnd,
+				key.NewBinding(
+					key.WithKeys("esc"),
+					key.WithHelp(helpKeyLabel("esc"), "clear/exit filter"),
+				),
+				key.NewBinding(
+					key.WithKeys("enter"),
+					key.WithHelp(helpKeyLabel("enter"), "apply/close filter"),
+				),
+			}
+			return footerKeyMap{bindings: bindings}
+		}
 		return logsKeyMap()
 	}
 

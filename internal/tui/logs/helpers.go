@@ -15,6 +15,20 @@ const (
 	TailStep    = 200
 )
 
+// FilterLogLines returns only log lines containing query. Empty query keeps all lines.
+func FilterLogLines(lines []string, query string) []string {
+	if strings.TrimSpace(query) == "" {
+		return lines
+	}
+	filtered := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.Contains(line, query) {
+			filtered = append(filtered, line)
+		}
+	}
+	return filtered
+}
+
 // ViewportRange returns the start and end indices of visible logs.
 func ViewportRange(state State, total int) (int, int) {
 	if total <= 0 {

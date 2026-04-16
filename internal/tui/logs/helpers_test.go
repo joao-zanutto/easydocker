@@ -5,6 +5,22 @@ import (
 	"testing"
 )
 
+func TestFilterLogLines(t *testing.T) {
+	lines := []string{"alpha one", "beta two", "alpha three"}
+
+	if got := FilterLogLines(lines, ""); !reflect.DeepEqual(got, lines) {
+		t.Fatalf("FilterLogLines(..., empty) = %v, want %v", got, lines)
+	}
+
+	if got := FilterLogLines(lines, "alpha"); !reflect.DeepEqual(got, []string{"alpha one", "alpha three"}) {
+		t.Fatalf("FilterLogLines(..., alpha) = %v, want only matching lines", got)
+	}
+
+	if got := FilterLogLines(lines, "zzz"); len(got) != 0 {
+		t.Fatalf("FilterLogLines(..., zzz) len = %d, want 0", len(got))
+	}
+}
+
 func TestMergePolledLogs(t *testing.T) {
 	tests := []struct {
 		name        string
