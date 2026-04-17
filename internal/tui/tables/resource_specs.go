@@ -34,6 +34,10 @@ func BuildContainerSpec(width, cursor int, items []core.ContainerRow, includeSco
 	tableWidth := ContentWidth(width)
 	columns := ContainerColumns(tableWidth)
 	stateWidth := ContainerStateColumnWidth(columns)
+	selectedContainerID := ""
+	if cursor >= 0 && cursor < len(items) {
+		selectedContainerID = items[cursor].FullID
+	}
 	emptyMessage := "No containers found."
 	if includeScopeHint {
 		emptyMessage += " Press a to switch between running and all containers."
@@ -45,7 +49,11 @@ func BuildContainerSpec(width, cursor int, items []core.ContainerRow, includeSco
 		Items:        items,
 		Columns:      columns,
 		RowBuilder: func(container core.ContainerRow) []string {
-			return ContainerTableRow(container, stateWidth, loadingIndicator)
+			rowLoadingIndicator := ""
+			if selectedContainerID != "" && container.FullID == selectedContainerID {
+				rowLoadingIndicator = loadingIndicator
+			}
+			return ContainerTableRow(container, stateWidth, rowLoadingIndicator)
 		},
 	}
 }

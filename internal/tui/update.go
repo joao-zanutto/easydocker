@@ -399,11 +399,16 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
-	cmds := make([]tea.Cmd, 0, 2)
+	cmds := make([]tea.Cmd, 0, 3)
 
 	if m.shouldAnimateMetricsLoadingIndicator() {
 		var cmd tea.Cmd
 		m.metricsSpinner, cmd = m.metricsSpinner.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+
+		m.containerSpinner, cmd = m.containerSpinner.Update(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}

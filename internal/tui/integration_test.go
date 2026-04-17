@@ -14,14 +14,15 @@ import (
 
 func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 	m := model{
-		width:          120,
-		height:         30,
-		activeTab:      tabContainers,
-		showAll:        true,
-		styles:         defaultStyles(),
-		logs:           logs.NewState(),
-		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
+		width:            120,
+		height:           30,
+		activeTab:        tabContainers,
+		showAll:          true,
+		styles:           defaultStyles(),
+		logs:             logs.NewState(),
+		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
+		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
 		snapshot: core.Snapshot{
 			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 		},
@@ -60,15 +61,16 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 
 func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 	m := model{
-		width:          100,
-		height:         28,
-		activeTab:      tabContainers,
-		showAll:        true,
-		screen:         screenModeBrowse,
-		styles:         defaultStyles(),
-		logs:           logs.NewState(),
-		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
+		width:            100,
+		height:           28,
+		activeTab:        tabContainers,
+		showAll:          true,
+		screen:           screenModeBrowse,
+		styles:           defaultStyles(),
+		logs:             logs.NewState(),
+		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
+		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
 		snapshot: core.Snapshot{
 			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", Image: "nginx", Status: "Up"}},
 		},
@@ -92,13 +94,14 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 
 func TestIntegration_UpdateResultFlow(t *testing.T) {
 	m := model{
-		showAll:        true,
-		loading:        true,
-		loadingStage:   loadStageContainers,
-		styles:         defaultStyles(),
-		logs:           logs.NewState(),
-		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
+		showAll:          true,
+		loading:          true,
+		loadingStage:     loadStageContainers,
+		styles:           defaultStyles(),
+		logs:             logs.NewState(),
+		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
+		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
 	}
 
 	updated, cmd := m.Update(containersResultMsg{containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}})
@@ -131,16 +134,17 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 
 func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 	m := model{
-		width:          120,
-		height:         30,
-		activeTab:      tabContainers,
-		showAll:        true,
-		loading:        false,
-		loadingStage:   loadStageIdle,
-		styles:         defaultStyles(),
-		logs:           logs.NewState(),
-		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
+		width:            120,
+		height:           30,
+		activeTab:        tabContainers,
+		showAll:          true,
+		loading:          false,
+		loadingStage:     loadStageIdle,
+		styles:           defaultStyles(),
+		logs:             logs.NewState(),
+		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
+		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
 		snapshot: core.Snapshot{
 			Containers: []core.ContainerRow{{
 				FullID:           "ctr-1",
@@ -174,16 +178,17 @@ func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 
 func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 	m := model{
-		width:          120,
-		height:         30,
-		activeTab:      tabContainers,
-		showAll:        true,
-		loading:        true,
-		loadingStage:   loadStageMetrics,
-		styles:         defaultStyles(),
-		logs:           logs.NewState(),
-		metricsSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		logsSpinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
+		width:            120,
+		height:           30,
+		activeTab:        tabContainers,
+		showAll:          true,
+		loading:          true,
+		loadingStage:     loadStageMetrics,
+		styles:           defaultStyles(),
+		logs:             logs.NewState(),
+		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
+		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
 		snapshot: core.Snapshot{
 			Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"}},
 		},
