@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/joao-zanutto/easydocker/compare/v1.0.0...v1.1.0) (2026-04-16)
+
+
+### Features
+
+* add resource filtering mode ([#21](https://github.com/joao-zanutto/easydocker/issues/21)) ([ead1438](https://github.com/joao-zanutto/easydocker/commit/ead1438387dcc02886a7409a473155b75c3276d6))
+* implement log filtering ([#22](https://github.com/joao-zanutto/easydocker/issues/22)) ([65afc00](https://github.com/joao-zanutto/easydocker/commit/65afc0090e78e7d9bc01ba2a36c8d3f142f33ee2))
+* replace static footer with bubbles help ([#16](https://github.com/joao-zanutto/easydocker/issues/16)) ([60a277d](https://github.com/joao-zanutto/easydocker/commit/60a277dfb6a4f8bddb53e9c7ad1cef6a9a88a7ae))
+
+
+### Bug Fixes
+
+* state coloring being disabled when the screen/column size is reduced ([#19](https://github.com/joao-zanutto/easydocker/issues/19)) ([bd92341](https://github.com/joao-zanutto/easydocker/commit/bd9234160e52e9367cb4d57a45226dcd7e2832fa))
+
 ## 1.0.0 (2026-04-12)
 
 
