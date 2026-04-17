@@ -161,3 +161,21 @@ func TestContainerTableRow_StateColoringByWidth(t *testing.T) {
 		t.Fatalf("expected medium width to keep full state label before table truncation, got %q", medium[1])
 	}
 }
+
+func TestBuildContainerSpec_LoadingIndicatorOnlyOnSelectedRow(t *testing.T) {
+	items := []core.ContainerRow{
+		{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"},
+		{FullID: "ctr-2", Name: "worker", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"},
+	}
+
+	spec := BuildContainerSpec(80, 1, items, true, "⠋")
+	first := spec.RowBuilder(items[0])
+	second := spec.RowBuilder(items[1])
+
+	if first[2] != "-" || first[3] != "-" {
+		t.Fatalf("non-selected row should not use loading indicator, got cpu=%q mem=%q", first[2], first[3])
+	}
+	if second[2] != "⠋" || second[3] != "⠋" {
+		t.Fatalf("selected row should use loading indicator, got cpu=%q mem=%q", second[2], second[3])
+	}
+}

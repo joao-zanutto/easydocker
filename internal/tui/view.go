@@ -166,7 +166,7 @@ func (m model) renderBrowseContent(width, height int) string {
 		Loading:                 m.loading,
 		Snapshot:                m.snapshot,
 		ActiveTab:               m.activeTab,
-		MetricsLoadingIndicator: m.metricsLoadingIndicator(),
+		MetricsLoadingIndicator: m.containerMetricsLoadingIndicator(),
 		Width:                   safeContentWidth,
 		Height:                  height,
 		Styles: browse.ViewStyles{
@@ -193,6 +193,13 @@ func (m model) metricsLoadingIndicator() string {
 		return ""
 	}
 	return strings.TrimSpace(m.metricsSpinner.View())
+}
+
+func (m model) containerMetricsLoadingIndicator() string {
+	if !m.shouldAnimateMetricsLoadingIndicator() {
+		return ""
+	}
+	return strings.TrimSpace(m.containerSpinner.View())
 }
 
 func (m model) browseSelections() browse.SelectionSet {
@@ -244,7 +251,7 @@ func (m model) stateStyle(state string) lipgloss.Style {
 func (m model) renderResourceList(width, height int) string {
 	switch m.activeTab {
 	case tabContainers:
-		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers, m.metricsLoadingIndicator())
+		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers, m.containerMetricsLoadingIndicator())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
 		spec := tables.BuildImageSpec(width, m.imageCursor, m.filteredImages())
