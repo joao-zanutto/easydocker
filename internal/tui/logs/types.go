@@ -47,7 +47,7 @@ type State struct {
 	TailLines                 int
 	HistoryBaseLen            int
 	HistoryAppendedDuringLoad int
-	HistoryNoProgressCount     int
+	HistoryNoProgressCount    int
 	FilterActive              bool
 	FilterQuery               string
 	FilterInput               textinput.Model
