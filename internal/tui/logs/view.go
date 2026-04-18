@@ -40,7 +40,7 @@ func RenderContent(vm ViewModel) string {
 	breadcrumb := util.ClampSingleLine("Containers / "+vm.ContainerName+" / Logs", safeContentWidth)
 	logsHeight := VisibleRowsForContent(layout.ContentHeight, vm.State.FilterActive)
 	logList := FilterLogLines(vm.State.Data.Logs, vm.State.FilterQuery)
-	start, end := ViewportRange(vm.State, len(logList))
+	start, end := VisibleLogRange(vm.State, logList)
 	headline := RenderHeader(headerVM, breadcrumb, len(logList), start, end)
 	logsPanel := RenderPanel(vm, safeContentWidth, logsHeight)
 
@@ -67,6 +67,10 @@ func RenderHeader(vm ViewModel, breadcrumb string, total, start, end int) string
 	if vm.State.Follow {
 		follow = "on"
 	}
+	wrap := "off"
+	if vm.State.WrapLines {
+		wrap = "on"
+	}
 	first := 0
 	last := 0
 	if total > 0 {
@@ -78,8 +82,15 @@ func RenderHeader(vm ViewModel, breadcrumb string, total, start, end int) string
 	if vm.State.Follow {
 		followText = vm.Styles.FollowOn.Render(follow)
 	}
+	wrapText := vm.Styles.FollowOff.Render(wrap)
+	if vm.State.WrapLines {
+		wrapText = vm.Styles.FollowOn.Render(wrap)
+	}
 	right := lipgloss.JoinHorizontal(
 		lipgloss.Left,
+		vm.Styles.Muted.Render("wrap:"),
+		wrapText,
+		vm.Styles.Muted.Render("  "),
 		vm.Styles.Muted.Render("follow:"),
 		followText,
 		vm.Styles.Muted.Render(fmt.Sprintf("  lines:(%d-%d/%d)", first, last, total)),

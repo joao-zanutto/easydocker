@@ -132,6 +132,61 @@ func TestRenderContent_KeepsLineCountIndicatorOnOneLine(t *testing.T) {
 	}
 }
 
+func TestRenderContent_WrapHeaderRangeUsesRawLogIndices(t *testing.T) {
+	state := NewState()
+	state.WrapLines = true
+	state.Data.Logs = []string{
+		strings.Repeat("a", 10),
+		strings.Repeat("b", 10),
+		strings.Repeat("c", 10),
+	}
+	state.SyncViewportFromData(5, 2)
+	state.Viewport.SetYOffset(3)
+
+	view := RenderContent(ViewModel{
+		State:         state,
+		ContainerName: "api",
+		Width:         80,
+		Height:        12,
+		Styles: ViewStyles{
+			Breadcrumb:   lipgloss.NewStyle().Bold(true),
+			FollowOn:     lipgloss.NewStyle().Bold(true),
+			FollowOff:    lipgloss.NewStyle(),
+			Muted:        lipgloss.NewStyle(),
+			Divider:      lipgloss.NewStyle(),
+			SubpageFrame: lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(0, 1),
+		},
+	})
+
+	if !strings.Contains(view, "lines:(2-3/3)") {
+		t.Fatalf("expected wrapped range to map to raw log lines, got %q", view)
+	}
+}
+
+func TestRenderHeader_IncludesWrapIndicatorBeforeFollow(t *testing.T) {
+	state := NewState()
+	state.WrapLines = true
+	header := RenderHeader(ViewModel{
+		State: state,
+		Width: 80,
+		Styles: ViewStyles{
+			Breadcrumb: lipgloss.NewStyle(),
+			FollowOn:   lipgloss.NewStyle(),
+			FollowOff:  lipgloss.NewStyle(),
+			Muted:      lipgloss.NewStyle(),
+		},
+	}, "Containers / api / Logs", 10, 0, 3)
+
+	wrapIndex := strings.Index(header, "wrap:")
+	followIndex := strings.Index(header, "follow:")
+	if wrapIndex == -1 || followIndex == -1 {
+		t.Fatalf("expected wrap/follow indicators in header, got %q", header)
+	}
+	if wrapIndex >= followIndex {
+		t.Fatalf("wrap indicator should appear before follow indicator, got %q", header)
+	}
+}
+
 func TestVisibleRowsForContent_FilterAdjustsHeight(t *testing.T) {
 	base := VisibleRowsForContent(20, false)
 	withFilter := VisibleRowsForContent(20, true)

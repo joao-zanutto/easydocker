@@ -62,11 +62,17 @@ func (Controller) HandleKey(state *State, msg tea.KeyMsg, keys KeyMap, container
 }
 
 func handleHorizontalScroll(state *State, right bool) Transition {
+	if state.WrapLines {
+		return Transition{}
+	}
 	state.SetFollow(false)
+	step := 8
 	if right {
-		state.Viewport.ScrollRight(8)
+		state.Viewport.ScrollRight(step)
+		state.HorizontalOffset += step
 	} else {
-		state.Viewport.ScrollLeft(8)
+		state.Viewport.ScrollLeft(step)
+		state.HorizontalOffset = max(0, state.HorizontalOffset-step)
 	}
 	return Transition{}
 }
@@ -98,6 +104,7 @@ func handleVerticalScroll(state *State, direction int, isPage bool) Transition {
 func handleHome(state *State) Transition {
 	state.SetFollow(false)
 	state.Viewport.SetXOffset(0)
+	state.HorizontalOffset = 0
 	state.Viewport.GotoTop()
 	return historyTransitionIfNeeded(state)
 }

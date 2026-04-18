@@ -51,6 +51,9 @@ type State struct {
 	FilterActive              bool
 	FilterQuery               string
 	FilterInput               textinput.Model
+	HorizontalOffset          int
+	WrapLines                 bool
+	WrapXOffset               int
 	InitialLoad               bool
 	HistoryDone               bool
 	HistoryLoad               bool
