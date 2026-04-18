@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/logs"
@@ -490,5 +491,87 @@ func TestIntegration_BrowseFilterInputView_UsesDynamicLineWidth(t *testing.T) {
 	}
 	if m.browseFilterInput.Width != 0 {
 		t.Fatalf("render helper should not mutate model input width, got %d", m.browseFilterInput.Width)
+	}
+}
+
+func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
+	m := New(nil).(model)
+	m.screen = screenModeLogs
+	m.logs.ContainerID = "ctr-1"
+	m.logs.Data = core.ContainerLiveData{Logs: make([]string, 220)}
+	for i := range m.logs.Data.Logs {
+		m.logs.Data.Logs[i] = "line"
+	}
+	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.Viewport.GotoTop()
+
+	if !m.shouldLoadHistoryOnTick() {
+		t.Fatalf("should request history when viewport is at top")
+	}
+	if m.shouldPollLogsOnTick() {
+		t.Fatalf("should not poll while viewport is at top and history is available")
+	}
+
+	m.logs.InitialLoad = true
+	if m.shouldLoadHistoryOnTick() {
+		t.Fatalf("should not load history while initial load is in progress")
+	}
+	if m.shouldPollLogsOnTick() {
+		t.Fatalf("should not poll while initial logs load is in progress")
+	}
+
+	m.logs.InitialLoad = false
+	m.logs.HistoryLoad = true
+	if m.shouldLoadHistoryOnTick() {
+		t.Fatalf("should not load history while history load is in progress")
+	}
+	if m.shouldPollLogsOnTick() {
+		t.Fatalf("should not poll while history logs load is in progress")
+	}
+
+	m.logs.HistoryLoad = false
+	m.logs.HistoryDone = true
+	m.logs.Viewport.GotoBottom()
+	if m.shouldLoadHistoryOnTick() {
+		t.Fatalf("should not load history after history is exhausted")
+	}
+	if !m.shouldPollLogsOnTick() {
+		t.Fatalf("should poll when not at top and no load is active")
+	}
+
+	m.screen = screenModeBrowse
+	if m.shouldPollLogsOnTick() {
+		t.Fatalf("should not poll outside logs screen")
+	}
+}
+
+func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
+	m := New(nil).(model)
+	m.screen = screenModeLogs
+	m.logs.ContainerID = "ctr-1"
+	m.logs.Data = core.ContainerLiveData{Logs: make([]string, 220)}
+	for i := range m.logs.Data.Logs {
+		m.logs.Data.Logs[i] = "line"
+	}
+	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.Viewport.GotoTop()
+	m.logs.InitialLoad = false
+	m.logs.HistoryLoad = false
+	m.logs.HistoryDone = false
+
+	if !m.shouldLoadHistoryOnTick() {
+		t.Fatalf("expected history load to be scheduled when viewport is at top")
+	}
+	if m.shouldPollLogsOnTick() {
+		t.Fatalf("polling should stay disabled at top while history loading is available")
+	}
+
+	updated, cmd := m.Update(tickMsg(time.Now()))
+	current := updated.(model)
+	if cmd == nil {
+		t.Fatalf("tick at top should schedule a history load command")
+	}
+	if current.logs.HistoryLoad {
+		t.Fatalf("tick handling should not mark history loading without result handling")
 	}
 }

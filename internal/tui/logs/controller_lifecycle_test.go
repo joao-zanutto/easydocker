@@ -115,17 +115,90 @@ func TestControllerHandleResult_HistorySource(t *testing.T) {
 
 	t.Run("marks done when history does not grow", func(t *testing.T) {
 		state := newControllerState(logLines("base", 20))
-		state.HistoryLoad = true
+		for attempt := 0; attempt < 3; attempt++ {
+			state.HistoryLoad = true
+			state.HistoryBaseLen = len(state.Data.Logs)
+			_ = controller.HandleResult(&state, ResultMsg{
+				ContainerID: state.ContainerID,
+				SessionID:   state.SessionID,
+				Data:        core.ContainerLiveData{Logs: append([]string(nil), state.Data.Logs...)},
+				Src:         SourceHistory,
+			}, 80, 8)
+			if attempt < 2 && state.HistoryDone {
+				t.Fatalf("historyDone should not be true before three unchanged history responses, attempt=%d", attempt+1)
+			}
+		}
 
+		if !state.HistoryDone {
+			t.Fatalf("historyDone should be true after three unchanged history responses")
+		}
+	})
+
+	t.Run("keeps top position stable while poll appends during history load", func(t *testing.T) {
+		state := newControllerState(logLines("base", 220))
+		state.SetFollow(false)
+		state.Viewport.GotoTop()
+
+		request := controller.HandleKey(&state, keyMsg(tea.KeyHome), NewKeyMap(), 0)
+		if request.Load == nil || request.Load.Src != SourceHistory {
+			t.Fatalf("home should request history load")
+		}
+
+		pollLogs := append(append([]string{}, state.Data.Logs...), "live-220", "live-221", "live-222")
 		_ = controller.HandleResult(&state, ResultMsg{
 			ContainerID: state.ContainerID,
 			SessionID:   state.SessionID,
-			Data:        core.ContainerLiveData{Logs: append([]string(nil), state.Data.Logs...)},
+			Data:        core.ContainerLiveData{Logs: pollLogs},
+			Src:         SourcePoll,
+		}, 80, 8)
+
+		historyLogs := append(logLines("older", TailStep), pollLogs...)
+		_ = controller.HandleResult(&state, ResultMsg{
+			ContainerID: state.ContainerID,
+			SessionID:   state.SessionID,
+			Data:        core.ContainerLiveData{Logs: historyLogs},
+			Tail:        request.Load.Tail,
 			Src:         SourceHistory,
 		}, 80, 8)
 
+		if got, want := state.Viewport.YOffset, TailStep; got != want {
+			t.Fatalf("YOffset = %d, want %d", got, want)
+		}
+		if state.HistoryDone {
+			t.Fatalf("historyDone should remain false when a full history chunk was prepended")
+		}
+	})
+
+	t.Run("marks done after three unchanged history responses", func(t *testing.T) {
+		state := newControllerState(logLines("base", 220))
+		state.SetFollow(false)
+		state.Viewport.GotoTop()
+
+		request := controller.HandleKey(&state, keyMsg(tea.KeyHome), NewKeyMap(), 0)
+		if request.Load == nil || request.Load.Src != SourceHistory {
+			t.Fatalf("home should request history load")
+		}
+
+		for attempt := 0; attempt < 3; attempt++ {
+			state.HistoryLoad = true
+			state.HistoryBaseLen = len(state.Data.Logs)
+			_ = controller.HandleResult(&state, ResultMsg{
+				ContainerID: state.ContainerID,
+				SessionID:   state.SessionID,
+				Data:        core.ContainerLiveData{Logs: append([]string(nil), state.Data.Logs...)},
+				Tail:        request.Load.Tail,
+				Src:         SourceHistory,
+			}, 80, 8)
+			if attempt < 2 && state.HistoryDone {
+				t.Fatalf("historyDone should not be true before three unchanged history responses, attempt=%d", attempt+1)
+			}
+		}
+
 		if !state.HistoryDone {
-			t.Fatalf("historyDone should be true when history does not grow")
+			t.Fatalf("historyDone should be true after three unchanged history responses")
+		}
+		if got, want := state.Viewport.YOffset, 0; got != want {
+			t.Fatalf("YOffset = %d, want %d", got, want)
 		}
 	})
 }

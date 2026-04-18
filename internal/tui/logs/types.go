@@ -41,18 +41,21 @@ type Transition struct {
 }
 
 type State struct {
-	ContainerID  string
-	SessionID    int
-	Data         core.ContainerLiveData
-	TailLines    int
-	FilterActive bool
-	FilterQuery  string
-	FilterInput  textinput.Model
-	InitialLoad  bool
-	HistoryDone  bool
-	HistoryLoad  bool
-	Follow       bool
-	Viewport     viewport.Model
+	ContainerID               string
+	SessionID                 int
+	Data                      core.ContainerLiveData
+	TailLines                 int
+	HistoryBaseLen            int
+	HistoryAppendedDuringLoad int
+	HistoryNoProgressCount     int
+	FilterActive              bool
+	FilterQuery               string
+	FilterInput               textinput.Model
+	InitialLoad               bool
+	HistoryDone               bool
+	HistoryLoad               bool
+	Follow                    bool
+	Viewport                  viewport.Model
 }
 
 func NewState() State {

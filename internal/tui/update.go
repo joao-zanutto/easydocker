@@ -301,8 +301,21 @@ func (m model) shouldReloadSnapshotOnTick() bool {
 	return m.loadingStage == loadStageIdle
 }
 
+func (m model) shouldLoadHistoryOnTick() bool {
+	return m.screen == screenModeLogs &&
+		m.logs.ContainerID != "" &&
+		m.logs.Viewport.AtTop() &&
+		!m.logs.InitialLoad &&
+		!m.logs.HistoryLoad &&
+		!m.logs.HistoryDone
+}
+
 func (m model) shouldPollLogsOnTick() bool {
-	return m.screen == screenModeLogs && m.logs.ContainerID != ""
+	return m.screen == screenModeLogs &&
+		m.logs.ContainerID != "" &&
+		!m.logs.Viewport.AtTop() &&
+		!m.logs.InitialLoad &&
+		!m.logs.HistoryLoad
 }
 
 func (m model) logsPollTail() int {
@@ -391,7 +404,10 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	if m.shouldReloadSnapshotOnTick() {
 		cmds = append(cmds, m.loadDockerCmd())
 	}
-	if m.shouldPollLogsOnTick() {
+	if m.shouldLoadHistoryOnTick() {
+		tail := len(m.logs.Data.Logs) + logs.TailStep
+		cmds = append(cmds, m.loadLogsDataCmd(m.logs.ContainerID, m.logs.SessionID, m.logs.Data.CPUHistory, m.logs.Data.MemHistory, tail, logs.SourceHistory))
+	} else if m.shouldPollLogsOnTick() {
 		tail := m.logsPollTail()
 		cmds = append(cmds, m.loadLogsDataCmd(m.logs.ContainerID, m.logs.SessionID, m.logs.Data.CPUHistory, m.logs.Data.MemHistory, tail, logs.SourcePoll))
 	}
