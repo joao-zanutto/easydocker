@@ -23,7 +23,7 @@ func TestTableColumnSchemas(t *testing.T) {
 		{
 			name:       "images",
 			columns:    ImageColumns(tableWidth),
-			wantHeader: []string{"REPOSITORY/TAGS", "SIZE", "CREATED", "IMAGE ID"},
+			wantHeader: []string{"REPOSITORY", "TAGS", "SIZE", "CREATED", "IMAGE ID"},
 		},
 		{
 			name:       "networks",
@@ -177,5 +177,22 @@ func TestBuildContainerSpec_LoadingIndicatorOnlyOnSelectedRow(t *testing.T) {
 	}
 	if second[2] != "⠋" || second[3] != "⠋" {
 		t.Fatalf("selected row should use loading indicator, got cpu=%q mem=%q", second[2], second[3])
+	}
+}
+
+func TestImageTableRow_SplitsRepositoryAndTags(t *testing.T) {
+	row := ImageTableRow(core.ImageRow{Tags: "nginx:latest, redis:alpine", Size: "1.0 KiB", Created: "just now", ID: "img-1"})
+
+	if len(row) != 5 {
+		t.Fatalf("image row len = %d, want 5", len(row))
+	}
+	if row[0] != "nginx, redis" {
+		t.Fatalf("repository column = %q, want %q", row[0], "nginx, redis")
+	}
+	if row[1] != "latest, alpine" {
+		t.Fatalf("tags column = %q, want %q", row[1], "latest, alpine")
+	}
+	if row[2] != "1.0 KiB" || row[3] != "just now" || row[4] != "img-1" {
+		t.Fatalf("tail columns = %#v, want size/created/id preserved", row[2:])
 	}
 }

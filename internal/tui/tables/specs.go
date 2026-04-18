@@ -12,7 +12,8 @@ var ContainerSchema = []ColumnDef{
 
 // ImageSchema defines column layout for images table.
 var ImageSchema = []ColumnDef{
-	{Header: "REPOSITORY/TAGS", MinWidth: 24, Desired: proportionalWidth(24, 2)},
+	{Header: "REPOSITORY", MinWidth: 18, Desired: proportionalWidth(18, 4)},
+	{Header: "TAGS", MinWidth: 16, Desired: proportionalWidth(16, 4)},
 	{Header: "SIZE", MinWidth: 10, Desired: fixedWidth(10)},
 	{Header: "CREATED", MinWidth: 12, Desired: fixedWidth(12)},
 	{Header: "IMAGE ID", MinWidth: 12, Desired: proportionalWidth(12, 5)},
