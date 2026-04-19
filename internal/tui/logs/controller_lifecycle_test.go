@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"easydocker/internal/core"
@@ -110,6 +111,43 @@ func TestControllerHandleResult_HistorySource(t *testing.T) {
 		}
 		if got, want := state.Viewport.YOffset, previousYOffset+5; got != want {
 			t.Fatalf("YOffset = %d, want %d", got, want)
+		}
+	})
+
+	t.Run("advances wrapped offset by wrapped-row count", func(t *testing.T) {
+		baseLogs := make([]string, 0, 30)
+		for i := 0; i < 30; i++ {
+			baseLogs = append(baseLogs, fmt.Sprintf("base-%02d %s", i, strings.Repeat("x", 36)))
+		}
+		state := newControllerState(baseLogs)
+		state.WrapLines = true
+		state.SyncViewportFromData(20, 8)
+		state.HistoryLoad = true
+		state.Follow = false
+		state.Viewport.SetYOffset(2)
+		previousYOffset := state.Viewport.YOffset
+
+		older := make([]string, 0, 5)
+		for i := 0; i < 5; i++ {
+			older = append(older, fmt.Sprintf("older-%02d %s", i, strings.Repeat("y", 36)))
+		}
+		history := append(older, state.Data.Logs...)
+		expectedDelta := renderedViewportLineDelta(&state, history, len(older))
+		_ = controller.HandleResult(&state, ResultMsg{
+			ContainerID: state.ContainerID,
+			SessionID:   state.SessionID,
+			Data:        core.ContainerLiveData{Logs: history},
+			Src:         SourceHistory,
+		}, 20, 8)
+
+		if state.HistoryLoad {
+			t.Fatalf("historyLoad should be false")
+		}
+		if state.HistoryDone {
+			t.Fatalf("historyDone should remain false when history grows")
+		}
+		if got, want := state.Viewport.YOffset, previousYOffset+expectedDelta; got != want {
+			t.Fatalf("wrapped YOffset = %d, want %d", got, want)
 		}
 	})
 

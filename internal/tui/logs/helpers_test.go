@@ -21,6 +21,14 @@ func TestFilterLogLines(t *testing.T) {
 	}
 }
 
+func TestWrapLogLines(t *testing.T) {
+	got := WrapLogLines([]string{"abcdef", "gh ijkl"}, 3)
+	want := []string{"abc", "def", "gh ", "ijk", "l"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("WrapLogLines() = %v, want %v", got, want)
+	}
+}
+
 func TestMergePolledLogs(t *testing.T) {
 	tests := []struct {
 		name        string

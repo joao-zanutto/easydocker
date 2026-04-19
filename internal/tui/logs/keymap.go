@@ -13,6 +13,7 @@ type KeyMap struct {
 	Home         key.Binding
 	End          key.Binding
 	ToggleFollow key.Binding
+	ToggleWrap   key.Binding
 	OpenFilter   key.Binding
 	Back         key.Binding
 	HelpNavigate key.Binding
@@ -58,6 +59,10 @@ func NewKeyMap() KeyMap {
 			key.WithKeys("f"),
 			key.WithHelp(helpKeyLabel("f"), "toggle follow"),
 		),
+		ToggleWrap: key.NewBinding(
+			key.WithKeys("w"),
+			key.WithHelp(helpKeyLabel("w"), "toggle wrap"),
+		),
 		OpenFilter: key.NewBinding(
 			key.WithKeys("/"),
 			key.WithHelp(helpKeyLabel("/"), "filter"),
@@ -86,13 +91,13 @@ func helpKeyLabel(label string) string {
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.HelpNavigate, k.HelpPage, k.HelpHomeEnd, k.OpenFilter, k.ToggleFollow, k.Back}
+	return []key.Binding{k.HelpNavigate, k.HelpPage, k.HelpHomeEnd, k.OpenFilter, k.ToggleFollow, k.ToggleWrap, k.Back}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.HelpNavigate, k.PageUp, k.PageDown},
 		{k.Home, k.End},
-		{k.ToggleFollow, k.Back},
+		{k.ToggleFollow, k.ToggleWrap, k.Back},
 	}
 }

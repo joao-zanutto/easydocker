@@ -237,6 +237,81 @@ func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
 	}
 }
 
+func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
+	m := New(nil).(model)
+	m.width = 80
+	m.height = 24
+	m.screen = screenModeLogs
+	m.activeTab = tabContainers
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
+	}
+	m.logs.ContainerID = "ctr-1"
+	m.logs.Data = core.ContainerLiveData{Logs: []string{"abcdefghijklmnopqrstuvwxyz"}}
+	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}})
+	current := updated.(model)
+	if !current.logs.WrapLines {
+		t.Fatalf("wrap should be enabled after pressing w")
+	}
+	if current.logs.WrapXOffset != 0 {
+		t.Fatalf("wrap should preserve zero offset by default, got %d", current.logs.WrapXOffset)
+	}
+
+	wrappedView := current.logs.Viewport.View()
+	if !strings.Contains(wrappedView, "\n") {
+		t.Fatalf("wrapped viewport should render on multiple lines, got %q", wrappedView)
+	}
+
+	if !strings.Contains(current.View(), "lines:(1-1/1)") {
+		t.Fatalf("wrapped line rows should not inflate total log count, view=%q", current.View())
+	}
+
+	updated, _ = current.Update(tea.KeyMsg{Type: tea.KeyRight})
+	after := updated.(model)
+	if after.logs.HorizontalOffset != current.logs.HorizontalOffset {
+		t.Fatalf("horizontal scroll should be ignored while wrapped, got %d want %d", after.logs.HorizontalOffset, current.logs.HorizontalOffset)
+	}
+}
+
+func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *testing.T) {
+	m := New(nil).(model)
+	m.width = 80
+	m.height = 24
+	m.screen = screenModeLogs
+	m.activeTab = tabContainers
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
+	}
+	m.logs.ContainerID = "ctr-1"
+	logsData := make([]string, 0, 300)
+	for i := 0; i < 300; i++ {
+		logsData = append(logsData, strconv.Itoa(i)+" "+strings.Repeat("x", 48))
+	}
+	m.logs.Data = core.ContainerLiveData{Logs: logsData}
+	m.logs.SetFollow(false)
+	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+
+	nearBottom := max(0, len(logsData)-m.logVisibleRows()-1)
+	m.logs.Viewport.SetYOffset(nearBottom)
+
+	beforeList := logs.FilterLogLines(m.logs.Data.Logs, m.logs.FilterQuery)
+	beforeStart, _ := logs.VisibleLogRange(m.logs, beforeList)
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}})
+	after := updated.(model)
+	if !after.logs.WrapLines {
+		t.Fatalf("wrap should be enabled after pressing w")
+	}
+
+	afterList := logs.FilterLogLines(after.logs.Data.Logs, after.logs.FilterQuery)
+	afterStart, _ := logs.VisibleLogRange(after.logs, afterList)
+	if afterStart != beforeStart {
+		t.Fatalf("visible raw log anchor changed across wrap toggle, before=%d after=%d", beforeStart, afterStart)
+	}
+}
+
 func TestIntegration_FilterPromptIcon(t *testing.T) {
 	m := New(nil).(model)
 	if m.browseFilterInput.Prompt != "🔎︎ " {

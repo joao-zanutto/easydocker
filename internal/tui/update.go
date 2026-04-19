@@ -227,6 +227,23 @@ func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 
+	if key.Matches(msg, keys.ToggleWrap) {
+		logList := logs.FilterLogLines(m.logs.Data.Logs, m.logs.FilterQuery)
+		startLine, _ := logs.VisibleLogRange(m.logs, logList)
+		visibleWidth := m.logVisibleWidth()
+		visibleRows := m.logVisibleRows()
+		m.logs.SetWrapLines(!m.logs.WrapLines)
+		m.logs.SyncViewportFromData(visibleWidth, visibleRows)
+		if !m.logs.Follow {
+			targetYOffset := startLine
+			if m.logs.WrapLines {
+				targetYOffset = logs.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
+			}
+			m.logs.Viewport.SetYOffset(targetYOffset)
+		}
+		return nil
+	}
+
 	transition := logsController.HandleKey(&m.logs, msg, logsKeyMap(), tabContainers)
 	return m.applyLogsTransition(transition)
 }

@@ -13,6 +13,19 @@ func (s *State) SetFollow(enabled bool) {
 	}
 }
 
+func (s *State) SetWrapLines(enabled bool) {
+	if s.WrapLines == enabled {
+		return
+	}
+	if enabled {
+		s.WrapXOffset = s.HorizontalOffset
+		s.Viewport.SetXOffset(0)
+	} else {
+		s.Viewport.SetXOffset(s.WrapXOffset)
+	}
+	s.WrapLines = enabled
+}
+
 func (s *State) ResetForContainer(sessionID int, containerID string, tail int) {
 	*s = NewState()
 	s.SessionID = sessionID
@@ -65,11 +78,12 @@ func (s *State) ApplyHistory(data core.ContainerLiveData, previousYOffset int) {
 	if s.HistoryNoProgressCount >= 3 {
 		s.HistoryDone = true
 	}
+	prependViewportDelta := renderedViewportLineDelta(s, data.Logs, prepended)
 	s.Data = data
 	s.HistoryBaseLen = 0
 	s.HistoryAppendedDuringLoad = 0
 	if !s.Follow {
-		s.Viewport.SetYOffset(previousYOffset + prepended)
+		s.Viewport.SetYOffset(previousYOffset + prependViewportDelta)
 	}
 }
 
@@ -106,5 +120,29 @@ func (s *State) SyncViewportFromData(visibleWidth, visibleRows int) {
 	for _, line := range logLines {
 		lines = append(lines, SanitizeLogRenderLine(line))
 	}
+	if s.WrapLines {
+		lines = WrapLogLines(lines, visibleWidth)
+	}
 	s.SyncViewport(lines, visibleWidth, visibleRows)
+}
+
+func renderedViewportLineDelta(state *State, allLines []string, prepended int) int {
+	if prepended <= 0 || len(allLines) == 0 {
+		return 0
+	}
+	if prepended > len(allLines) {
+		prepended = len(allLines)
+	}
+
+	added := FilterLogLines(allLines[:prepended], state.FilterQuery)
+	if !state.WrapLines {
+		return len(added)
+	}
+
+	width := max(1, state.Viewport.Width)
+	delta := 0
+	for _, line := range added {
+		delta += wrappedRowCount(SanitizeLogRenderLine(line), width)
+	}
+	return delta
 }
