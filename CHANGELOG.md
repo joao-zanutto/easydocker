@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0](https://github.com/joao-zanutto/easydocker/compare/v1.1.0...v1.2.0) (2026-04-20)
+
+
+### Features
+
+* add MIT license ([#33](https://github.com/joao-zanutto/easydocker/issues/33)) ([2875578](https://github.com/joao-zanutto/easydocker/commit/2875578e975062f402e517c2d0d7929daa411885))
+* implement log line wrapping ([#32](https://github.com/joao-zanutto/easydocker/issues/32)) ([a57b908](https://github.com/joao-zanutto/easydocker/commit/a57b908240b08302dfb5517e9d50ebed28900f70))
+* split repo and tags from image view ([#30](https://github.com/joao-zanutto/easydocker/issues/30)) ([7d878be](https://github.com/joao-zanutto/easydocker/commit/7d878be160ae5dc921f0ba137591ea8d95640fc8))
+* update spinners ([#26](https://github.com/joao-zanutto/easydocker/issues/26)) ([fa1a849](https://github.com/joao-zanutto/easydocker/commit/fa1a84942932b2899f118e08e1bbd44c6614efc3))
+
+
+### Bug Fixes
+
+* log loading inconsistency ([#29](https://github.com/joao-zanutto/easydocker/issues/29)) ([3326551](https://github.com/joao-zanutto/easydocker/commit/3326551c9b8e898db34893a06f01f8b3d9fb8b20))
+* remove leftover spacing on right border of log viewport ([#35](https://github.com/joao-zanutto/easydocker/issues/35)) ([00a2289](https://github.com/joao-zanutto/easydocker/commit/00a228924351edc8746777abb5aaa800eff09558))
+
 ## [1.1.0](https://github.com/joao-zanutto/easydocker/compare/v1.0.0...v1.1.0) (2026-04-16)
 
 
