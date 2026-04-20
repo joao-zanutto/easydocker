@@ -76,7 +76,7 @@ func (m model) logVisibleWidth() int {
 	totalWidth := max(1, m.width)
 	if m.screen == screenModeLogs {
 		pageContentWidth := m.logsPageContentWidth(totalWidth)
-		return max(1, pageContentWidth-4)
+		return max(1, pageContentWidth-2)
 	}
 	innerWidth := util.FrameContentWidth(totalWidth, m.styles.MainFrame)
 	return max(1, innerWidth-2)
