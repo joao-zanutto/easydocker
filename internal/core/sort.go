@@ -25,11 +25,30 @@ func SortImages(rows []ImageRow) {
 	sort.Slice(rows, func(i, j int) bool {
 		left := rows[i]
 		right := rows[j]
-		if left.CreatedUnix != right.CreatedUnix {
-			return left.CreatedUnix > right.CreatedUnix
+		leftRepository, leftTag := parseImageSortKey(left.Tags)
+		rightRepository, rightTag := parseImageSortKey(right.Tags)
+		if leftRepository != rightRepository {
+			return leftRepository < rightRepository
+		}
+		if leftTag != rightTag {
+			return leftTag < rightTag
 		}
 		return strings.ToLower(left.Tags) < strings.ToLower(right.Tags)
 	})
+}
+
+func parseImageSortKey(tags string) (string, string) {
+	primaryTag := strings.TrimSpace(tags)
+	if comma := strings.Index(primaryTag, ","); comma >= 0 {
+		primaryTag = strings.TrimSpace(primaryTag[:comma])
+	}
+	separator := strings.LastIndex(primaryTag, ":")
+	if separator <= 0 {
+		return strings.ToLower(primaryTag), ""
+	}
+	repository := strings.ToLower(primaryTag[:separator])
+	tag := strings.ToLower(primaryTag[separator+1:])
+	return repository, tag
 }
 
 func SortNetworks(rows []NetworkRow) {
