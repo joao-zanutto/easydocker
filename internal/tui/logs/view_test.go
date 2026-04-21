@@ -252,6 +252,79 @@ func TestRenderPanel_FilterNoMatchesMessage(t *testing.T) {
 	}
 }
 
+func TestRenderPanel_HorizontalScrollIndicatorRight(t *testing.T) {
+	state := NewState()
+	state.Data.Logs = []string{"abcdefghij"}
+	state.SyncViewportFromData(5, 1)
+
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 7, 1)
+	line := strings.Split(panel, "\n")[0]
+	plain := util.StripANSI(line)
+
+	if !strings.HasSuffix(plain, ">") {
+		t.Fatalf("expected right scroll indicator at border, got %q", plain)
+	}
+	if strings.HasPrefix(plain, "<") {
+		t.Fatalf("did not expect left indicator at offset 0, got %q", plain)
+	}
+}
+
+func TestRenderPanel_HorizontalScrollIndicatorLeft(t *testing.T) {
+	state := NewState()
+	state.Data.Logs = []string{"abcdefghij"}
+	state.SyncViewportFromData(5, 1)
+	state.HorizontalOffset = 5
+	state.Viewport.SetXOffset(5)
+
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 7, 1)
+	line := strings.Split(panel, "\n")[0]
+	plain := util.StripANSI(line)
+
+	if !strings.HasPrefix(plain, "<") {
+		t.Fatalf("expected left scroll indicator at border, got %q", plain)
+	}
+	if strings.HasSuffix(plain, ">") {
+		t.Fatalf("did not expect right indicator at far right offset, got %q", plain)
+	}
+}
+
+func TestRenderPanel_HorizontalScrollIndicatorsBothSides(t *testing.T) {
+	state := NewState()
+	state.Data.Logs = []string{"abcdefghij"}
+	state.SyncViewportFromData(5, 1)
+	state.HorizontalOffset = 2
+	state.Viewport.SetXOffset(2)
+
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 7, 1)
+	line := strings.Split(panel, "\n")[0]
+	plain := util.StripANSI(line)
+
+	if !strings.HasPrefix(plain, "<") || !strings.HasSuffix(plain, ">") {
+		t.Fatalf("expected both indicators at borders, got %q", plain)
+	}
+}
+
+func TestRenderPanel_HorizontalScrollIndicatorPerLine(t *testing.T) {
+	state := NewState()
+	state.Data.Logs = []string{"abcdefghij", "short"}
+	state.SyncViewportFromData(5, 2)
+
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 7, 2)
+	lines := strings.Split(panel, "\n")
+	if len(lines) < 2 {
+		t.Fatalf("expected 2 lines, got %d", len(lines))
+	}
+	first := util.StripANSI(lines[0])
+	second := util.StripANSI(lines[1])
+
+	if !strings.HasSuffix(first, ">") {
+		t.Fatalf("expected indicator on scrollable first line, got %q", first)
+	}
+	if strings.Contains(second, "<") || strings.Contains(second, ">") {
+		t.Fatalf("expected no indicator on non-scrollable second line, got %q", second)
+	}
+}
+
 func TestRenderDivider_FillsRequestedWidth(t *testing.T) {
 	line := renderDivider(lipgloss.NewStyle(), 24)
 	if util.DisplayWidth(line) != 24 {

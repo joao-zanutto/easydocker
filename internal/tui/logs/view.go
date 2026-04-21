@@ -113,7 +113,13 @@ func RenderPanel(vm ViewModel, width, height int) string {
 		return strings.Join(util.ClipAndPadLines([]string{util.ClampSingleLine(vm.Styles.Muted.Render(empty), contentWidth)}, height, ""), "\n")
 	}
 
+	renderLines := make([]string, 0, len(logList))
+	for _, line := range logList {
+		renderLines = append(renderLines, SanitizeLogRenderLine(line))
+	}
+
 	lines := strings.Split(vm.State.Viewport.View(), "\n")
+	lines = renderHorizontalScrollIndicators(vm.State, lines, renderLines, contentWidth, vm.Styles.Muted.Reverse(true))
 	if vm.State.HistoryLoad {
 		lines = append([]string{renderHistoryLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator)}, lines...)
 	}
@@ -159,6 +165,51 @@ func renderHistoryLoadingLine(style lipgloss.Style, width int, indicator string)
 		prefix += " "
 	}
 	return util.ClampSingleLine(style.Render(prefix+"Loading older logs..."), width)
+}
+
+func renderHorizontalScrollIndicators(state State, lines, renderLines []string, width int, indicatorStyle lipgloss.Style) []string {
+	if state.WrapLines || width <= 0 || len(lines) == 0 || len(renderLines) == 0 {
+		return lines
+	}
+
+	start, end := ViewportRange(state, len(renderLines))
+	visible := renderLines[start:end]
+	if len(visible) == 0 {
+		return lines
+	}
+
+	xOffset := max(0, state.HorizontalOffset)
+	out := append([]string(nil), lines...)
+	for i := 0; i < len(out) && i < len(visible); i++ {
+		lineWidth := util.DisplayWidth(visible[i])
+		canScrollLeft := xOffset > 0 && lineWidth > 0
+		canScrollRight := lineWidth > xOffset+width
+		if !canScrollLeft && !canScrollRight {
+			continue
+		}
+		out[i] = applyScrollIndicator(out[i], width, canScrollLeft, canScrollRight, indicatorStyle)
+	}
+
+	return out
+}
+
+func applyScrollIndicator(line string, width int, canScrollLeft, canScrollRight bool, style lipgloss.Style) string {
+	if width <= 0 {
+		return ""
+	}
+
+	left := style.Render("<")
+	right := style.Render(">")
+	if canScrollLeft && canScrollRight {
+		middle := padVisibleWidth(util.ClampSingleLine(line, max(0, width-2)), max(0, width-2))
+		return left + middle + right
+	}
+	if canScrollLeft {
+		rest := padVisibleWidth(util.ClampSingleLine(line, max(0, width-1)), max(0, width-1))
+		return left + rest
+	}
+	prefix := padVisibleWidth(util.ClampSingleLine(line, max(0, width-1)), max(0, width-1))
+	return prefix + right
 }
 
 func renderRightPriorityLine(left, right string, width int) string {
