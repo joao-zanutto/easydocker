@@ -119,7 +119,7 @@ func RenderPanel(vm ViewModel, width, height int) string {
 	}
 
 	lines := strings.Split(vm.State.Viewport.View(), "\n")
-	lines = renderHorizontalScrollIndicators(vm.State, lines, renderLines, contentWidth, vm.Styles.Muted.Reverse(true))
+	lines = renderHorizontalScrollIndicators(vm.State, lines, renderLines, max(1, vm.State.Viewport.Width), vm.Styles.Muted.Reverse(true))
 	if vm.State.HistoryLoad {
 		lines = append([]string{renderHistoryLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator)}, lines...)
 	}
@@ -182,8 +182,10 @@ func renderHorizontalScrollIndicators(state State, lines, renderLines []string, 
 	out := append([]string(nil), lines...)
 	for i := 0; i < len(out) && i < len(visible); i++ {
 		lineWidth := util.DisplayWidth(visible[i])
-		canScrollLeft := xOffset > 0 && lineWidth > 0
-		canScrollRight := lineWidth > xOffset+width
+		maxOffset := max(0, lineWidth-width)
+		effectiveOffset := min(xOffset, maxOffset)
+		canScrollLeft := effectiveOffset > 0
+		canScrollRight := effectiveOffset < maxOffset
 		if !canScrollLeft && !canScrollRight {
 			continue
 		}

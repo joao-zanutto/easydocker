@@ -257,7 +257,7 @@ func TestRenderPanel_HorizontalScrollIndicatorRight(t *testing.T) {
 	state.Data.Logs = []string{"abcdefghij"}
 	state.SyncViewportFromData(5, 1)
 
-	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 7, 1)
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 5, 1)
 	line := strings.Split(panel, "\n")[0]
 	plain := util.StripANSI(line)
 
@@ -276,7 +276,7 @@ func TestRenderPanel_HorizontalScrollIndicatorLeft(t *testing.T) {
 	state.HorizontalOffset = 5
 	state.Viewport.SetXOffset(5)
 
-	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 7, 1)
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 5, 1)
 	line := strings.Split(panel, "\n")[0]
 	plain := util.StripANSI(line)
 
@@ -295,7 +295,7 @@ func TestRenderPanel_HorizontalScrollIndicatorsBothSides(t *testing.T) {
 	state.HorizontalOffset = 2
 	state.Viewport.SetXOffset(2)
 
-	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 7, 1)
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 5, 1)
 	line := strings.Split(panel, "\n")[0]
 	plain := util.StripANSI(line)
 
@@ -309,7 +309,7 @@ func TestRenderPanel_HorizontalScrollIndicatorPerLine(t *testing.T) {
 	state.Data.Logs = []string{"abcdefghij", "short"}
 	state.SyncViewportFromData(5, 2)
 
-	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 7, 2)
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 5, 2)
 	lines := strings.Split(panel, "\n")
 	if len(lines) < 2 {
 		t.Fatalf("expected 2 lines, got %d", len(lines))
@@ -322,6 +322,20 @@ func TestRenderPanel_HorizontalScrollIndicatorPerLine(t *testing.T) {
 	}
 	if strings.Contains(second, "<") || strings.Contains(second, ">") {
 		t.Fatalf("expected no indicator on non-scrollable second line, got %q", second)
+	}
+}
+
+func TestRenderPanel_HorizontalScrollIndicatorIgnoresStaleTrackedOffset(t *testing.T) {
+	state := NewState()
+	state.Data.Logs = []string{"short"}
+	state.SyncViewportFromData(20, 1)
+	state.HorizontalOffset = 8 // stale tracked state while viewport remained at x=0
+
+	panel := RenderPanel(ViewModel{State: state, Styles: ViewStyles{Muted: lipgloss.NewStyle()}}, 20, 1)
+	line := util.StripANSI(strings.Split(panel, "\n")[0])
+
+	if strings.Contains(line, "<") || strings.Contains(line, ">") {
+		t.Fatalf("expected no horizontal indicator when viewport is not scrolled, got %q", line)
 	}
 }
 
