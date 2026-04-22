@@ -171,4 +171,4 @@ fi
 install_binary "$EXTRACTED_BIN"
 
 echo "Installed: $INSTALL_DIR/$BINARY"
-echo "Run: $BINARY --help"
+echo "Run: $BINARY"
