@@ -14,7 +14,7 @@ export default defineConfig({
     ],
   ],
   themeConfig: {
-    logo: `/easydocker-logo.png`,
+    logo: `${base}easydocker-logo.png`,
     nav: [
       {text: "Install", link: "/install"},
       {text: "Usage", link: "/usage"},
