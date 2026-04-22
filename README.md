@@ -5,6 +5,8 @@
 
 EasyDocker is a TUI for Docker inspired by lazydocker and k9s while leveraging beautiful graphics from BubbleTea
 
+### [See our Docs](https://joao-zanutto.github.io/easydocker/)
+
 ![easydocker usage](./docs/example.gif)
 
 <div align="center">Troubleshoot your containers with style 😎</div>

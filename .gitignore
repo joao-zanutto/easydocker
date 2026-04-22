@@ -11,3 +11,5 @@ coverage.out
 *.tmp
 *.test
 *.out
+cache
+node_modules
