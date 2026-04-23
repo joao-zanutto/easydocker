@@ -1,6 +1,7 @@
 import {h} from "vue";
 import DefaultTheme from "vitepress/theme";
 import HeroInstallTabs from "./components/HeroInstallTabs.vue";
+import RootChangelog from "./components/RootChangelog.vue";
 import "./custom.css";
 
 export default {
@@ -12,5 +13,6 @@ export default {
   },
   enhanceApp({app}) {
     app.component("HeroInstallTabs", HeroInstallTabs);
+    app.component("RootChangelog", RootChangelog);
   },
 };
