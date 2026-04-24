@@ -6,10 +6,6 @@ on:
       - main
     paths:
       - "**/**/*.go"
-      - docs/**
-      - README.md
-      - package.json
-      - package-lock.json
       - go.mod
       - go.sum
 
@@ -82,20 +78,3 @@ jobs:
         with:
           name: easydocker-linux-amd64
           path: easydocker
-
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install docs dependencies
-        run: npm ci
-
-      - name: Validate VitePress site
-        run: npm run docs:build

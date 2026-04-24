@@ -1,4 +1,4 @@
-name: PR - Validate
+name: PR - Validate Docs
 
 on:
   pull_request:
