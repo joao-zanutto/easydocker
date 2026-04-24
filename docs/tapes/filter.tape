@@ -2,7 +2,6 @@
 
 Output filter.gif
 
-Set Theme "Dracula"
 Set Width 1920
 Set Height 800
 Set Shell zsh
