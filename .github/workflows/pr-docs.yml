@@ -37,6 +37,11 @@ jobs:
     strategy:
       matrix:
         tape: ${{ fromJson(needs.discover-tapes.outputs.tapes) }}
+    services:
+      db:
+        image: postgres:14
+      redis:
+        image: redis
     steps:
       - uses: actions/checkout@v4
         with:
