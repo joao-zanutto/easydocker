@@ -67,7 +67,7 @@ jobs:
         run: |
           mkdir -p docs/public
           tape="docs/tapes/${{ matrix.tape }}.tape"
-          svg="${{ matrix.tape }}.svg"
+          svg="docs/public/${{ matrix.tape }}.svg"
           echo "Rendering $tape -> $svg"
           sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $svg|" "$tape" | vhs
 
