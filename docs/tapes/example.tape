@@ -4,11 +4,11 @@ Output example.gif
 
 Set Width 1920
 Set Height 800
-Set Shell zsh
+Set Shell bash
 Set PlaybackSpeed 1.3
 
 # Launch the TUI
-Type "./easydocker"
+Type "easydocker"
 Sleep 1s
 Enter
 Sleep 4s
