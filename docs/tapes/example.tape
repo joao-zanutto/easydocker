@@ -2,6 +2,9 @@
 
 Output example.gif
 
+Set Theme "Dracula"
+Set FontFamily "FiraMono Nerd Font Mono"
+Set FontSize 32
 Set Width 1920
 Set Height 800
 Set Shell bash
