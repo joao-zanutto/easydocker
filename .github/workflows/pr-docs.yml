@@ -72,7 +72,7 @@ jobs:
           sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $webm|" "$tape" | vhs
 
       - name: Convert WEBM to AVIF
-        run: ffmpeg -i ${{ matrix.tape }}.webm -c:v libsvtav1 -crf 24 -preset 0 -pix_fmt
+        run: ffmpeg -i ${{ matrix.tape }}.webm -c:v libsvtav1 -crf 24 -preset 5 -pix_fmt
           yuv420p10le -svtav1-params tune=0 docs/public/${{ matrix.tape }}.avif
 
       - name: Upload AVIF artifact
