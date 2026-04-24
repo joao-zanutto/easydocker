@@ -2,10 +2,15 @@
 
 Output filter.gif
 
+Set FontFamily "JetBrains Mono"
+Set FontSize 18 (or your preferred)
+Set LineHeight 1.0
+Set LetterSpacing 0
+
 Set Width 1920
 Set Height 800
 Set Shell zsh
-Set PlaybackSpeed 1.3
+Set PlaybackSpeed 1.0
 
 # Launch the TUI
 Type "easydocker"
