@@ -7,7 +7,7 @@ EasyDocker is a TUI for Docker inspired by lazydocker and k9s while leveraging b
 
 ### [See our Docs](https://joao-zanutto.github.io/easydocker/)
 
-![easydocker usage](https://joao-zanutto.github.io/easydocker/example.gif)
+![easydocker usage](https://joao-zanutto.github.io/easydocker/example.svg)
 
 <div align="center">Troubleshoot your containers with style 😎</div>
 

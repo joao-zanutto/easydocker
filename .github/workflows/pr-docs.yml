@@ -47,15 +47,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Deps
+        run: sudo apt update && sudo apt install ttyd ffmpeg zsh -y
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
 
-      - name: Prepare environment
+      - name: Install VHS
+        run: go install github.com/agentstation/vhs@latest # Forked repo that natively supports svg generation
+
+      - name: Install EasyDocker
         run: |
-          sudo apt update && sudo apt install ttyd ffmpeg zsh -y
-          go install github.com/charmbracelet/vhs@latest
           echo "header = \"Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}\"" >> ~/.curlrc
           ./install/install.sh
 
@@ -63,15 +67,15 @@ jobs:
         run: |
           mkdir -p docs/public
           tape="docs/tapes/${{ matrix.tape }}.tape"
-          gif="docs/public/${{ matrix.tape }}.gif"
-          echo "Rendering $tape -> $gif"
-          sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $gif|" "$tape" | vhs
+          svg="${{ matrix.tape }}.svg"
+          echo "Rendering $tape -> $svg"
+          sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $svg|" "$tape" | vhs
 
       - name: Upload GIF artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vhs-gifs-${{ matrix.tape }}
-          path: docs/public/${{ matrix.tape }}.gif
+          name: vhs-svgs-${{ matrix.tape }}
+          path: docs/public/${{ matrix.tape }}.svg
 
   docs:
     needs: render-tapes
@@ -81,7 +85,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download GIF artifacts
+      - name: Download SVG artifacts
         uses: actions/download-artifact@v4
         with:
           path: docs/public
