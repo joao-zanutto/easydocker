@@ -23,7 +23,7 @@ jobs:
       - name: Discover VHS tapes
         id: set-matrix
         run: |
-          tapes=$(find docs/tapes -maxdepth 1 -type f -name '*.tape' | sed 's|^docs/tapes/||' | sort | python3 -c 'import json,sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
+          tapes=$(find docs/tapes -maxdepth 1 -type f -name '*.tape' | sed 's|^docs/tapes/||; s/\.tape$//' | sort | python3 -c 'import json,sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
           echo "tapes=$tapes" >> $GITHUB_OUTPUT
 
   render-tapes:
@@ -52,9 +52,8 @@ jobs:
       - name: Render tape
         run: |
           mkdir -p docs/public
-          tape="docs/tapes/${{ matrix.tape }}"
-          filename="$(basename "$tape" .tape)"
-          gif="docs/public/${filename}.gif"
+          tape="docs/tapes/${{ matrix.tape }}.tape"
+          gif="docs/public/${{ matrix.tape }}.gif"
           echo "Rendering $tape -> $gif"
           sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $gif|" "$tape" | vhs
 
@@ -62,12 +61,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vhs-gifs-${{ matrix.tape }}
-          path: docs/public/${filename}.gif
-
-      - run: |
-          ls
-          ls docs
-          ls docs/public
+          path: docs/public/${{ matrix.tape }}.gif
 
   docs:
     needs: render-tapes
