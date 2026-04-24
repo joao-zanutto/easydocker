@@ -10,10 +10,6 @@ on:
       - package.json
       - package-lock.json
 
-env:
-  TERM: xterm-256color
-  FORCE_COLOR: 1
-
 jobs:
   discover-tapes:
     runs-on: ubuntu-latest
@@ -33,6 +29,11 @@ jobs:
   render-tapes:
     needs: discover-tapes
     runs-on: macos-latest
+    env:
+      TERM: xterm-256color
+      FORCE_COLOR: 3
+      COLORTERM: truecolor
+      CLICOLOR_FORCE: 1
     strategy:
       matrix:
         tape: ${{ fromJson(needs.discover-tapes.outputs.tapes) }}
