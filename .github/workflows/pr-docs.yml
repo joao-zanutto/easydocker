@@ -80,6 +80,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: docs/public
+          merge-multiple: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
