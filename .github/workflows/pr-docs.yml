@@ -48,7 +48,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Deps
-        run: sudo apt update && sudo apt install ttyd ffmpeg zsh libaom-dev libaom3 -y
+        run: sudo apt update && sudo apt install ttyd ffmpeg zsh libsvtav1-dev -y
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -70,7 +70,7 @@ jobs:
           webm="${{ matrix.tape }}.webm"
           echo "Rendering $tape -> $webm"
           sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $webm|" "$tape" | vhs
-          ffmpeg -i ${{ matrix.tape }}.webm -c:v libaom-av1 -crf 30 docs/public/${{ matrix.tape }}.avif
+          ffmpeg -i ${{ matrix.tape }}.webm -c:v libsvtav1 -crf 24 -preset 4 -pix_fmt yuv420p10le -svtav1-params tune=0 docs/public/${{ matrix.tape }}.avif
 
       - name: Upload AVIF artifact
         uses: actions/upload-artifact@v4
