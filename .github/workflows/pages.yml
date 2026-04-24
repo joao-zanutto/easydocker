@@ -73,6 +73,11 @@ jobs:
           name: vhs-gifs-${{ matrix.tape }}
           path: docs/public/*.gif
 
+      - run: |
+          ls
+          ls docs
+          ls docs/public
+
   build:
     needs: render-gifs
     runs-on: ubuntu-latest
