@@ -63,14 +63,17 @@ jobs:
           echo "header = \"Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}\"" >> ~/.curlrc
           ./install/install.sh
 
-      - name: Render tape
+      - name: Render tape to WEBM
         run: |
           mkdir -p docs/public
           tape="docs/tapes/${{ matrix.tape }}.tape"
           webm="${{ matrix.tape }}.webm"
           echo "Rendering $tape -> $webm"
           sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $webm|" "$tape" | vhs
-          ffmpeg -i ${{ matrix.tape }}.webm -c:v libsvtav1 -crf 24 -preset 4 -pix_fmt yuv420p10le -svtav1-params tune=0 docs/public/${{ matrix.tape }}.avif
+
+      - name: Convert WEBM to AVIF
+        run: ffmpeg -i ${{ matrix.tape }}.webm -c:v libsvtav1 -crf 24 -preset 0 -pix_fmt
+          yuv420p10le -svtav1-params tune=0 docs/public/${{ matrix.tape }}.avif
 
       - name: Upload AVIF artifact
         uses: actions/upload-artifact@v4
