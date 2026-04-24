@@ -3,7 +3,7 @@
 Output filter.gif
 
 Set FontFamily "JetBrains Mono"
-Set FontSize 18 (or your preferred)
+Set FontSize 18
 Set LineHeight 1.0
 Set LetterSpacing 0
 
