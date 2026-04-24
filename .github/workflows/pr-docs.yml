@@ -50,7 +50,7 @@ jobs:
         run: |
           brew install ttyd ffmpeg
           go install github.com/charmbracelet/vhs@latest
-          curl -fsSL https://raw.githubusercontent.com/joao-zanutto/easydocker/main/install/install.sh | sh
+          ./install.sh
 
       - name: Render tape
         run: |
