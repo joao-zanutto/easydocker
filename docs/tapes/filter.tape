@@ -2,11 +2,6 @@
 
 Output filter.gif
 
-Set FontFamily "JetBrains Mono"
-Set FontSize 18
-Set LineHeight 1.0
-Set LetterSpacing 0
-
 Set Width 1920
 Set Height 800
 Set Shell zsh

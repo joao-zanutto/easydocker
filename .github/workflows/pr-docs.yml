@@ -48,7 +48,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Deps
-        run: sudo apt update && sudo apt install ttyd ffmpeg zsh -y
+        run: sudo apt update && sudo apt install ttyd ffmpeg zsh libaom-dev libaom3 -y
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -56,7 +56,7 @@ jobs:
           go-version: "1.25"
 
       - name: Install VHS
-        run: go install github.com/agentstation/vhs@latest # Forked repo that natively supports svg generation
+        run: go install github.com/charmbracelet/vhs@latest
 
       - name: Install EasyDocker
         run: |
@@ -67,15 +67,16 @@ jobs:
         run: |
           mkdir -p docs/public
           tape="docs/tapes/${{ matrix.tape }}.tape"
-          svg="docs/public/${{ matrix.tape }}.svg"
-          echo "Rendering $tape -> $svg"
-          sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $svg|" "$tape" | vhs --no-svg-opt
+          webm="${{ matrix.tape }}.webm"
+          echo "Rendering $tape -> $webm"
+          sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $webm|" "$tape" | vhs
+          ffmpeg -i ${{ matrix.tape }}.webm -c:v libaom-av1 -crf 30 docs/public/${{ matrix.tape }}.avif
 
-      - name: Upload GIF artifact
+      - name: Upload AVIF artifact
         uses: actions/upload-artifact@v4
         with:
           name: vhs-svgs-${{ matrix.tape }}
-          path: docs/public/${{ matrix.tape }}.svg
+          path: docs/public/${{ matrix.tape }}.avif
 
   docs:
     needs: render-tapes
@@ -85,7 +86,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download SVG artifacts
+      - name: Download AVIF artifacts
         uses: actions/download-artifact@v4
         with:
           path: docs/public

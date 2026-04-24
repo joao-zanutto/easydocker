@@ -6,7 +6,7 @@ hero:
   text: Troubleshoot with style 😎
   tagline: "Install with one command:"
   image:
-    src: /example.svg
+    src: /example.avif
     alt: EasyDocker usage
   actions:
     - theme: brand

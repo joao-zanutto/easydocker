@@ -11,7 +11,7 @@ Under construction... 🚧 🏗️
 ## Browse
 
 <figure>
-  <img src="/example.svg" alt="Browse containers, images, networks, and volumes" />
+  <img src="/example.avif" alt="Browse containers, images, networks, and volumes" />
 </figure>
 
 Migrating
@@ -19,5 +19,5 @@ Migrating
 ## Filter
 
 <figure>
-  <img src="/filter.svg" alt="Filter resources and logs" />
+  <img src="/filter.avif" alt="Filter resources and logs" />
 </figure>
