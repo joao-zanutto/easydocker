@@ -28,7 +28,7 @@ jobs:
 
   render-tapes:
     needs: discover-tapes
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     env:
       TERM: xterm-256color
       FORCE_COLOR: 3
@@ -49,7 +49,7 @@ jobs:
 
       - name: Prepare environment
         run: |
-          brew install ttyd ffmpeg
+          sudo apt update && sudo apt install ttyd ffmpeg zsh -y
           go install github.com/charmbracelet/vhs@latest
           echo "header = \"Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}\"" >> ~/.curlrc
           ./install/install.sh
