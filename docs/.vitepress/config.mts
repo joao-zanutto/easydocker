@@ -1,6 +1,38 @@
 import {defineConfig} from "vitepress";
+import {readFileSync} from "node:fs";
+import {dirname, resolve} from "node:path";
+import {fileURLToPath} from "node:url";
 
 const base = "/easydocker/";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\- ]+/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/\-+/g, "-");
+}
+
+function getFeatureHeadings(): Array<{text: string; link: string}> {
+  const featuresPath = resolve(__dirname, "../features.md");
+  const raw = readFileSync(featuresPath, "utf8");
+  const entries: Array<{text: string; link: string}> = [];
+  const headingRe = /^##\s+(.*)$/gm;
+  let match;
+
+  while ((match = headingRe.exec(raw)) !== null) {
+    const title = match[1].trim();
+    if (!title) continue;
+    entries.push({
+      text: title,
+      link: `/features#${slugify(title)}`,
+    });
+  }
+
+  return entries;
+}
 
 export default defineConfig({
   base,
@@ -17,7 +49,7 @@ export default defineConfig({
     logo: "/easydocker-logo.png",
     nav: [
       {text: "Install", link: "/install"},
-      {text: "Usage", link: "/usage"},
+      {text: "Features", link: "/features"},
       {text: "Changelog", link: "/changelog"},
       {text: "GitHub", link: "https://github.com/joao-zanutto/easydocker"},
     ],
@@ -28,7 +60,11 @@ export default defineConfig({
           items: [
             {text: "Home", link: "/"},
             {text: "Install", link: "/install"},
-            {text: "Usage", link: "/usage"},
+            {
+              text: "Features",
+              link: "/features",
+              items: getFeatureHeadings(),
+            },
             {text: "Changelog", link: "/changelog"},
           ],
         },

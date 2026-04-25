@@ -2,16 +2,16 @@ package theme
 
 import "github.com/charmbracelet/lipgloss"
 
-func applyBrowseStyles(s *Set) {
-	s.Section = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("186"))
-	s.Label = lipgloss.NewStyle().Foreground(lipgloss.Color("109"))
-	s.Value = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-	s.Muted = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-	s.Divider = lipgloss.NewStyle().Foreground(lipgloss.Color("60"))
+func applyBrowseStyles(s *Set, p palette) {
+	s.Section = lipgloss.NewStyle().Bold(true).Foreground(p.sectionFg)
+	s.Label = lipgloss.NewStyle().Foreground(p.labelFg)
+	s.Value = lipgloss.NewStyle().Foreground(p.valueFg)
+	s.Muted = lipgloss.NewStyle().Foreground(p.mutedFg)
+	s.Divider = lipgloss.NewStyle().Foreground(p.dividerFg)
 
-	s.StateRun = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
-	s.StateWarn = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
-	s.StateStop = lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
-	s.StateDead = lipgloss.NewStyle().Foreground(lipgloss.Color("199"))
-	s.StateOther = lipgloss.NewStyle().Foreground(lipgloss.Color("110"))
+	s.StateRun = lipgloss.NewStyle().Foreground(p.stateRunFg)
+	s.StateWarn = lipgloss.NewStyle().Foreground(p.stateWarnFg)
+	s.StateStop = lipgloss.NewStyle().Foreground(p.stateStopFg)
+	s.StateDead = lipgloss.NewStyle().Foreground(p.stateDeadFg)
+	s.StateOther = lipgloss.NewStyle().Foreground(p.stateOtherFg)
 }

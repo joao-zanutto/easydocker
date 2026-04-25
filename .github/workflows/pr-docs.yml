@@ -1,4 +1,4 @@
-name: PR - Validate 
+name: PR - Validate Docs
 
 on:
   pull_request:
@@ -11,10 +11,89 @@ on:
       - package-lock.json
 
 jobs:
+  discover-tapes:
+    runs-on: ubuntu-latest
+    outputs:
+      tapes: ${{ steps.set-matrix.outputs.tapes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Discover VHS tapes
+        id: set-matrix
+        run: |
+          tapes=$(find docs/tapes -maxdepth 1 -type f -name '*.tape' | sed 's|^docs/tapes/||; s/\.tape$//' | sort | python3 -c 'import json,sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
+          echo "tapes=$tapes" >> $GITHUB_OUTPUT
+
+  render-tapes:
+    needs: discover-tapes
+    runs-on: ubuntu-latest
+    env:
+      TERM: xterm-256color
+      FORCE_COLOR: 3
+      COLORTERM: truecolor
+      CLICOLOR_FORCE: 1
+    strategy:
+      matrix:
+        tape: ${{ fromJson(needs.discover-tapes.outputs.tapes) }}
+    services:
+      db:
+        image: postgres:14
+      redis:
+        image: redis
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Deps
+        run: sudo apt update && sudo apt install ttyd ffmpeg zsh libsvtav1-dev -y
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Install VHS
+        run: go install github.com/charmbracelet/vhs@latest
+
+      - name: Install EasyDocker
+        run: |
+          echo "header = \"Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}\"" >> ~/.curlrc
+          ./install/install.sh
+
+      - name: Render tape to WEBM
+        run: |
+          mkdir -p docs/public
+          tape="docs/tapes/${{ matrix.tape }}.tape"
+          webm="${{ matrix.tape }}.webm"
+          echo "Rendering $tape -> $webm"
+          sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $webm|" "$tape" | vhs
+
+      - name: Convert WEBM to AVIF
+        run: ffmpeg -i ${{ matrix.tape }}.webm -c:v libsvtav1 -crf 24 -preset 5 -pix_fmt
+          yuv420p10le -svtav1-params tune=0 docs/public/${{ matrix.tape }}.avif
+
+      - name: Upload AVIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vhs-svgs-${{ matrix.tape }}
+          path: docs/public/${{ matrix.tape }}.avif
+
   docs:
+    needs: render-tapes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download AVIF artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: docs/public
+          merge-multiple: true
 
       - name: Set up Node
         uses: actions/setup-node@v4

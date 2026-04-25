@@ -2,11 +2,11 @@
 title: Install
 ---
 
+# Install
+
 ::: warning
 Under construction... 🚧 🏗️
 :::
-
-# Install
 
 ### Linux and macOS
 

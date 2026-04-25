@@ -20,10 +20,71 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  discover-tapes:
+    runs-on: ubuntu-latest
+    outputs:
+      tapes: ${{ steps.set-matrix.outputs.tapes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Discover VHS tapes
+        id: set-matrix
+        run: |
+          tapes=$(find docs/tapes -maxdepth 1 -type f -name '*.tape' | sed 's|^docs/tapes/||' | sort | python3 -c 'import json,sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
+          echo "tapes=$tapes" >> $GITHUB_OUTPUT
+
+  render-gifs:
+    needs: discover-tapes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tape: ${{ fromJson(needs.discover-tapes.outputs.tapes) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Prepare environment
+        run: |
+          sudo apt update
+          sudo apt install -y ffmpeg ttyd
+          go install github.com/charmbracelet/vhs@latest
+          curl -fsSL https://raw.githubusercontent.com/joao-zanutto/easydocker/main/install/install.sh | sh
+
+      - name: Render tape
+        run: |
+          mkdir -p docs/public
+          tape="docs/tapes/${{ matrix.tape }}"
+          filename="$(basename "$tape" .tape)"
+          gif="docs/public/${filename}.gif"
+          echo "Rendering $tape -> $gif"
+          sed -E "s|^Output[[:space:]]+[^[:space:]]+|Output $gif|" "$tape" | vhs
+
+      - name: Upload GIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vhs-gifs-${{ matrix.tape }}
+          path: docs/public/*.gif
+
   build:
+    needs: render-gifs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download GIF artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: docs/public
 
       - name: Set up Node
         uses: actions/setup-node@v4

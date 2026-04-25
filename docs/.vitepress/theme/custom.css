@@ -5,6 +5,11 @@ body,
   overflow-x: clip;
 }
 
+:root {
+  --vp-c-brand-1: #4088fc;
+  --vp-c-brand-2: #2b65d0;
+}
+
 .hero-install-tabs {
   margin-right: 18px;
   margin-top: 18px;
