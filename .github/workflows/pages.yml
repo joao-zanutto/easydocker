@@ -9,6 +9,8 @@ on:
       - package.json
       - package-lock.json
       - .github/workflows/pages.yml
+  release:
+    types: [ published ]
 
 permissions:
   contents: read
