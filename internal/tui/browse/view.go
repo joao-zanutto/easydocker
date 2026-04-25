@@ -261,7 +261,7 @@ func RenderFilterHeader(input string, width int, dividerStyle lipgloss.Style) st
 		return ""
 	}
 	inputLine := padVisibleWidth(input, width)
-	divider := dividerStyle.Render(strings.Repeat("─", max(1, width-2)))
+	divider := dividerStyle.Render(strings.Repeat("─", max(1, width)))
 	return util.JoinSections(inputLine, divider)
 }
 

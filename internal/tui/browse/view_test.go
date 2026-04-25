@@ -69,8 +69,8 @@ func TestRenderFilterHeader_InputAndDivider(t *testing.T) {
 	if util.DisplayWidth(lines[0]) != 24 {
 		t.Fatalf("input line width = %d, want 24 (%q)", util.DisplayWidth(lines[0]), lines[0])
 	}
-	if util.DisplayWidth(lines[1]) != 22 {
-		t.Fatalf("divider line width = %d, want 22 (%q)", util.DisplayWidth(lines[1]), lines[1])
+	if util.DisplayWidth(lines[1]) != 24 {
+		t.Fatalf("divider line width = %d, want 24 (%q)", util.DisplayWidth(lines[1]), lines[1])
 	}
 	if strings.Contains(lines[0], "┌") || strings.Contains(lines[0], "┐") || strings.Contains(lines[0], "└") || strings.Contains(lines[0], "┘") {
 		t.Fatalf("input line should not render a box: %q", lines[0])

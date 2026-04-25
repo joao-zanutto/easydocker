@@ -9,7 +9,7 @@ Set Shell zsh
 Set PlaybackSpeed 1.3
 
 # Launch the TUI
-Type "easydocker"
+Type "go run ./cmd/easydocker"
 Sleep 1s
 Enter
 Sleep 4s
