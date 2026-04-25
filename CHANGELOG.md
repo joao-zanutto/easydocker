@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.2.0](https://github.com/joao-zanutto/easydocker/compare/v1.1.0...v1.2.0) (2026-04-24)
+
+
+### Features
+
+* add changelog to docs ([#49](https://github.com/joao-zanutto/easydocker/issues/49)) ([48db33d](https://github.com/joao-zanutto/easydocker/commit/48db33da31f24f5efe6fe3c1996a676508a4ddd8))
+* add github pages website ([#44](https://github.com/joao-zanutto/easydocker/issues/44)) ([5f14ae5](https://github.com/joao-zanutto/easydocker/commit/5f14ae5006bdc4ffa710245b67839f8dc0674cfe))
+* add horizontal scroll indicator ([#38](https://github.com/joao-zanutto/easydocker/issues/38)) ([59298d2](https://github.com/joao-zanutto/easydocker/commit/59298d2c9d6208cbfec0bcba299b0f3f96b0df6d))
+* add MIT license ([#33](https://github.com/joao-zanutto/easydocker/issues/33)) ([2875578](https://github.com/joao-zanutto/easydocker/commit/2875578e975062f402e517c2d0d7929daa411885))
+* add readme badges ([#40](https://github.com/joao-zanutto/easydocker/issues/40)) ([cf50c28](https://github.com/joao-zanutto/easydocker/commit/cf50c2862c02aabb0abfeaea9f259dd369e08508))
+* implement log line wrapping ([#32](https://github.com/joao-zanutto/easydocker/issues/32)) ([a57b908](https://github.com/joao-zanutto/easydocker/commit/a57b908240b08302dfb5517e9d50ebed28900f70))
+* split repo and tags from image view ([#30](https://github.com/joao-zanutto/easydocker/issues/30)) ([7d878be](https://github.com/joao-zanutto/easydocker/commit/7d878be160ae5dc921f0ba137591ea8d95640fc8))
+* update image sorting policy ([#41](https://github.com/joao-zanutto/easydocker/issues/41)) ([e5ef905](https://github.com/joao-zanutto/easydocker/commit/e5ef9052189a690b28ce74047751d7f812053a96))
+* update spinners ([#26](https://github.com/joao-zanutto/easydocker/issues/26)) ([fa1a849](https://github.com/joao-zanutto/easydocker/commit/fa1a84942932b2899f118e08e1bbd44c6614efc3))
+
+
+### Bug Fixes
+
+* adjust spacing reintroduced by horizontal scroll indicator ([#39](https://github.com/joao-zanutto/easydocker/issues/39)) ([bf9e2d7](https://github.com/joao-zanutto/easydocker/commit/bf9e2d75267294e0dda37172f4abb332d644ac49))
+* **ci:** refactor to prevent app/docs pipelines running when there are no changes on it ([#51](https://github.com/joao-zanutto/easydocker/issues/51)) ([a088613](https://github.com/joao-zanutto/easydocker/commit/a088613cc988b072d5caba795db6c72a3dca5403))
+* **docs:** adjust gif location ([#46](https://github.com/joao-zanutto/easydocker/issues/46)) ([426ff32](https://github.com/joao-zanutto/easydocker/commit/426ff327af66b40fb5b96ab5246cb1da4b886567))
+* **docs:** broken logo and gif ([#45](https://github.com/joao-zanutto/easydocker/issues/45)) ([5382601](https://github.com/joao-zanutto/easydocker/commit/538260140e25cb229614fe3a713110e38ac996bc))
+* **docs:** gif reference in README ([#47](https://github.com/joao-zanutto/easydocker/issues/47)) ([24d0602](https://github.com/joao-zanutto/easydocker/commit/24d0602c59137d47c4bfe37cf96c7c0e3a650e1b))
+* log loading inconsistency ([#29](https://github.com/joao-zanutto/easydocker/issues/29)) ([3326551](https://github.com/joao-zanutto/easydocker/commit/3326551c9b8e898db34893a06f01f8b3d9fb8b20))
+* remove leftover spacing on right border of log viewport ([#35](https://github.com/joao-zanutto/easydocker/issues/35)) ([00a2289](https://github.com/joao-zanutto/easydocker/commit/00a228924351edc8746777abb5aaa800eff09558))
+
 ## [1.1.0](https://github.com/joao-zanutto/easydocker/compare/v1.0.0...v1.1.0) (2026-04-16)
 
 
