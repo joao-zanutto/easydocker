@@ -231,5 +231,9 @@ func renderRightPriorityLine(left, right string, width int) string {
 }
 
 func dynamicInputWidth(prompt string, lineWidth int) int {
-	return max(1, lineWidth-util.DisplayWidth(prompt))
+	promptWidth := util.DisplayWidth(prompt)
+	if promptWidth > 0 {
+		return max(1, lineWidth-promptWidth-1)
+	}
+	return max(1, lineWidth)
 }
