@@ -82,11 +82,11 @@ func TestAggregateComposeProjects_GroupsSortsAndRollsUpMetrics(t *testing.T) {
 	if project.MemoryUsage != "150 B" {
 		t.Fatalf("project MemoryUsage = %q, want 150 B", project.MemoryUsage)
 	}
-	if project.MemoryLimit != "300 B" {
-		t.Fatalf("project MemoryLimit = %q, want 300 B", project.MemoryLimit)
+	if project.MemoryLimit != "100 B" {
+		t.Fatalf("project MemoryLimit = %q, want 100 B", project.MemoryLimit)
 	}
-	if project.MemoryPercent != 50.0 {
-		t.Fatalf("project MemoryPercent = %v, want 50", project.MemoryPercent)
+	if project.MemoryPercent != 100.0 {
+		t.Fatalf("project MemoryPercent = %v, want 100", project.MemoryPercent)
 	}
 	if len(project.Containers) != 3 {
 		t.Fatalf("project containers len = %d, want 3", len(project.Containers))
@@ -96,7 +96,7 @@ func TestAggregateComposeProjects_GroupsSortsAndRollsUpMetrics(t *testing.T) {
 	}
 }
 
-func TestAggregateComposeProjects_MemoryPercentDoesNotUseSummedLimits(t *testing.T) {
+func TestAggregateComposeProjects_MemoryPercentSumsComposeContainerPercents(t *testing.T) {
 	now := time.Now()
 	containers := []ContainerRow{
 		{
@@ -126,8 +126,8 @@ func TestAggregateComposeProjects_MemoryPercentDoesNotUseSummedLimits(t *testing
 		t.Fatalf("projects len = %d, want 1", len(projects))
 	}
 
-	if projects[0].MemoryPercent != 30 {
-		t.Fatalf("project MemoryPercent = %v, want 30 (average of 50 and 10)", projects[0].MemoryPercent)
+	if projects[0].MemoryPercent != 60 {
+		t.Fatalf("project MemoryPercent = %v, want 60 (sum of 50 and 10)", projects[0].MemoryPercent)
 	}
 }
 
