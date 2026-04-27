@@ -83,6 +83,7 @@ type model struct {
 	browseFilterActive bool
 	browseFilterInput  textinput.Model
 	browseFilterQuery  string
+	composeExpanded    map[string]bool
 }
 
 func New(service *core.Service) tea.Model {
@@ -109,6 +110,7 @@ func New(service *core.Service) tea.Model {
 		containerSpinner:  containerSpinner,
 		logsSpinner:       logsSpinner,
 		browseFilterInput: filterInput,
+		composeExpanded:   map[string]bool{},
 	}
 }
 

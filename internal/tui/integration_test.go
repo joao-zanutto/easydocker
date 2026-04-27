@@ -349,6 +349,103 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 	}
 }
 
+func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
+	m := New(nil).(model)
+	m.screen = screenModeBrowse
+	m.activeTab = tabContainers
+	m.showAll = true
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{
+			{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"},
+			{FullID: "ctr-2", Name: "worker", ComposeProject: "shop", State: "running"},
+		},
+	}
+
+	if got := m.itemCountForTab(tabContainers); got != 1 {
+		t.Fatalf("collapsed compose list should show one row, got %d", got)
+	}
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	afterExpand := updated.(model)
+	if got := afterExpand.itemCountForTab(tabContainers); got != 3 {
+		t.Fatalf("expanded compose list should show project + 2 containers, got %d", got)
+	}
+
+	updated, _ = afterExpand.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	afterCollapse := updated.(model)
+	if got := afterCollapse.itemCountForTab(tabContainers); got != 1 {
+		t.Fatalf("collapsed compose list should return to one row, got %d", got)
+	}
+}
+
+func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
+	m := New(nil).(model)
+	m.screen = screenModeBrowse
+	m.activeTab = tabContainers
+	m.showAll = true
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
+	}
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	after := updated.(model)
+	if cmd != nil {
+		t.Fatalf("enter on compose project row should not open logs command")
+	}
+	if after.screen != screenModeBrowse {
+		t.Fatalf("screen = %v, want browse", after.screen)
+	}
+	if got := after.itemCountForTab(tabContainers); got != 2 {
+		t.Fatalf("enter on compose project should expand row, got item count %d", got)
+	}
+}
+
+func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.T) {
+	m := New(nil).(model)
+	m.width = 120
+	m.height = 34
+	m.screen = screenModeBrowse
+	m.activeTab = tabContainers
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
+	}
+
+	composeView := m.View()
+	if !strings.Contains(composeView, "expand") {
+		t.Fatalf("collapsed compose row should advertise expand action, got %q", composeView)
+	}
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	after := updated.(model)
+	expandedView := after.View()
+	if !strings.Contains(expandedView, "collapse") {
+		t.Fatalf("expanded compose row should advertise collapse action, got %q", expandedView)
+	}
+}
+
+func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(t *testing.T) {
+	m := New(nil).(model)
+	m.width = 120
+	m.height = 34
+	m.screen = screenModeBrowse
+	m.activeTab = tabContainers
+	m.showAll = true
+	m.snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{
+			{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"},
+			{FullID: "ctr-2", Name: "worker", ComposeProject: "shop", State: "running"},
+		},
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "Containers (2)") {
+		t.Fatalf("header should show total container count, got %q", view)
+	}
+	if got := m.itemCountForTab(tabContainers); got != 1 {
+		t.Fatalf("collapsed compose list should still render one row, got %d", got)
+	}
+}
+
 func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
 	m := New(nil).(model)
 	m.screen = screenModeBrowse

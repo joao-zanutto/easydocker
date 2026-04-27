@@ -102,6 +102,9 @@ func (m model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, keys.PageDown):
 		m.moveCursor(browseCursorPageStep)
 	case key.Matches(msg, keys.OpenLogs):
+		if m.toggleSelectedComposeProject() {
+			return m, nil
+		}
 		if cmd := m.enterLogsModeIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}

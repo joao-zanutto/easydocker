@@ -50,7 +50,7 @@ func (m *mockRepository) LoadContainerLiveData(ctx context.Context, containerID 
 }
 
 func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
-	rows := []ContainerRow{{FullID: "id-1", Name: "one"}, {FullID: "id-2", Name: "two"}}
+	rows := []ContainerRow{{FullID: "id-1", Name: "one", ComposeProject: "shop"}, {FullID: "id-2", Name: "two", ComposeProject: "shop"}}
 	metrics := map[string]ContainerMetrics{
 		"id-1": {
 			CPUPercent:       10.5,
@@ -96,6 +96,12 @@ func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 
 	if len(snapshot.Containers) != 2 {
 		t.Fatalf("snapshot.Containers len = %d, want 2", len(snapshot.Containers))
+	}
+	if len(snapshot.ComposeProjects) != 1 {
+		t.Fatalf("snapshot.ComposeProjects len = %d, want 1", len(snapshot.ComposeProjects))
+	}
+	if snapshot.ComposeProjects[0].Name != "shop" || snapshot.ComposeProjects[0].ContainerCount != 2 {
+		t.Fatalf("compose project summary = %#v, want shop with 2 containers", snapshot.ComposeProjects[0])
 	}
 	if snapshot.Containers[0].CPUPercent != 10.5 {
 		t.Fatalf("snapshot container CPU = %v, want 10.5", snapshot.Containers[0].CPUPercent)
