@@ -144,10 +144,55 @@ func TestRenderDetailEmptyAndSelected(t *testing.T) {
 		HasContainer: true,
 	}, "", fakeProvider{}, section, muted, 160, 20)
 
-	for _, token := range []string{"api", "nginx:1.27", "8080->80/tcp", "ctr-1"} {
+	for _, token := range []string{"api", "nginx:1.27", "Memory: 100 MiB (25.0%)", "8080->80/tcp", "ctr-1"} {
 		if !strings.Contains(selected, token) {
 			t.Fatalf("selected detail missing %q in %q", token, selected)
 		}
+	}
+	if strings.Contains(selected, " / 400 MiB") {
+		t.Fatalf("container detail should not include max memory in details, got %q", selected)
+	}
+}
+
+func TestRenderDetailComposeProjectSelected(t *testing.T) {
+	muted := lipgloss.NewStyle()
+	section := lipgloss.NewStyle()
+
+	selected := RenderDetail(0, SelectionSet{
+		ComposeProject: core.ComposeProject{
+			Name:           "shop",
+			ContainerCount: 2,
+			RunningCount:   1,
+			HealthyCount:   1,
+			Network:        "shop_default, shop_shared",
+			WorkingDir:     "/srv/shop",
+			ConfigFiles:    "compose.yaml",
+			Created:        "just now",
+			CPUPercent:     12.5,
+			MemoryUsage:    "150 B",
+			MemoryLimit:    "300 B",
+			MemoryPercent:  50,
+			Services:       []string{"api", "worker"},
+			Containers:     []core.ContainerRow{{Name: "api"}, {Name: "worker"}},
+		},
+		HasComposeProject: true,
+	}, "", fakeProvider{}, section, muted, 160, 20)
+
+	for _, token := range []string{"Project: shop", "Working dir: /srv/shop", "Compose file: compose.yaml", "Created at: just now", "CPU: 12.5%", "Memory: 150 B (50.0%)", "Networks: - shop_default", "  - shop_shared"} {
+		if !strings.Contains(selected, token) {
+			t.Fatalf("compose project detail missing %q in %q", token, selected)
+		}
+	}
+	if strings.Contains(selected, "Config files") {
+		t.Fatalf("compose project detail should use Compose file label, got %q", selected)
+	}
+	if strings.Contains(selected, " / 300 B") {
+		t.Fatalf("compose project detail should not include max memory in details, got %q", selected)
+	}
+	if project := strings.Index(selected, "Project: shop"); project == -1 {
+		t.Fatalf("compose project detail missing project line: %q", selected)
+	} else if workingDir := strings.Index(selected, "Working dir: /srv/shop"); workingDir == -1 || workingDir < project {
+		t.Fatalf("compose project detail order should place Working dir after Project, got %q", selected)
 	}
 }
 

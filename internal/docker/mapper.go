@@ -3,6 +3,7 @@ package docker
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,19 +23,25 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 	}
 
 	return core.ContainerRow{
-		ID:          shortID(item.ID),
-		FullID:      item.ID,
-		Name:        primaryName(item.Names),
-		Image:       item.Image,
-		State:       item.State,
-		Status:      item.Status,
-		Ports:       formatPorts(item.Ports),
-		Command:     cleanCommand(item.Command),
-		CreatedUnix: item.Created,
-		CPUPercent:  cpuPercent,
-		Healthy:     strings.Contains(strings.ToLower(item.Status), "healthy"),
-		MemoryUsage: memoryUsage,
-		MemoryLimit: "-",
+		ID:                     shortID(item.ID),
+		FullID:                 item.ID,
+		Name:                   primaryName(item.Names),
+		ComposeProject:         strings.TrimSpace(item.Labels["com.docker.compose.project"]),
+		ComposeService:         strings.TrimSpace(item.Labels["com.docker.compose.service"]),
+		ComposeWorkingDir:      strings.TrimSpace(item.Labels["com.docker.compose.project.working_dir"]),
+		ComposeConfigFiles:     strings.TrimSpace(item.Labels["com.docker.compose.project.config_files"]),
+		ComposeOneOff:          strings.EqualFold(item.Labels["com.docker.compose.oneoff"], "true"),
+		ComposeContainerNumber: parseContainerNumber(item.Labels["com.docker.compose.container-number"]),
+		Image:                  item.Image,
+		State:                  item.State,
+		Status:                 item.Status,
+		Ports:                  formatPorts(item.Ports),
+		Command:                cleanCommand(item.Command),
+		CreatedUnix:            item.Created,
+		CPUPercent:             cpuPercent,
+		Healthy:                strings.Contains(strings.ToLower(item.Status), "healthy"),
+		MemoryUsage:            memoryUsage,
+		MemoryLimit:            "-",
 	}
 }
 
@@ -123,6 +130,17 @@ func cleanCommand(command string) string {
 		return trimmed
 	}
 	return trimmed[:61] + "..."
+}
+
+func parseContainerNumber(value string) int {
+	if value == "" {
+		return 0
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0
+	}
+	return parsed
 }
 
 func formatTags(tags []string) string {

@@ -5,6 +5,7 @@ import (
 
 	"easydocker/internal/core"
 	tuistate "easydocker/internal/tui/state"
+	"easydocker/internal/tui/tables"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -42,6 +43,19 @@ func (m *model) enterLogsModeIfContainerSelected() tea.Cmd {
 	return m.enterLogsMode(container)
 }
 
+func (m *model) toggleSelectedComposeProject() bool {
+	if m.activeTab != tabContainers {
+		return false
+	}
+	row, ok := m.selectedContainerListRow()
+	if !ok || row.Kind != tables.ContainerListRowComposeProject {
+		return false
+	}
+	m.composeExpanded[row.ComposeProject.Name] = !m.composeExpanded[row.ComposeProject.Name]
+	m.clampCursors()
+	return true
+}
+
 func (m *model) moveCursor(delta int) {
 	sel := m.selectionState()
 	_ = tuistate.MoveCursorForTab(&sel.Cursors, sel.ActiveTab, delta, m.itemCountForTab(sel.ActiveTab))
@@ -57,7 +71,7 @@ func (m *model) clampCursors() {
 func (m model) itemCountForTab(tab int) int {
 	switch tab {
 	case tabContainers:
-		return len(m.filteredContainers())
+		return len(m.containerListRows())
 	case tabImages:
 		return len(m.filteredImages())
 	case tabNetworks:
@@ -87,8 +101,11 @@ func (m model) filteredVolumes() []core.VolumeRow {
 }
 
 func (m model) findContainerIndexByID(id string) (int, bool) {
-	for index, container := range m.filteredContainers() {
-		if container.FullID == id {
+	for index, row := range m.containerListRows() {
+		if row.Kind != tables.ContainerListRowContainer {
+			continue
+		}
+		if row.Container.FullID == id {
 			return index, true
 		}
 	}
@@ -96,7 +113,27 @@ func (m model) findContainerIndexByID(id string) (int, bool) {
 }
 
 func (m model) selectedContainer() (core.ContainerRow, bool) {
-	return selectedAt(m.filteredContainers(), m.containerCursor)
+	row, ok := selectedAt(m.containerListRows(), m.containerCursor)
+	if !ok || row.Kind != tables.ContainerListRowContainer {
+		return core.ContainerRow{}, false
+	}
+	return row.Container, true
+}
+
+func (m model) selectedContainerListRow() (tables.ContainerListRow, bool) {
+	return selectedAt(m.containerListRows(), m.containerCursor)
+}
+
+func (m model) selectedComposeProject() (core.ComposeProject, bool) {
+	row, ok := m.selectedContainerListRow()
+	if !ok || row.Kind != tables.ContainerListRowComposeProject {
+		return core.ComposeProject{}, false
+	}
+	return row.ComposeProject, true
+}
+
+func (m model) containerListRows() []tables.ContainerListRow {
+	return tables.BuildContainerListRows(m.filteredContainers(), m.composeExpanded)
 }
 
 func (m model) selectedLogsContainer() (core.ContainerRow, bool) {

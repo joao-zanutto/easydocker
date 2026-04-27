@@ -35,14 +35,16 @@ type ViewStyles struct {
 }
 
 type SelectionSet struct {
-	Container    core.ContainerRow
-	HasContainer bool
-	Image        core.ImageRow
-	HasImage     bool
-	Network      core.NetworkRow
-	HasNetwork   bool
-	Volume       core.VolumeRow
-	HasVolume    bool
+	Container         core.ContainerRow
+	HasContainer      bool
+	ComposeProject    core.ComposeProject
+	HasComposeProject bool
+	Image             core.ImageRow
+	HasImage          bool
+	Network           core.NetworkRow
+	HasNetwork        bool
+	Volume            core.VolumeRow
+	HasVolume         bool
 }
 
 type DetailProvider interface {
@@ -140,6 +142,9 @@ func RenderDetail(activeTab int, selections SelectionSet, loadingIndicator strin
 func activeDetailLines(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
 	switch activeTab {
 	case 0:
+		if selections.HasComposeProject {
+			return detailLinesForSelection(selections.ComposeProject, selections.HasComposeProject, "No compose project selected.", composeProjectDetailLines, provider, mutedStyle, width)
+		}
 		builder := func(container core.ContainerRow, p DetailProvider, w int) []string {
 			return containerDetailLines(container, loadingIndicator, p, w)
 		}
@@ -167,7 +172,7 @@ func containerDetailLines(container core.ContainerRow, loadingIndicator string, 
 		provider.DetailLine("State", provider.RenderContainerState(container), width),
 		provider.DetailLine("Status", container.Status, width),
 		provider.DetailLine("CPU", ContainerCPUValue(container, loadingIndicator), width),
-		provider.DetailLine("Memory", ContainerMemorySummary(container, loadingIndicator), width),
+		provider.DetailLine("Memory", ContainerMemoryTableValue(container, loadingIndicator), width),
 		provider.DetailLine("Ports", container.Ports, width),
 		provider.DetailLine("Command", container.Command, width),
 		provider.DetailLine("ID", container.ID, width),
@@ -209,6 +214,59 @@ func volumeDetailLines(volume core.VolumeRow, provider DetailProvider, width int
 	}
 }
 
+func composeProjectDetailLines(project core.ComposeProject, provider DetailProvider, width int) []string {
+	lines := []string{
+		provider.DetailLine("Project", project.Name, width),
+		provider.DetailLine("Working dir", project.WorkingDir, width),
+		provider.DetailLine("Compose file", project.ConfigFiles, width),
+		provider.DetailLine("Created at", project.Created, width),
+		provider.DetailLine("CPU", composeMetricText(project.CPUPercent), width),
+		provider.DetailLine("Memory", composeMemoryText(project), width),
+	}
+	lines = append(lines, composeProjectNetworkDetailLines(project, provider, width)...)
+	return lines
+}
+
+func composeMetricText(value float64) string {
+	if value <= 0 {
+		return "-"
+	}
+	return fmt.Sprintf("%.1f%%", value)
+}
+
+func composeMemoryText(project core.ComposeProject) string {
+	if project.MemoryUsage == "-" {
+		return "-"
+	}
+	return fmt.Sprintf("%s (%.1f%%)", project.MemoryUsage, project.MemoryPercent)
+}
+
+func composeProjectNetworkDetailLines(project core.ComposeProject, provider DetailProvider, width int) []string {
+	networks := composeProjectNetworks(project.Network)
+	if len(networks) == 0 {
+		return []string{provider.DetailLine("Networks", "-", width)}
+	}
+
+	lines := []string{provider.DetailLine("Networks", "- "+networks[0], width)}
+	for _, network := range networks[1:] {
+		lines = append(lines, util.ConstrainLine("  - "+network, width))
+	}
+	return lines
+}
+
+func composeProjectNetworks(networkField string) []string {
+	values := strings.Split(networkField, ",")
+	networks := make([]string, 0, len(values))
+	for _, value := range values {
+		network := strings.TrimSpace(value)
+		if network == "" || network == "-" {
+			continue
+		}
+		networks = append(networks, network)
+	}
+	return networks
+}
+
 func ContainerCPUValue(container core.ContainerRow, loadingIndicator string) string {
 	if container.CPUPercent < 0 {
 		if strings.EqualFold(container.State, "running") {
@@ -223,19 +281,6 @@ func ContainerCPUValue(container core.ContainerRow, loadingIndicator string) str
 		return "-"
 	}
 	return fmt.Sprintf("%.1f%%", container.CPUPercent)
-}
-
-func ContainerMemorySummary(container core.ContainerRow, loadingIndicator string) string {
-	if container.MemoryUsage == "-" || strings.EqualFold(container.MemoryUsage, "loading") {
-		if strings.EqualFold(container.State, "running") {
-			return metricsLoadingValue(loadingIndicator)
-		}
-		return "-"
-	}
-	if container.MemoryLimit != "" && container.MemoryLimit != "-" {
-		return fmt.Sprintf("%s / %s (%.1f%%)", container.MemoryUsage, container.MemoryLimit, container.MemoryPercent)
-	}
-	return fmt.Sprintf("%s (%.1f%%)", container.MemoryUsage, container.MemoryPercent)
 }
 
 func ContainerMemoryTableValue(container core.ContainerRow, loadingIndicator string) string {

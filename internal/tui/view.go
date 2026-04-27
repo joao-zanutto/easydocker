@@ -204,18 +204,21 @@ func (m model) containerMetricsLoadingIndicator() string {
 
 func (m model) browseSelections() browse.SelectionSet {
 	container, hasContainer := m.selectedContainer()
+	composeProject, hasComposeProject := m.selectedComposeProject()
 	image, hasImage := m.selectedImage()
 	network, hasNetwork := m.selectedNetwork()
 	volume, hasVolume := m.selectedVolume()
 	return browse.SelectionSet{
-		Container:    container,
-		HasContainer: hasContainer,
-		Image:        image,
-		HasImage:     hasImage,
-		Network:      network,
-		HasNetwork:   hasNetwork,
-		Volume:       volume,
-		HasVolume:    hasVolume,
+		Container:         container,
+		HasContainer:      hasContainer,
+		ComposeProject:    composeProject,
+		HasComposeProject: hasComposeProject,
+		Image:             image,
+		HasImage:          hasImage,
+		Network:           network,
+		HasNetwork:        hasNetwork,
+		Volume:            volume,
+		HasVolume:         hasVolume,
 	}
 }
 
@@ -251,7 +254,7 @@ func (m model) stateStyle(state string) lipgloss.Style {
 func (m model) renderResourceList(width, height int) string {
 	switch m.activeTab {
 	case tabContainers:
-		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers, m.containerMetricsLoadingIndicator())
+		spec := tables.BuildContainerSpec(width, m.containerCursor, m.containerListRows(), m.activeTab == tabContainers, m.containerMetricsLoadingIndicator())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
 		spec := tables.BuildImageSpec(width, m.imageCursor, m.filteredImages())

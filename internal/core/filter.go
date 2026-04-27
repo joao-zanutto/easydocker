@@ -25,7 +25,8 @@ func FilterContainersByQuery(containers []ContainerRow, query string) []Containe
 	filtered := make([]ContainerRow, 0, len(containers))
 	for _, container := range containers {
 		if strings.Contains(strings.ToLower(container.Name), query) ||
-			strings.Contains(strings.ToLower(container.Image), query) {
+			strings.Contains(strings.ToLower(container.Image), query) ||
+			strings.Contains(strings.ToLower(container.ComposeProject), query) {
 			filtered = append(filtered, container)
 		}
 	}

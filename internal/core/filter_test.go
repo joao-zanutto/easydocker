@@ -78,6 +78,19 @@ func TestFilterContainersByQuery_MatchesByImageCaseInsensitive(t *testing.T) {
 	}
 }
 
+func TestFilterContainersByQuery_MatchesByComposeProject(t *testing.T) {
+	containers := []ContainerRow{
+		{Name: "api", Image: "nginx:latest", ComposeProject: "shop"},
+		{Name: "worker", Image: "busybox", ComposeProject: "shop"},
+		{Name: "db", Image: "postgres:16", ComposeProject: "payments"},
+	}
+
+	got := FilterContainersByQuery(containers, "shop")
+	if len(got) != 2 {
+		t.Fatalf("FilterContainersByQuery('shop') len = %d, want 2", len(got))
+	}
+}
+
 // Tests for FilterImagesByQuery
 func TestFilterImagesByQuery_EmptyQueryReturnsAll(t *testing.T) {
 	images := []ImageRow{

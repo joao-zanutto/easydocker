@@ -2,6 +2,7 @@ package tui
 
 import (
 	"easydocker/internal/tui/logs"
+	"easydocker/internal/tui/tables"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -144,7 +145,19 @@ func (m model) footerKeyMap() help.KeyMap {
 		browseKeys.Quit,
 	}
 	if m.activeTab == tabContainers {
-		bindings = append(bindings, browseKeys.ToggleScope, browseKeys.OpenLogs)
+		bindings = append(bindings, browseKeys.ToggleScope)
+		if row, ok := m.selectedContainerListRow(); ok && row.Kind == tables.ContainerListRowComposeProject {
+			action := "expand"
+			if row.ComposeExpanded {
+				action = "collapse"
+			}
+			bindings = append(bindings, key.NewBinding(
+				key.WithKeys("enter"),
+				key.WithHelp(helpKeyLabel("enter"), action),
+			))
+		} else {
+			bindings = append(bindings, browseKeys.OpenLogs)
+		}
 	}
 	return footerKeyMap{bindings: bindings}
 }
