@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/util"
 )
 
 func TestTableColumnSchemas(t *testing.T) {
@@ -310,17 +311,46 @@ func TestComposeProjectTableRow_ShowsCollapsedState(t *testing.T) {
 		ComposeExpanded: false,
 	}, "")
 
-	if row[0] != "\x1b[1m[+] shop\x1b[22m" {
+	if row[0] != "\x1b[1m[+]  shop\x1b[22m" {
 		t.Fatalf("compose name column = %q, want bold [+] prefix", row[0])
 	}
 	if row[1] != "\x1b[1m2/3 running\x1b[22m" {
 		t.Fatalf("compose state column = %q, want bold state", row[1])
 	}
-	if row[2] != "\x1b[1m12.5%\x1b[22m" || row[3] != "\x1b[1m100 MiB (25.0%)\x1b[22m" {
+	if row[2] != "\x1b[1m12.5%\x1b[22m" || row[3] != "\x1b[1m100 MiB\x1b[22m" {
 		t.Fatalf("compose metrics columns = %#v, want cpu/memory aggregation", row[2:4])
 	}
 	if row[4] != "\x1b[1m-\x1b[22m" || row[5] != "\x1b[1mjust now\x1b[22m" {
 		t.Fatalf("compose image/status columns = %#v, want image dash and created time", row[4:6])
+	}
+}
+
+func TestContainerTableRow_IndentsChildMetrics(t *testing.T) {
+	container := core.ContainerRow{
+		Name:          "api",
+		State:         "running",
+		CPUPercent:    12.5,
+		MemoryUsage:   "100 MiB",
+		MemoryPercent: 25,
+		MemoryLimit:   "400 MiB",
+	}
+
+	parentLike := ContainerTableRow(container, 20, "", "")
+	child := ContainerTableRow(container, 20, "", "├─ ")
+
+	if parentLike[2] != "12.5%" || parentLike[3] != "100 MiB" {
+		t.Fatalf("parent-like metrics should be unindented, got cpu=%q mem=%q", parentLike[2], parentLike[3])
+	}
+	if !strings.Contains(child[2], "\x1b[2m") || !strings.Contains(child[3], "\x1b[2m") {
+		t.Fatalf("child metrics should be dimmed, got cpu=%q mem=%q", child[2], child[3])
+	}
+	if !strings.Contains(util.StripANSI(child[2]), "├─ ") || !strings.Contains(util.StripANSI(child[3]), "├─ ") {
+		t.Fatalf("child metrics should reuse the tree prefix, got cpu=%q mem=%q", child[2], child[3])
+	}
+
+	lastChild := ContainerTableRow(container, 20, "", "└─ ")
+	if !strings.Contains(util.StripANSI(lastChild[2]), "└─ ") || !strings.Contains(util.StripANSI(lastChild[3]), "└─ ") {
+		t.Fatalf("last child metrics should use a terminal tree cue, got cpu=%q mem=%q", lastChild[2], lastChild[3])
 	}
 }
 

@@ -144,7 +144,7 @@ func TestRenderDetailEmptyAndSelected(t *testing.T) {
 		HasContainer: true,
 	}, "", fakeProvider{}, section, muted, 160, 20)
 
-	for _, token := range []string{"api", "nginx:1.27", "Memory: 100 MiB (25.0%)", "8080->80/tcp", "ctr-1"} {
+	for _, token := range []string{"api", "nginx:1.27", "Memory: 100 MiB", "8080->80/tcp", "ctr-1"} {
 		if !strings.Contains(selected, token) {
 			t.Fatalf("selected detail missing %q in %q", token, selected)
 		}
@@ -243,7 +243,7 @@ func TestContainerCPUValue_RunningNeverDash(t *testing.T) {
 func TestContainerMemoryTableValue_OmitsLimit(t *testing.T) {
 	running := core.ContainerRow{State: "running", MemoryUsage: "128 MiB", MemoryLimit: "2 GiB", MemoryPercent: 6.25}
 	got := ContainerMemoryTableValue(running, "⠋")
-	if got != "128 MiB (6.2%)" {
+	if got != "128 MiB" {
 		t.Fatalf("table memory value = %q, want %q", got, "128 MiB (6.2%)")
 	}
 

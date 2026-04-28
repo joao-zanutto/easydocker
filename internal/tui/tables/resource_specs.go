@@ -166,26 +166,40 @@ func ContainerTableRow(container core.ContainerRow, stateWidth int, loadingIndic
 	}
 	state = colorStateLabel(state, container.State)
 	name := container.Name
+	cpu := browse.ContainerCPUValue(container, loadingIndicator)
+	mem := browse.ContainerMemoryTableValue(container, loadingIndicator)
 	if treePrefix != "" {
 		name = treePrefix + name
+		cpu = childMetricGuidePrefix(treePrefix) + cpu
+		mem = childMetricGuidePrefix(treePrefix) + mem
 	}
 
 	return []string{
 		name,
 		state,
-		browse.ContainerCPUValue(container, loadingIndicator),
-		browse.ContainerMemoryTableValue(container, loadingIndicator),
+		cpu,
+		mem,
 		container.Image,
 		container.Status,
 	}
 }
+
+func childMetricGuidePrefix(treePrefix string) string {
+	guide := "├─ "
+	if strings.HasPrefix(treePrefix, "└") {
+		guide = "└─ "
+	}
+	return "\x1b[2m" + guide + "\x1b[22m"
+}
+
+
 
 func ComposeProjectTableRow(item ContainerListRow, loadingIndicator string) []string {
 	prefix := "[+]"
 	if item.ComposeExpanded {
 		prefix = "[-]"
 	}
-	name := ansiBold(prefix + " " + item.ComposeProject.Name)
+	name := ansiBold(prefix + "  " + item.ComposeProject.Name)
 	state := fmt.Sprintf("%d/%d running", item.ComposeProject.RunningCount, item.ComposeProject.ContainerCount)
 	cpu := "-"
 	if item.ComposeProject.CPUPercent > 0 {
@@ -195,7 +209,7 @@ func ComposeProjectTableRow(item ContainerListRow, loadingIndicator string) []st
 	}
 	mem := "-"
 	if item.ComposeProject.MemoryUsage != "-" {
-		mem = fmt.Sprintf("%s (%.1f%%)", item.ComposeProject.MemoryUsage, item.ComposeProject.MemoryPercent)
+		mem = fmt.Sprintf("%s", item.ComposeProject.MemoryUsage)
 	} else if item.ComposeProject.RunningCount > 0 && loadingIndicator != "" {
 		mem = loadingIndicator
 	}
