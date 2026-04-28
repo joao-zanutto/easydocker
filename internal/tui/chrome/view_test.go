@@ -7,8 +7,21 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/util"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
 )
+
+type testFooterKeyMap struct {
+	bindings []key.Binding
+}
+
+func (m testFooterKeyMap) ShortHelp() []key.Binding {
+	return m.bindings
+}
+
+func (m testFooterKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{m.bindings}
+}
 
 func TestRenderHeaderTabs_WidthFallback(t *testing.T) {
 	specs := []TabSpec{
@@ -91,14 +104,18 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 	}
 
 	footer := RenderFooter(FooterInput{
-		Width:     220,
-		HelpSpecs: FooterHelpSpecs(false, true),
+		Width: 220,
+		KeyMap: testFooterKeyMap{bindings: []key.Binding{
+			key.NewBinding(key.WithKeys("up", "down"), key.WithHelp("↑/↓", "navigate")),
+			key.NewBinding(key.WithKeys("left", "right"), key.WithHelp("←/→", "switch tabs")),
+			key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "toggle running/all")),
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "logs")),
+		}},
 		Styles: FooterStyles{
 			Footer:  lipgloss.NewStyle(),
 			Key:     lipgloss.NewStyle(),
 			KeyText: lipgloss.NewStyle(),
 		},
-		RenderHelpItem: func(key, description string) string { return key + " " + description },
 	})
 	for _, token := range []string{"navigate", "switch tabs", "toggle running/all", "logs"} {
 		if !strings.Contains(util.StripANSI(footer), token) {

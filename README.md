@@ -1,8 +1,13 @@
 # EasyDocker 🐋
 
+[![CI](https://github.com/joao-zanutto/easydocker/actions/workflows/pr-app.yml/badge.svg)](https://github.com/joao-zanutto/easydocker/actions/workflows/pr.yml)
+[![Release](https://img.shields.io/github/v/release/joao-zanutto/easydocker?display_name=tag)](https://github.com/joao-zanutto/easydocker/releases)
+
 EasyDocker is a TUI for Docker inspired by lazydocker and k9s while leveraging beautiful graphics from BubbleTea
 
-![easydocker usage](./docs/example.gif)
+### [See our Docs](https://joao-zanutto.github.io/easydocker/)
+
+![easydocker usage](./docs/public/example.gif)
 
 <div align="center">Troubleshoot your containers with style 😎</div>
 

@@ -9,6 +9,7 @@ import (
 	"easydocker/internal/tui/theme"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -60,49 +61,65 @@ type loadResultMsg struct {
 type execDoneMsg struct{ err error }
 
 type model struct {
-	service         *core.Service
-	width           int
-	height          int
-	activeTab       int
-	showAll         bool
-	loading         bool
-	err             error
-	snapshot        core.Snapshot
-	containerCursor int
-	imageCursor     int
-	networkCursor   int
-	volumeCursor    int
-	screen          screenMode
-	logs            logs.State
-	loadingStage    int
-	styles          theme.Set
-	metricsLoaded   bool
-	metricsSpinner  spinner.Model
-	logsSpinner     spinner.Model
+	service          *core.Service
+	width            int
+	height           int
+	activeTab        int
+	showAll          bool
+	loading          bool
+	err              error
+	snapshot         core.Snapshot
+	containerCursor  int
+	imageCursor      int
+	networkCursor    int
+	volumeCursor     int
+	screen           screenMode
+	logs             logs.State
+	loadingStage     int
+	styles           theme.Set
+	metricsLoaded    bool
+	metricsSpinner   spinner.Model
+	containerSpinner spinner.Model
+	logsSpinner      spinner.Model
+	// Browse filter mode state
+	browseFilterActive bool
+	browseFilterInput  textinput.Model
+	browseFilterQuery  string
+	composeExpanded    map[string]bool
 }
 
 func New(service *core.Service) tea.Model {
-	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
+	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
+	containerSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
 	logsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
 
+	// Initialize filter input
+	filterInput := textinput.New()
+	filterInput.Prompt = "🔎︎ "
+	filterInput.Placeholder = ""
+	filterInput.CharLimit = 200
+
 	return model{
-		service:        service,
-		activeTab:      tabContainers,
-		showAll:        true,
-		loading:        true,
-		screen:         screenModeBrowse,
-		loadingStage:   loadStageContainers,
-		logs:           logs.NewState(),
-		styles:         defaultStyles(),
-		metricsSpinner: metricsSpinner,
-		logsSpinner:    logsSpinner,
+		service:           service,
+		activeTab:         tabContainers,
+		showAll:           true,
+		loading:           true,
+		screen:            screenModeBrowse,
+		loadingStage:      loadStageContainers,
+		logs:              logs.NewState(),
+		styles:            defaultStyles(),
+		metricsSpinner:    metricsSpinner,
+		containerSpinner:  containerSpinner,
+		logsSpinner:       logsSpinner,
+		browseFilterInput: filterInput,
+		composeExpanded:   map[string]bool{},
 	}
 }
 
 func (m model) Init() tea.Cmd {
 	cmds := []tea.Cmd{m.loadContainersCmd(), tickCmd()}
 	if m.shouldAnimateMetricsLoadingIndicator() {
-		cmds = append(cmds, m.metricsSpinner.Tick)
+		cmds = append(cmds, m.metricsSpinner.Tick, m.containerSpinner.Tick)
 	}
 	return tea.Batch(cmds...)
 }

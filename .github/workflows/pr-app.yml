@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["1.25"]
+        go-version: [ "1.25" ]
     steps:
       - uses: actions/checkout@v4
 
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["1.25"]
+        go-version: [ "1.25" ]
     steps:
       - uses: actions/checkout@v4
 
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["1.25"]
+        go-version: [ "1.25" ]
     steps:
       - uses: actions/checkout@v4
 

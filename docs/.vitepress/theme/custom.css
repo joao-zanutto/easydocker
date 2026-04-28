@@ -1,0 +1,189 @@
+/* Keep the page from becoming horizontally scrollable. */
+html,
+body,
+#app {
+  overflow-x: clip;
+}
+
+.hero-install-tabs {
+  margin-right: 18px;
+  margin-top: 18px;
+  max-width: 680px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 14px;
+  background: var(--vp-c-bg-soft);
+  overflow: hidden;
+}
+
+.hero-install-tab-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-alt);
+}
+
+.hero-install-actions {
+  margin-left: auto;
+}
+
+.hero-install-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  appearance: none;
+  border: 0;
+  border-radius: 9px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vp-c-text-2);
+  background: transparent;
+  cursor: pointer;
+}
+
+.hero-install-tab:hover {
+  color: var(--vp-c-text-1);
+  background: var(--vp-c-default-soft);
+}
+
+.hero-install-tab.is-active {
+  color: var(--vp-c-text-1);
+  background: var(--vp-c-default-soft);
+}
+
+.hero-install-tab-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.hero-install-tab-icon--stack {
+  margin-right: 1px;
+}
+
+.hero-install-copy {
+  appearance: none;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 9px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  background: var(--vp-c-bg-soft);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.hero-install-copy:hover {
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+}
+
+.hero-install-copy.is-copied {
+  border-color: var(--vp-c-green-1);
+  color: var(--vp-c-green-1);
+}
+
+.hero-install-copy.is-error {
+  border-color: var(--vp-c-danger-1);
+  color: var(--vp-c-danger-1);
+}
+
+.hero-install-code {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.hero-install-code code {
+  font-family: var(--vp-font-family-mono);
+}
+
+/* Mobile: make the image full width */
+@media (max-width: 959px) {
+  .hero-install-tabs {
+    margin-top: 14px;
+    max-width: 100%;
+  }
+
+  .hero-install-tab-list {
+    flex-wrap: wrap;
+  }
+
+  .hero-install-actions {
+    width: auto;
+    margin-left: auto;
+  }
+
+  .hero-install-copy {
+    width: auto;
+    padding: 4px 9px;
+    font-size: 11px;
+  }
+
+  .VPHome .VPHero .image {
+    margin-bottom: 12px;
+    padding-top: 2px;
+  }
+
+  .VPHome .VPHero .image-container {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    max-width: none;
+  }
+
+  .VPHome .VPHero .image-src {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    object-position: center;
+  }
+}
+
+@media (min-width: 960px) {
+  .VPHome .VPHero .container {
+    overflow-x: visible;
+    height: 450px;
+  }
+
+  /* Expand only the image visuals to the right; keep hero text layout default. */
+  .VPHome .VPHero .image {
+    flex: auto;
+    min-width: 0;
+    padding-left: 32px;
+    padding-right: 0;
+    margin-right: calc(50% - 50vw);
+    width: calc(100% + max(0px, 50vw - 50%));
+  }
+
+  /* Fill the expanded right column and crop only inside the visual frame. */
+  .VPHome .VPHero .image-container {
+    width: 100vw;
+    margin-right: calc(-50vw + 50%);
+    /* height: clamp(360px, 34vw, 540px); */
+
+    max-width: none;
+    overflow-x: visible;
+  }
+
+  .VPHome .VPHero .image-src {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    object-position: left center;
+  }
+}

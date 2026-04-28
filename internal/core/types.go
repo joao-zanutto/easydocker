@@ -3,33 +3,60 @@ package core
 import "time"
 
 type Snapshot struct {
-	Containers []ContainerRow
-	Images     []ImageRow
-	Networks   []NetworkRow
-	Volumes    []VolumeRow
-	TotalCPU   float64
-	TotalMem   uint64
-	TotalLimit uint64
-	Timestamp  time.Time
+	Containers      []ContainerRow
+	ComposeProjects []ComposeProject
+	Images          []ImageRow
+	Networks        []NetworkRow
+	Volumes         []VolumeRow
+	TotalCPU        float64
+	TotalMem        uint64
+	TotalLimit      uint64
+	Timestamp       time.Time
 }
 
 type ContainerRow struct {
-	ID               string
-	FullID           string
+	ID                     string
+	FullID                 string
+	Name                   string
+	ComposeProject         string
+	ComposeService         string
+	ComposeWorkingDir      string
+	ComposeConfigFiles     string
+	ComposeOneOff          bool
+	ComposeContainerNumber int
+	Image                  string
+	State                  string
+	Status                 string
+	Ports                  string
+	Command                string
+	CreatedUnix            int64
+	CPUPercent             float64
+	MemoryPercent          float64
+	MemoryUsage            string
+	MemoryLimit            string
+	MemoryUsageBytes       uint64
+	MemoryLimitBytes       uint64
+	Healthy                bool
+}
+
+type ComposeProject struct {
 	Name             string
-	Image            string
-	State            string
-	Status           string
-	Ports            string
-	Command          string
+	Containers       []ContainerRow
+	ContainerCount   int
+	RunningCount     int
+	HealthyCount     int
 	CreatedUnix      int64
+	Created          string
+	Network          string
+	WorkingDir       string
+	ConfigFiles      string
+	Services         []string
 	CPUPercent       float64
 	MemoryPercent    float64
 	MemoryUsage      string
 	MemoryLimit      string
 	MemoryUsageBytes uint64
 	MemoryLimitBytes uint64
-	Healthy          bool
 }
 
 type ImageRow struct {

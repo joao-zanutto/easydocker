@@ -15,6 +15,7 @@ func TestMapContainerRow(t *testing.T) {
 	item := types.Container{
 		ID:      "sha256:1234567890abcdef1234",
 		Names:   []string{"/api"},
+		Labels:  map[string]string{"com.docker.compose.project": "demo"},
 		Image:   "nginx:latest",
 		State:   "running",
 		Status:  "Up 3 minutes (healthy)",
@@ -37,6 +38,9 @@ func TestMapContainerRow(t *testing.T) {
 	}
 	if row.Name != "api" {
 		t.Fatalf("Name = %q, want %q", row.Name, "api")
+	}
+	if row.ComposeProject != "demo" {
+		t.Fatalf("ComposeProject = %q, want %q", row.ComposeProject, "demo")
 	}
 	if row.Ports != "53/udp, 80/tcp, 8443->443/tcp" {
 		t.Fatalf("Ports = %q, want sorted formatted ports", row.Ports)

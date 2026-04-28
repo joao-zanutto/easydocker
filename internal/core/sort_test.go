@@ -50,16 +50,24 @@ func TestSortContainers_StateRankThenCreatedThenName(t *testing.T) {
 	}
 }
 
-func TestSortImages_CreatedDescThenTagsAsc(t *testing.T) {
+func TestSortImages_RepositoryThenTagAsc(t *testing.T) {
 	rows := []ImageRow{
-		{Tags: "z", CreatedUnix: 10},
-		{Tags: "a", CreatedUnix: 10},
-		{Tags: "n", CreatedUnix: 20},
+		{Tags: "redis:7", CreatedUnix: 20},
+		{Tags: "alpine:3.20", CreatedUnix: 5},
+		{Tags: "alpine:3.18", CreatedUnix: 50},
+		{Tags: "ghcr.io:5000/app/backend:v1", CreatedUnix: 40},
+		{Tags: "ghcr.io:5000/app/backend:v0", CreatedUnix: 10},
 	}
 
 	SortImages(rows)
 
-	wantTags := []string{"n", "a", "z"}
+	wantTags := []string{
+		"alpine:3.18",
+		"alpine:3.20",
+		"ghcr.io:5000/app/backend:v0",
+		"ghcr.io:5000/app/backend:v1",
+		"redis:7",
+	}
 	for i, want := range wantTags {
 		if rows[i].Tags != want {
 			t.Fatalf("rows[%d].Tags = %q, want %q", i, rows[i].Tags, want)

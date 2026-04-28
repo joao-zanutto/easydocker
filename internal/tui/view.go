@@ -76,7 +76,7 @@ func (m model) logVisibleWidth() int {
 	totalWidth := max(1, m.width)
 	if m.screen == screenModeLogs {
 		pageContentWidth := m.logsPageContentWidth(totalWidth)
-		return max(1, pageContentWidth-4)
+		return max(1, pageContentWidth-2)
 	}
 	innerWidth := util.FrameContentWidth(totalWidth, m.styles.MainFrame)
 	return max(1, innerWidth-2)
@@ -85,7 +85,7 @@ func (m model) logVisibleWidth() int {
 func (m model) logSectionHeight() int {
 	mainHeight := util.MainAreaHeight(m.height, m.renderHeader(), m.renderFooter())
 	if m.screen == screenModeLogs {
-		return max(1, m.logsPageContentHeight(mainHeight)-3)
+		return logs.VisibleRowsForContent(m.logsPageContentHeight(mainHeight), m.logs.FilterActive)
 	}
 	innerHeight := util.FrameContentHeight(mainHeight, m.styles.MainFrame)
 	return max(1, innerHeight-2)
@@ -127,14 +127,13 @@ func (m model) renderHeader() string {
 
 func (m model) renderFooter() string {
 	return chrome.RenderFooter(chrome.FooterInput{
-		Width:     m.width,
-		HelpSpecs: chrome.FooterHelpSpecs(m.screen == screenModeLogs, m.activeTab == tabContainers),
+		Width:  m.width,
+		KeyMap: m.footerKeyMap(),
 		Styles: chrome.FooterStyles{
 			Footer:  m.styles.Footer,
 			Key:     m.styles.Key,
 			KeyText: m.styles.KeyText,
 		},
-		RenderHelpItem: m.renderFooterHelpItem,
 	})
 }
 
@@ -143,10 +142,6 @@ func (m model) renderChromeTab(tab int, label string) string {
 		return m.styles.ActiveTab.Render(label)
 	}
 	return m.styles.Tab.Render(label)
-}
-
-func (m model) renderFooterHelpItem(key, description string) string {
-	return m.styles.Key.Render(key) + " " + m.styles.KeyText.Render(description)
 }
 
 func (m model) detailLineWithWidth(label, value string, width int) string {
@@ -171,7 +166,7 @@ func (m model) renderBrowseContent(width, height int) string {
 		Loading:                 m.loading,
 		Snapshot:                m.snapshot,
 		ActiveTab:               m.activeTab,
-		MetricsLoadingIndicator: m.metricsLoadingIndicator(),
+		MetricsLoadingIndicator: m.containerMetricsLoadingIndicator(),
 		Width:                   safeContentWidth,
 		Height:                  height,
 		Styles: browse.ViewStyles{
@@ -180,7 +175,17 @@ func (m model) renderBrowseContent(width, height int) string {
 			Section: m.styles.Section,
 		},
 		Selections: m.browseSelections(),
-	}, m.renderResourceList(safeContentWidth, browse.ListHeight(height)), m.browseDetailRenderer())
+		// Add filter state
+		FilterActive: m.browseFilterActive,
+		FilterQuery:  m.browseFilterQuery,
+		FilterInput:  m.renderBrowseFilterInputView(safeContentWidth),
+	}, m.renderResourceList(safeContentWidth, browse.ListHeightForContent(height, m.browseFilterActive)), m.browseDetailRenderer())
+}
+
+func (m model) renderBrowseFilterInputView(lineWidth int) string {
+	input := m.browseFilterInput
+	input.Width = max(1, lineWidth-util.DisplayWidth(input.Prompt))
+	return input.View()
 }
 
 func (m model) metricsLoadingIndicator() string {
@@ -190,20 +195,30 @@ func (m model) metricsLoadingIndicator() string {
 	return strings.TrimSpace(m.metricsSpinner.View())
 }
 
+func (m model) containerMetricsLoadingIndicator() string {
+	if !m.shouldAnimateMetricsLoadingIndicator() {
+		return ""
+	}
+	return strings.TrimSpace(m.containerSpinner.View())
+}
+
 func (m model) browseSelections() browse.SelectionSet {
 	container, hasContainer := m.selectedContainer()
+	composeProject, hasComposeProject := m.selectedComposeProject()
 	image, hasImage := m.selectedImage()
 	network, hasNetwork := m.selectedNetwork()
 	volume, hasVolume := m.selectedVolume()
 	return browse.SelectionSet{
-		Container:    container,
-		HasContainer: hasContainer,
-		Image:        image,
-		HasImage:     hasImage,
-		Network:      network,
-		HasNetwork:   hasNetwork,
-		Volume:       volume,
-		HasVolume:    hasVolume,
+		Container:         container,
+		HasContainer:      hasContainer,
+		ComposeProject:    composeProject,
+		HasComposeProject: hasComposeProject,
+		Image:             image,
+		HasImage:          hasImage,
+		Network:           network,
+		HasNetwork:        hasNetwork,
+		Volume:            volume,
+		HasVolume:         hasVolume,
 	}
 }
 
@@ -239,16 +254,16 @@ func (m model) stateStyle(state string) lipgloss.Style {
 func (m model) renderResourceList(width, height int) string {
 	switch m.activeTab {
 	case tabContainers:
-		spec := tables.BuildContainerSpec(width, m.containerCursor, m.filteredContainers(), m.activeTab == tabContainers, m.metricsLoadingIndicator())
+		spec := tables.BuildContainerSpec(width, m.containerCursor, m.containerListRows(), m.activeTab == tabContainers, m.containerMetricsLoadingIndicator())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
-		spec := tables.BuildImageSpec(width, m.imageCursor, m.snapshot.Images)
+		spec := tables.BuildImageSpec(width, m.imageCursor, m.filteredImages())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabNetworks:
-		spec := tables.BuildNetworkSpec(width, m.networkCursor, m.snapshot.Networks)
+		spec := tables.BuildNetworkSpec(width, m.networkCursor, m.filteredNetworks())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	default:
-		spec := tables.BuildVolumeSpec(width, m.volumeCursor, m.snapshot.Volumes)
+		spec := tables.BuildVolumeSpec(width, m.volumeCursor, m.filteredVolumes())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	}
 }

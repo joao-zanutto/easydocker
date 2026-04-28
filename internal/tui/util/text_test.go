@@ -46,3 +46,18 @@ func TestConstrainLine_WithANSIAndTightWidth(t *testing.T) {
 		t.Fatalf("constrainLine(..., 1) = %q, want ellipsis", got1)
 	}
 }
+
+func TestTruncateWithEllipsis_PreservesTrailingANSIReset(t *testing.T) {
+	line := "\x1b[32mrunning\x1b[39m"
+	got := TruncateWithEllipsis(line, 4)
+
+	if !strings.Contains(got, "\x1b[39m") {
+		t.Fatalf("expected truncated output to keep foreground reset, got %q", got)
+	}
+	if !strings.Contains(got, "…\x1b[39m") {
+		t.Fatalf("expected ellipsis before reset so ellipsis keeps state color, got %q", got)
+	}
+	if DisplayWidth(got) != 4 {
+		t.Fatalf("display width = %d, want 4", DisplayWidth(got))
+	}
+}

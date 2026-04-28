@@ -121,6 +121,7 @@ func (s *Service) LoadSnapshot() (Snapshot, error) {
 	}
 
 	resources.Containers = ApplyMetricsToContainers(containers, metricsByID)
+	resources.ComposeProjects = AggregateComposeProjects(resources.Containers)
 	resources.TotalCPU = totalCPU
 	resources.TotalMem = totalMem
 	resources.Timestamp = time.Now()

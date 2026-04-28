@@ -5,12 +5,22 @@ import (
 
 	"easydocker/internal/core"
 	tuistate "easydocker/internal/tui/state"
+	"easydocker/internal/tui/tables"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (m *model) moveActiveTab(delta int) {
+	previous := m.activeTab
 	m.activeTab = tuistate.MoveActiveTab(m.activeTab, delta, tabContainers, tabVolumes)
+	if m.activeTab != previous {
+		m.clearBrowseFilter()
+	}
+}
+
+func (m *model) clearBrowseFilter() {
+	m.browseFilterQuery = ""
+	m.browseFilterInput.SetValue("")
 }
 
 func (m *model) toggleContainerScope() {
@@ -44,6 +54,19 @@ func (m *model) execTerminalIfContainerSelected() tea.Cmd {
 	return m.execTerminalCmd(container.FullID)
 }
 
+func (m *model) toggleSelectedComposeProject() bool {
+	if m.activeTab != tabContainers {
+		return false
+	}
+	row, ok := m.selectedContainerListRow()
+	if !ok || row.Kind != tables.ContainerListRowComposeProject {
+		return false
+	}
+	m.composeExpanded[row.ComposeProject.Name] = !m.composeExpanded[row.ComposeProject.Name]
+	m.clampCursors()
+	return true
+}
+
 func (m *model) moveCursor(delta int) {
 	sel := m.selectionState()
 	_ = tuistate.MoveCursorForTab(&sel.Cursors, sel.ActiveTab, delta, m.itemCountForTab(sel.ActiveTab))
@@ -59,25 +82,41 @@ func (m *model) clampCursors() {
 func (m model) itemCountForTab(tab int) int {
 	switch tab {
 	case tabContainers:
-		return len(m.filteredContainers())
+		return len(m.containerListRows())
 	case tabImages:
-		return len(m.snapshot.Images)
+		return len(m.filteredImages())
 	case tabNetworks:
-		return len(m.snapshot.Networks)
+		return len(m.filteredNetworks())
 	case tabVolumes:
-		return len(m.snapshot.Volumes)
+		return len(m.filteredVolumes())
 	default:
 		return 0
 	}
 }
 
 func (m model) filteredContainers() []core.ContainerRow {
-	return core.FilterContainersByScope(m.snapshot.Containers, m.showAll)
+	scoped := core.FilterContainersByScope(m.snapshot.Containers, m.showAll)
+	return core.FilterContainersByQuery(scoped, m.browseFilterQuery)
+}
+
+func (m model) filteredImages() []core.ImageRow {
+	return core.FilterImagesByQuery(m.snapshot.Images, m.browseFilterQuery)
+}
+
+func (m model) filteredNetworks() []core.NetworkRow {
+	return core.FilterNetworksByQuery(m.snapshot.Networks, m.browseFilterQuery)
+}
+
+func (m model) filteredVolumes() []core.VolumeRow {
+	return core.FilterVolumesByQuery(m.snapshot.Volumes, m.browseFilterQuery)
 }
 
 func (m model) findContainerIndexByID(id string) (int, bool) {
-	for index, container := range m.filteredContainers() {
-		if container.FullID == id {
+	for index, row := range m.containerListRows() {
+		if row.Kind != tables.ContainerListRowContainer {
+			continue
+		}
+		if row.Container.FullID == id {
 			return index, true
 		}
 	}
@@ -85,7 +124,27 @@ func (m model) findContainerIndexByID(id string) (int, bool) {
 }
 
 func (m model) selectedContainer() (core.ContainerRow, bool) {
-	return selectedAt(m.filteredContainers(), m.containerCursor)
+	row, ok := selectedAt(m.containerListRows(), m.containerCursor)
+	if !ok || row.Kind != tables.ContainerListRowContainer {
+		return core.ContainerRow{}, false
+	}
+	return row.Container, true
+}
+
+func (m model) selectedContainerListRow() (tables.ContainerListRow, bool) {
+	return selectedAt(m.containerListRows(), m.containerCursor)
+}
+
+func (m model) selectedComposeProject() (core.ComposeProject, bool) {
+	row, ok := m.selectedContainerListRow()
+	if !ok || row.Kind != tables.ContainerListRowComposeProject {
+		return core.ComposeProject{}, false
+	}
+	return row.ComposeProject, true
+}
+
+func (m model) containerListRows() []tables.ContainerListRow {
+	return tables.BuildContainerListRows(m.filteredContainers(), m.composeExpanded)
 }
 
 func (m model) selectedLogsContainer() (core.ContainerRow, bool) {
@@ -93,15 +152,15 @@ func (m model) selectedLogsContainer() (core.ContainerRow, bool) {
 }
 
 func (m model) selectedImage() (core.ImageRow, bool) {
-	return selectedAt(m.snapshot.Images, m.imageCursor)
+	return selectedAt(m.filteredImages(), m.imageCursor)
 }
 
 func (m model) selectedNetwork() (core.NetworkRow, bool) {
-	return selectedAt(m.snapshot.Networks, m.networkCursor)
+	return selectedAt(m.filteredNetworks(), m.networkCursor)
 }
 
 func (m model) selectedVolume() (core.VolumeRow, bool) {
-	return selectedAt(m.snapshot.Volumes, m.volumeCursor)
+	return selectedAt(m.filteredVolumes(), m.volumeCursor)
 }
 
 func selectedAt[T any](items []T, cursor int) (T, bool) {

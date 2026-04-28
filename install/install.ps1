@@ -99,7 +99,7 @@ try {
 
     Ensure-PathContainsInstallDir -Dir $InstallDir
     Write-Host "Installed: $target"
-    Write-Host "Run: easydocker --help"
+    Write-Host "Run: easydocker"
 }
 finally {
     if (Test-Path $tmpDir) {

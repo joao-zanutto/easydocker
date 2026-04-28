@@ -11,6 +11,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const filterHeaderHeight = 2
+
 type ViewModel struct {
 	Loading                 bool
 	Snapshot                core.Snapshot
@@ -20,6 +22,10 @@ type ViewModel struct {
 	Height                  int
 	Styles                  ViewStyles
 	Selections              SelectionSet
+	// Filter mode state
+	FilterActive bool
+	FilterQuery  string
+	FilterInput  string
 }
 
 type ViewStyles struct {
@@ -29,14 +35,16 @@ type ViewStyles struct {
 }
 
 type SelectionSet struct {
-	Container    core.ContainerRow
-	HasContainer bool
-	Image        core.ImageRow
-	HasImage     bool
-	Network      core.NetworkRow
-	HasNetwork   bool
-	Volume       core.VolumeRow
-	HasVolume    bool
+	Container         core.ContainerRow
+	HasContainer      bool
+	ComposeProject    core.ComposeProject
+	HasComposeProject bool
+	Image             core.ImageRow
+	HasImage          bool
+	Network           core.NetworkRow
+	HasNetwork        bool
+	Volume            core.VolumeRow
+	HasVolume         bool
 }
 
 type DetailProvider interface {
@@ -49,11 +57,22 @@ func RenderContent(vm ViewModel, list string, detailProvider DetailProvider) str
 		return util.ConstrainLine(vm.Styles.Muted.Render("Loading Docker resources..."), vm.Width)
 	}
 
-	listHeight := ListHeight(vm.Height)
-	detailHeight := max(1, vm.Height-listHeight-1)
+	filterHeight, listHeight, detailHeight := contentHeights(vm.Height, vm.FilterActive)
+	listLines := util.ClipAndPadLines(
+		util.ConstrainLines(strings.Split(list, "\n"), vm.Width),
+		listHeight,
+		"",
+	)
+	listBlock := strings.Join(listLines, "\n")
 	detail := RenderDetail(vm.ActiveTab, vm.Selections, vm.MetricsLoadingIndicator, detailProvider, vm.Styles.Section, vm.Styles.Muted, vm.Width, detailHeight)
 	divider := vm.Styles.Divider.Render(strings.Repeat("─", max(1, vm.Width-2)))
-	return util.JoinSections(list, divider, detail)
+
+	var parts []string
+	if filterHeight > 0 {
+		parts = append(parts, RenderFilterHeader(vm.FilterInput, vm.Width, vm.Styles.Divider))
+	}
+	parts = append(parts, listBlock, divider, detail)
+	return util.JoinSections(parts...)
 }
 
 func ShouldRenderLoading(loading bool, snapshot core.Snapshot) bool {
@@ -78,6 +97,43 @@ func ListHeight(height int) int {
 	return listHeight
 }
 
+// ListHeightForContent computes table height while preserving a fixed divider position
+// when the filter container is shown above the table.
+func ListHeightForContent(height int, filterActive bool) int {
+	_, listHeight, _ := contentHeights(height, filterActive)
+	return listHeight
+}
+
+func contentHeights(height int, filterActive bool) (int, int, int) {
+	totalHeight := max(1, height)
+	filterHeight := 0
+	if filterActive {
+		filterHeight = filterHeaderHeight
+		// Keep room for list + divider + detail.
+		maxFilterHeight := max(0, totalHeight-3)
+		if filterHeight > maxFilterHeight {
+			filterHeight = maxFilterHeight
+		}
+	}
+
+	listHeight := ListHeight(totalHeight)
+	if filterHeight > 0 {
+		// Shrink table from the top to preserve divider/bottom anchoring.
+		listHeight = max(1, listHeight-filterHeight)
+	}
+
+	detailHeight := totalHeight - filterHeight - listHeight - 1
+	for detailHeight < 1 && listHeight > 1 {
+		listHeight--
+		detailHeight = totalHeight - filterHeight - listHeight - 1
+	}
+	if detailHeight < 1 {
+		detailHeight = 1
+	}
+
+	return filterHeight, listHeight, detailHeight
+}
+
 func RenderDetail(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
 	lines := append([]string{sectionStyle.Render("Details")}, activeDetailLines(activeTab, selections, loadingIndicator, provider, mutedStyle, width)...)
 	return strings.Join(util.ClipLines(util.ConstrainLines(lines, width), height), "\n")
@@ -86,6 +142,9 @@ func RenderDetail(activeTab int, selections SelectionSet, loadingIndicator strin
 func activeDetailLines(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
 	switch activeTab {
 	case 0:
+		if selections.HasComposeProject {
+			return detailLinesForSelection(selections.ComposeProject, selections.HasComposeProject, "No compose project selected.", composeProjectDetailLines, provider, mutedStyle, width)
+		}
 		builder := func(container core.ContainerRow, p DetailProvider, w int) []string {
 			return containerDetailLines(container, loadingIndicator, p, w)
 		}
@@ -113,7 +172,7 @@ func containerDetailLines(container core.ContainerRow, loadingIndicator string, 
 		provider.DetailLine("State", provider.RenderContainerState(container), width),
 		provider.DetailLine("Status", container.Status, width),
 		provider.DetailLine("CPU", ContainerCPUValue(container, loadingIndicator), width),
-		provider.DetailLine("Memory", ContainerMemorySummary(container, loadingIndicator), width),
+		provider.DetailLine("Memory", ContainerMemoryTableValue(container, loadingIndicator), width),
 		provider.DetailLine("Ports", container.Ports, width),
 		provider.DetailLine("Command", container.Command, width),
 		provider.DetailLine("ID", container.ID, width),
@@ -155,6 +214,59 @@ func volumeDetailLines(volume core.VolumeRow, provider DetailProvider, width int
 	}
 }
 
+func composeProjectDetailLines(project core.ComposeProject, provider DetailProvider, width int) []string {
+	lines := []string{
+		provider.DetailLine("Project", project.Name, width),
+		provider.DetailLine("Working dir", project.WorkingDir, width),
+		provider.DetailLine("Compose file", project.ConfigFiles, width),
+		provider.DetailLine("Created at", project.Created, width),
+		provider.DetailLine("CPU", composeMetricText(project.CPUPercent), width),
+		provider.DetailLine("Memory", composeMemoryText(project), width),
+	}
+	lines = append(lines, composeProjectNetworkDetailLines(project, provider, width)...)
+	return lines
+}
+
+func composeMetricText(value float64) string {
+	if value <= 0 {
+		return "-"
+	}
+	return fmt.Sprintf("%.1f%%", value)
+}
+
+func composeMemoryText(project core.ComposeProject) string {
+	if project.MemoryUsage == "-" {
+		return "-"
+	}
+	return fmt.Sprintf("%s (%.1f%%)", project.MemoryUsage, project.MemoryPercent)
+}
+
+func composeProjectNetworkDetailLines(project core.ComposeProject, provider DetailProvider, width int) []string {
+	networks := composeProjectNetworks(project.Network)
+	if len(networks) == 0 {
+		return []string{provider.DetailLine("Networks", "-", width)}
+	}
+
+	lines := []string{provider.DetailLine("Networks", "- "+networks[0], width)}
+	for _, network := range networks[1:] {
+		lines = append(lines, util.ConstrainLine("  - "+network, width))
+	}
+	return lines
+}
+
+func composeProjectNetworks(networkField string) []string {
+	values := strings.Split(networkField, ",")
+	networks := make([]string, 0, len(values))
+	for _, value := range values {
+		network := strings.TrimSpace(value)
+		if network == "" || network == "-" {
+			continue
+		}
+		networks = append(networks, network)
+	}
+	return networks
+}
+
 func ContainerCPUValue(container core.ContainerRow, loadingIndicator string) string {
 	if container.CPUPercent < 0 {
 		if strings.EqualFold(container.State, "running") {
@@ -171,19 +283,6 @@ func ContainerCPUValue(container core.ContainerRow, loadingIndicator string) str
 	return fmt.Sprintf("%.1f%%", container.CPUPercent)
 }
 
-func ContainerMemorySummary(container core.ContainerRow, loadingIndicator string) string {
-	if container.MemoryUsage == "-" || strings.EqualFold(container.MemoryUsage, "loading") {
-		if strings.EqualFold(container.State, "running") {
-			return metricsLoadingValue(loadingIndicator)
-		}
-		return "-"
-	}
-	if container.MemoryLimit != "" && container.MemoryLimit != "-" {
-		return fmt.Sprintf("%s / %s (%.1f%%)", container.MemoryUsage, container.MemoryLimit, container.MemoryPercent)
-	}
-	return fmt.Sprintf("%s (%.1f%%)", container.MemoryUsage, container.MemoryPercent)
-}
-
 func ContainerMemoryTableValue(container core.ContainerRow, loadingIndicator string) string {
 	if container.MemoryUsage == "-" || strings.EqualFold(container.MemoryUsage, "loading") {
 		if strings.EqualFold(container.State, "running") {
@@ -191,7 +290,7 @@ func ContainerMemoryTableValue(container core.ContainerRow, loadingIndicator str
 		}
 		return "-"
 	}
-	return fmt.Sprintf("%s (%.1f%%)", container.MemoryUsage, container.MemoryPercent)
+	return fmt.Sprintf("%s", container.MemoryUsage)
 }
 
 func metricsLoadingValue(loadingIndicator string) string {
@@ -199,6 +298,25 @@ func metricsLoadingValue(loadingIndicator string) string {
 		return "-"
 	}
 	return loadingIndicator
+}
+
+// RenderFilterHeader renders a plain filter input line followed by a divider.
+func RenderFilterHeader(input string, width int, dividerStyle lipgloss.Style) string {
+	if width <= 0 {
+		return ""
+	}
+	inputLine := padVisibleWidth(input, width)
+	divider := dividerStyle.Render(strings.Repeat("─", max(1, width-2)))
+	return util.JoinSections(inputLine, divider)
+}
+
+func padVisibleWidth(line string, width int) string {
+	constrained := util.ClampSingleLine(line, width)
+	padding := width - util.DisplayWidth(constrained)
+	if padding <= 0 {
+		return constrained
+	}
+	return constrained + strings.Repeat(" ", padding)
 }
 
 func ContainerStateText(container core.ContainerRow) string {

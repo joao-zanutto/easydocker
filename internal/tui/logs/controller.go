@@ -1,6 +1,11 @@
 package logs
 
-import "easydocker/internal/core"
+import (
+	"easydocker/internal/core"
+
+	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 type Controller struct{}
 
@@ -23,60 +28,91 @@ func (Controller) Exit(state *State, containersTab int) Transition {
 	return Transition{ExitToBrowse: true, ForceTab: containersTab}
 }
 
-func (Controller) HandleKey(state *State, key string, containersTab int) Transition {
-	switch key {
-	case "right":
-		state.SetFollow(false)
-		state.Viewport.ScrollRight(8)
-		return Transition{}
-	case "left":
-		state.SetFollow(false)
-		state.Viewport.ScrollLeft(8)
-		return Transition{}
-	case "up", "k":
-		state.SetFollow(false)
-		state.Viewport.LineUp(1)
-		return historyTransitionIfNeeded(state)
-	case "down", "j":
-		if state.Viewport.AtBottom() {
-			state.SetFollow(true)
-			return Transition{}
-		}
-		state.SetFollow(false)
-		state.Viewport.LineDown(1)
-		return Transition{}
-	case "pgup":
-		state.SetFollow(false)
-		state.Viewport.PageUp()
-		return historyTransitionIfNeeded(state)
-	case "pgdown":
-		if state.Viewport.AtBottom() {
-			state.SetFollow(true)
-			return Transition{}
-		}
-		state.SetFollow(false)
-		state.Viewport.PageDown()
-		return Transition{}
-	case "home":
-		state.SetFollow(false)
-		state.Viewport.SetXOffset(0)
-		state.Viewport.GotoTop()
-		return historyTransitionIfNeeded(state)
-	case "end":
-		state.SetFollow(true)
-		return Transition{}
-	case "f":
+func (Controller) HandleKey(state *State, msg tea.KeyMsg, keys KeyMap, containersTab int) Transition {
+	switch {
+	case key.Matches(msg, keys.Right):
+		return handleHorizontalScroll(state, true)
+	case key.Matches(msg, keys.Left):
+		return handleHorizontalScroll(state, false)
+
+	case key.Matches(msg, keys.Up):
+		return handleVerticalScroll(state, -1, false)
+	case key.Matches(msg, keys.Down):
+		return handleVerticalScroll(state, 1, false)
+	case key.Matches(msg, keys.PageUp):
+		return handleVerticalScroll(state, -1, true)
+	case key.Matches(msg, keys.PageDown):
+		return handleVerticalScroll(state, 1, true)
+
+	case key.Matches(msg, keys.Home):
+		return handleHome(state)
+	case key.Matches(msg, keys.End):
+		return handleEnd(state)
+
+	case key.Matches(msg, keys.ToggleFollow):
 		state.SetFollow(!state.Follow)
 		return Transition{}
-	case "t":
+	case "s":
 		return Transition{LaunchTerminal: true}
-	case "esc", "backspace":
+	case key.Matches(msg, keys.Back):
 		return Controller{}.Exit(state, containersTab)
-	case " ", "b", "g", "G", "q", "tab":
-		return Transition{}
+
 	default:
 		return Transition{}
 	}
+}
+
+func handleHorizontalScroll(state *State, right bool) Transition {
+	if state.WrapLines {
+		return Transition{}
+	}
+	state.SetFollow(false)
+	step := 8
+	if right {
+		state.Viewport.ScrollRight(step)
+		state.HorizontalOffset += step
+	} else {
+		state.Viewport.ScrollLeft(step)
+		state.HorizontalOffset = max(0, state.HorizontalOffset-step)
+	}
+	return Transition{}
+}
+
+func handleVerticalScroll(state *State, direction int, isPage bool) Transition {
+	state.SetFollow(false)
+	if isPage {
+		if direction > 0 {
+			state.Viewport.PageDown()
+		} else {
+			state.Viewport.PageUp()
+		}
+	} else {
+		if direction > 0 {
+			state.Viewport.LineDown(1)
+		} else {
+			state.Viewport.LineUp(1)
+		}
+	}
+
+	// When scrolling down and already at bottom, re-enable follow
+	if direction > 0 && state.Viewport.AtBottom() {
+		state.SetFollow(true)
+	}
+
+	return historyTransitionIfNeeded(state)
+}
+
+func handleHome(state *State) Transition {
+	state.SetFollow(false)
+	state.Viewport.SetXOffset(0)
+	state.HorizontalOffset = 0
+	state.Viewport.GotoTop()
+	return historyTransitionIfNeeded(state)
+}
+
+func handleEnd(state *State) Transition {
+	state.SetFollow(true)
+	return Transition{}
 }
 
 func historyTransitionIfNeeded(state *State) Transition {

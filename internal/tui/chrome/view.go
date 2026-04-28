@@ -7,6 +7,7 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/util"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -15,11 +16,6 @@ type TabSpec struct {
 	Icon  string
 	Name  string
 	Count int
-}
-
-type FooterHelpSpec struct {
-	Key         string
-	Description string
 }
 
 type HeaderStyles struct {
@@ -52,10 +48,9 @@ type HeaderInput struct {
 }
 
 type FooterInput struct {
-	Width          int
-	HelpSpecs      []FooterHelpSpec
-	Styles         FooterStyles
-	RenderHelpItem func(key, description string) string
+	Width  int
+	KeyMap help.KeyMap
+	Styles FooterStyles
 }
 
 type tabLabelVariant int
@@ -65,27 +60,6 @@ const (
 	tabLabelFullCompact
 	tabLabelIconWithCount
 	tabLabelIconOnly
-)
-
-var (
-	browseFooterBaseHelp = []FooterHelpSpec{
-		{Key: "↑/↓", Description: "navigate"},
-		{Key: "←/→", Description: "switch tabs"},
-		{Key: "esc", Description: "quit"},
-	}
-	browseContainerFooterHelp = []FooterHelpSpec{
-		{Key: "a", Description: "toggle running/all"},
-		{Key: "enter", Description: "logs"},
-		{Key: "t", Description: "terminal"},
-	}
-	logsFooterHelp = []FooterHelpSpec{
-		{Key: "← ↑ ↓ →", Description: "navigate"},
-		{Key: "pgup/dn", Description: "jump up/down"},
-		{Key: "home/end", Description: "go to top/bottom"},
-		{Key: "f", Description: "toggle follow"},
-		{Key: "t", Description: "terminal"},
-		{Key: "esc", Description: "back"},
-	}
 )
 
 func RenderHeaderTabs(specs []TabSpec, maxWidth int, renderTab func(tab int, label string) string) []string {
@@ -111,25 +85,6 @@ func RenderScopeBadge(showAll bool, maxWidth int, renderBadge func(string) strin
 		}
 	}
 	return renderBadge(scope)
-}
-
-func FooterHelpSpecs(isLogsScreen bool, isContainersTab bool) []FooterHelpSpec {
-	if isLogsScreen {
-		return logsFooterHelp
-	}
-	specs := append([]FooterHelpSpec{}, browseFooterBaseHelp...)
-	if isContainersTab {
-		specs = append(specs, browseContainerFooterHelp...)
-	}
-	return specs
-}
-
-func RenderHelpItems(specs []FooterHelpSpec, helpItem func(key, description string) string) []string {
-	items := make([]string, 0, len(specs))
-	for _, spec := range specs {
-		items = append(items, helpItem(spec.Key, spec.Description))
-	}
-	return items
 }
 
 func RenderHeader(input HeaderInput) string {
@@ -160,10 +115,22 @@ func RenderHeader(input HeaderInput) string {
 }
 
 func RenderFooter(input FooterInput) string {
-	items := RenderHelpItems(input.HelpSpecs, input.RenderHelpItem)
 	innerWidth := max(1, input.Width-input.Styles.Footer.GetHorizontalFrameSize())
-	line := util.ConstrainLine(strings.Join(items, "   "), innerWidth)
-	return input.Styles.Footer.Render(renderCenteredLine(line, innerWidth))
+	helpModel := help.New()
+	helpModel.Width = innerWidth
+	helpModel.ShortSeparator = "   "
+	helpModel.Ellipsis = "…"
+	helpModel.Styles = help.Styles{
+		ShortKey:       input.Styles.Key,
+		ShortDesc:      input.Styles.KeyText,
+		ShortSeparator: lipgloss.NewStyle(),
+		FullKey:        input.Styles.Key,
+		FullDesc:       input.Styles.KeyText,
+		FullSeparator:  lipgloss.NewStyle(),
+		Ellipsis:       lipgloss.NewStyle(),
+	}
+	line := util.ConstrainLine(helpModel.View(input.KeyMap), innerWidth)
+	return input.Styles.Footer.Render(lipgloss.PlaceHorizontal(innerWidth, lipgloss.Center, line))
 }
 
 func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, loadStageMetrics int, metricsLoaded bool, loadingIndicator string) string {
@@ -210,19 +177,6 @@ func renderEdgeAlignedLine(left, right string, width int) string {
 		return util.ClampSingleLine(util.ConstrainLine(left+" "+right, width), width)
 	}
 	return util.ClampSingleLine(left+strings.Repeat(" ", width-leftWidth-rightWidth)+right, width)
-}
-
-func renderCenteredLine(line string, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	line = util.ConstrainLine(line, width)
-	lineWidth := util.DisplayWidth(line)
-	if lineWidth >= width {
-		return util.ClampSingleLine(line, width)
-	}
-	leftPad := (width - lineWidth) / 2
-	return util.ClampSingleLine(strings.Repeat(" ", leftPad)+line, width)
 }
 
 func renderPinnedHeaderLine(leftStyle lipgloss.Style, leftText, right string, width int) string {

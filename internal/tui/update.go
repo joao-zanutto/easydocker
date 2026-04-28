@@ -9,6 +9,7 @@ import (
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/mode"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -20,7 +21,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSizeMsg(msg)
 	case tea.KeyMsg:
-		return m.handleKey(msg.String())
+		return m.handleKey(msg)
 	case containersResultMsg:
 		return m.handleContainersResultMsg(msg)
 	case resourcesResultMsg:
@@ -44,31 +45,81 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 const browseCursorPageStep = 5
 
-func (m model) handleBrowseKey(key string) (tea.Model, tea.Cmd) {
-	switch key {
-	case "right", "l":
+func (m model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	keys := browseKeyMap()
+
+	// If filter mode is active, handle filter input first
+	if m.browseFilterActive {
+		switch {
+		case key.Matches(msg, keys.Quit):
+			// Esc exits filter mode and clears query
+			m.browseFilterActive = false
+			m.browseFilterInput.Blur()
+			m.browseFilterQuery = ""
+			m.browseFilterInput.SetValue("")
+			m.clampCursors()
+			return m, nil
+		case msg.String() == "enter":
+			// Enter exits filter mode but keeps query
+			m.browseFilterActive = false
+			m.browseFilterInput.Blur()
+			return m, nil
+		case msg.Type == tea.KeyUp:
+			m.moveCursor(-1)
+			return m, nil
+		case msg.Type == tea.KeyDown:
+			m.moveCursor(1)
+			return m, nil
+		case msg.Type == tea.KeyPgUp:
+			m.moveCursor(-browseCursorPageStep)
+			return m, nil
+		case msg.Type == tea.KeyPgDown:
+			m.moveCursor(browseCursorPageStep)
+			return m, nil
+		default:
+			// All other keys go to filter input
+			var cmd tea.Cmd
+			m.browseFilterInput, cmd = m.browseFilterInput.Update(msg)
+			m.browseFilterQuery = m.browseFilterInput.Value()
+			// Recompute visible lists and clamp cursors to keep selection valid
+			m.clampCursors()
+			return m, cmd
+		}
+	}
+
+	// Normal browse mode key handling
+	switch {
+	case key.Matches(msg, keys.TabRight):
 		m.moveActiveTab(1)
-	case "left", "h":
+	case key.Matches(msg, keys.TabLeft):
 		m.moveActiveTab(-1)
-	case "a":
+	case key.Matches(msg, keys.ToggleScope):
 		m.toggleContainerScope()
-	case "up", "k":
+	case key.Matches(msg, keys.MoveUp):
 		m.moveCursor(-1)
-	case "down", "j":
+	case key.Matches(msg, keys.MoveDown):
 		m.moveCursor(1)
-	case "pgup":
+	case key.Matches(msg, keys.PageUp):
 		m.moveCursor(-browseCursorPageStep)
-	case "pgdown":
+	case key.Matches(msg, keys.PageDown):
 		m.moveCursor(browseCursorPageStep)
-	case "enter":
+	case key.Matches(msg, keys.OpenLogs):
+		if m.toggleSelectedComposeProject() {
+			return m, nil
+		}
 		if cmd := m.enterLogsModeIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}
-	case "t":
+	case "s":
 		if cmd := m.execTerminalIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}
-	case "esc", "backspace":
+	case key.Matches(msg, keys.OpenFilter):
+		// Slash opens filter mode
+		m.browseFilterActive = true
+		m.browseFilterInput.Focus()
+		m.browseFilterInput.SetValue(m.browseFilterQuery)
+	case key.Matches(msg, keys.Quit):
 		return m, tea.Quit
 	}
 	return m, nil
@@ -83,17 +134,29 @@ func (m model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
-	route := mode.RouteRootKey(key, toModeScreen(m.screen))
+func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
+
+	if m.screen == screenModeBrowse && m.browseFilterActive {
+		return m.handleBrowseKey(msg)
+	}
+
+	if m.screen == screenModeLogs && m.logs.FilterActive {
+		return m, m.handleLogsKey(msg)
+	}
+
+	route := mode.RouteRootKey(msg.String(), toModeScreen(m.screen))
 	switch route {
 	case mode.RouteQuit:
 		return m, tea.Quit
 	case mode.RouteNoop:
 		return m, nil
 	case mode.RouteLogs:
-		return m, m.handleLogsKey(key)
+		return m, m.handleLogsKey(msg)
 	case mode.RouteBrowse:
-		return m.handleBrowseKey(key)
+		return m.handleBrowseKey(msg)
 	}
 
 	return m, nil
@@ -113,8 +176,84 @@ func fromModeScreen(screen mode.Screen) screenMode {
 	return screenModeBrowse
 }
 
-func (m *model) handleLogsKey(key string) tea.Cmd {
-	transition := logsController.HandleKey(&m.logs, key, tabContainers)
+func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
+	keys := logsKeyMap()
+
+	if m.logs.FilterActive {
+		switch {
+		case key.Matches(msg, keys.Back):
+			previousRows := m.logVisibleRows()
+			previousYOffset := m.logs.Viewport.YOffset
+			m.logs.FilterActive = false
+			m.logs.FilterInput.Blur()
+			m.logs.FilterQuery = ""
+			m.logs.FilterInput.SetValue("")
+			newRows := m.logVisibleRows()
+			m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+			if !m.logs.Follow && newRows > previousRows {
+				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
+			}
+			return nil
+		case msg.String() == "enter":
+			previousRows := m.logVisibleRows()
+			previousYOffset := m.logs.Viewport.YOffset
+			m.logs.FilterActive = false
+			m.logs.FilterInput.Blur()
+			newRows := m.logVisibleRows()
+			m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+			if !m.logs.Follow && newRows > previousRows {
+				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
+			}
+			return nil
+		case msg.Type == tea.KeyUp,
+			msg.Type == tea.KeyDown,
+			msg.Type == tea.KeyPgUp,
+			msg.Type == tea.KeyPgDown,
+			msg.Type == tea.KeyHome,
+			msg.Type == tea.KeyEnd:
+			transition := logsController.HandleKey(&m.logs, msg, keys, tabContainers)
+			return m.applyLogsTransition(transition)
+		default:
+			var cmd tea.Cmd
+			m.logs.FilterInput, cmd = m.logs.FilterInput.Update(msg)
+			m.logs.FilterQuery = m.logs.FilterInput.Value()
+			m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+			return cmd
+		}
+	}
+
+	if key.Matches(msg, keys.OpenFilter) {
+		previousRows := m.logVisibleRows()
+		previousYOffset := m.logs.Viewport.YOffset
+		m.logs.FilterActive = true
+		m.logs.FilterInput.Focus()
+		m.logs.FilterInput.SetValue(m.logs.FilterQuery)
+		newRows := m.logVisibleRows()
+		m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+		if !m.logs.Follow && newRows < previousRows {
+			m.logs.Viewport.SetYOffset(previousYOffset + (previousRows - newRows))
+		}
+		return nil
+	}
+
+	if key.Matches(msg, keys.ToggleWrap) {
+		logList := logs.FilterLogLines(m.logs.Data.Logs, m.logs.FilterQuery)
+		startLine, _ := logs.VisibleLogRange(m.logs, logList)
+		visibleWidth := m.logVisibleWidth()
+		visibleRows := m.logVisibleRows()
+		m.logs.SetWrapLines(!m.logs.WrapLines)
+		m.logs.SyncViewportFromData(visibleWidth, visibleRows)
+		if !m.logs.Follow {
+			targetYOffset := startLine
+			if m.logs.WrapLines {
+				targetYOffset = logs.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
+			}
+			m.logs.Viewport.SetYOffset(targetYOffset)
+		}
+		return nil
+	}
+
+	transition := logsController.HandleKey(&m.logs, msg, logsKeyMap(), tabContainers)
 	return m.applyLogsTransition(transition)
 }
 
@@ -194,8 +333,21 @@ func (m model) shouldReloadSnapshotOnTick() bool {
 	return m.loadingStage == loadStageIdle
 }
 
+func (m model) shouldLoadHistoryOnTick() bool {
+	return m.screen == screenModeLogs &&
+		m.logs.ContainerID != "" &&
+		m.logs.Viewport.AtTop() &&
+		!m.logs.InitialLoad &&
+		!m.logs.HistoryLoad &&
+		!m.logs.HistoryDone
+}
+
 func (m model) shouldPollLogsOnTick() bool {
-	return m.screen == screenModeLogs && m.logs.ContainerID != ""
+	return m.screen == screenModeLogs &&
+		m.logs.ContainerID != "" &&
+		!m.logs.Viewport.AtTop() &&
+		!m.logs.InitialLoad &&
+		!m.logs.HistoryLoad
 }
 
 func (m model) logsPollTail() int {
@@ -284,7 +436,10 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	if m.shouldReloadSnapshotOnTick() {
 		cmds = append(cmds, m.loadDockerCmd())
 	}
-	if m.shouldPollLogsOnTick() {
+	if m.shouldLoadHistoryOnTick() {
+		tail := len(m.logs.Data.Logs) + logs.TailStep
+		cmds = append(cmds, m.loadLogsDataCmd(m.logs.ContainerID, m.logs.SessionID, m.logs.Data.CPUHistory, m.logs.Data.MemHistory, tail, logs.SourceHistory))
+	} else if m.shouldPollLogsOnTick() {
 		tail := m.logsPollTail()
 		cmds = append(cmds, m.loadLogsDataCmd(m.logs.ContainerID, m.logs.SessionID, m.logs.Data.CPUHistory, m.logs.Data.MemHistory, tail, logs.SourcePoll))
 	}
@@ -292,11 +447,16 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
-	cmds := make([]tea.Cmd, 0, 2)
+	cmds := make([]tea.Cmd, 0, 3)
 
 	if m.shouldAnimateMetricsLoadingIndicator() {
 		var cmd tea.Cmd
 		m.metricsSpinner, cmd = m.metricsSpinner.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+
+		m.containerSpinner, cmd = m.containerSpinner.Update(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
