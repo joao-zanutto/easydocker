@@ -192,8 +192,6 @@ func childMetricGuidePrefix(treePrefix string) string {
 	return "\x1b[2m" + guide + "\x1b[22m"
 }
 
-
-
 func ComposeProjectTableRow(item ContainerListRow, loadingIndicator string) []string {
 	prefix := "[+]"
 	if item.ComposeExpanded {
