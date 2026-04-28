@@ -290,7 +290,7 @@ func ContainerMemoryTableValue(container core.ContainerRow, loadingIndicator str
 		}
 		return "-"
 	}
-	return fmt.Sprintf("%s (%.1f%%)", container.MemoryUsage, container.MemoryPercent)
+	return fmt.Sprintf("%s", container.MemoryUsage)
 }
 
 func metricsLoadingValue(loadingIndicator string) string {
