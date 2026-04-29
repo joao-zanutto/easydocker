@@ -51,6 +51,10 @@ func (m *model) execTerminalIfContainerSelected() tea.Cmd {
 	if !ok {
 		return nil
 	}
+	// Only allow shell on running containers
+	if !isShellCompatibleState(container.State) {
+		return nil
+	}
 	return m.execTerminalCmd(container.FullID)
 }
 

@@ -99,6 +99,11 @@ func logsKeyMap() logs.KeyMap {
 	return defaultLogsKeyMap
 }
 
+func isShellCompatibleState(state string) bool {
+	// Only running containers support shell execution
+	return state == "running"
+}
+
 func (m model) footerKeyMap() help.KeyMap {
 	if m.screen == screenModeLogs {
 		if m.logs.FilterActive {
@@ -147,7 +152,6 @@ func (m model) footerKeyMap() help.KeyMap {
 		browseKeys.HelpNavigate,
 		browseKeys.HelpSwitch,
 		browseKeys.OpenFilter,
-		browseKeys.OpenShell,
 		browseKeys.Quit,
 	}
 	if m.activeTab == tabContainers {
@@ -163,6 +167,10 @@ func (m model) footerKeyMap() help.KeyMap {
 			))
 		} else {
 			bindings = append(bindings, browseKeys.OpenLogs)
+			// Only show shell option for running containers
+			if container, ok := m.selectedContainer(); ok && isShellCompatibleState(container.State) {
+				bindings = append(bindings, browseKeys.OpenShell)
+			}
 		}
 	}
 	return footerKeyMap{bindings: bindings}
