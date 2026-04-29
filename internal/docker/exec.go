@@ -18,6 +18,16 @@ func shellExecOptions() container.ExecOptions {
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          true,
+		Cmd:          []string{"bash"},
+	}
+}
+
+func shellExecOptionsFallback() container.ExecOptions {
+	return container.ExecOptions{
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          true,
 		Cmd:          []string{"sh"},
 	}
 }
@@ -29,6 +39,10 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 	}
 
 	execResp, err := cli.ContainerExecCreate(ctx, containerID, shellExecOptions())
+	// If bash is not available, fallback to sh
+	if err != nil {
+		execResp, err = cli.ContainerExecCreate(ctx, containerID, shellExecOptionsFallback())
+	}
 	if err != nil {
 		return fmt.Errorf("create exec: %w", err)
 	}
