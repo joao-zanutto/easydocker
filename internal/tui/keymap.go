@@ -19,6 +19,7 @@ type BrowseKeyMap struct {
 	ToggleScope  key.Binding
 	OpenLogs     key.Binding
 	OpenFilter   key.Binding
+	OpenShell		 key.Binding
 	Quit         key.Binding
 	HelpNavigate key.Binding
 	HelpSwitch   key.Binding
@@ -66,6 +67,10 @@ func newBrowseKeyMap() BrowseKeyMap {
 		OpenFilter: key.NewBinding(
 			key.WithKeys("/"),
 			key.WithHelp(helpKeyLabel("/"), "filter"),
+		),
+		OpenShell: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp(helpKeyLabel("s"), "shell"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("esc"),
@@ -142,6 +147,7 @@ func (m model) footerKeyMap() help.KeyMap {
 		browseKeys.HelpNavigate,
 		browseKeys.HelpSwitch,
 		browseKeys.OpenFilter,
+		browseKeys.OpenShell,
 		browseKeys.Quit,
 	}
 	if m.activeTab == tabContainers {

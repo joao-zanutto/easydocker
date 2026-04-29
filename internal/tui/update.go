@@ -110,7 +110,7 @@ func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if cmd := m.enterLogsModeIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}
-	case "s":
+	case key.Matches(msg, keys.OpenShell):
 		if cmd := m.execTerminalIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}
