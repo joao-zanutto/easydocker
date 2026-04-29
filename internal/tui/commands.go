@@ -61,6 +61,12 @@ func (e *execShellCommand) SetStdout(w io.Writer) { e.stdout = w }
 func (e *execShellCommand) SetStderr(w io.Writer) { e.stderr = w }
 
 func (e *execShellCommand) Run() error {
+	// Enter alternate screen buffer
+	_, _ = io.WriteString(e.stdout, "\033[?1049h")
+	defer func() {
+		// Exit alternate screen buffer
+		_, _ = io.WriteString(e.stdout, "\033[?1049l")
+	}()
 	return e.service.ExecShell(e.containerID, e.stdin, e.stdout, e.stderr)
 }
 
