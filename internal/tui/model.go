@@ -58,6 +58,8 @@ type loadResultMsg struct {
 	err      error
 }
 
+type execDoneMsg struct{ err error }
+
 type model struct {
 	service          *core.Service
 	width            int

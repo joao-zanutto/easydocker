@@ -19,6 +19,7 @@ type BrowseKeyMap struct {
 	ToggleScope  key.Binding
 	OpenLogs     key.Binding
 	OpenFilter   key.Binding
+	OpenShell    key.Binding
 	Quit         key.Binding
 	HelpNavigate key.Binding
 	HelpSwitch   key.Binding
@@ -67,6 +68,10 @@ func newBrowseKeyMap() BrowseKeyMap {
 			key.WithKeys("/"),
 			key.WithHelp(helpKeyLabel("/"), "filter"),
 		),
+		OpenShell: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp(helpKeyLabel("s"), "shell"),
+		),
 		Quit: key.NewBinding(
 			key.WithKeys("esc"),
 			key.WithHelp(helpKeyLabel("esc"), "quit"),
@@ -92,6 +97,11 @@ func browseKeyMap() BrowseKeyMap {
 
 func logsKeyMap() logs.KeyMap {
 	return defaultLogsKeyMap
+}
+
+func isShellCompatibleState(state string) bool {
+	// Only running containers support shell execution
+	return state == "running"
 }
 
 func (m model) footerKeyMap() help.KeyMap {
@@ -157,6 +167,10 @@ func (m model) footerKeyMap() help.KeyMap {
 			))
 		} else {
 			bindings = append(bindings, browseKeys.OpenLogs)
+			// Only show shell option for running containers
+			if container, ok := m.selectedContainer(); ok && isShellCompatibleState(container.State) {
+				bindings = append(bindings, browseKeys.OpenShell)
+			}
 		}
 	}
 	return footerKeyMap{bindings: bindings}

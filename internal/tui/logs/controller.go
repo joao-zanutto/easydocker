@@ -52,7 +52,8 @@ func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap, cont
 	case key.Matches(msg, keys.ToggleFollow):
 		state.SetFollow(!state.Follow)
 		return Transition{}
-
+	case key.Matches(msg, keys.OpenShell):
+		return Transition{LaunchTerminal: true}
 	case key.Matches(msg, keys.Back):
 		return Controller{}.Exit(state, containersTab)
 

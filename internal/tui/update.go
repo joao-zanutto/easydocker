@@ -32,6 +32,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleLoadResultMsg(msg)
 	case logs.ResultMsg:
 		return m.handleLogsResultMsg(msg)
+	case execDoneMsg:
+		return m, nil
 	case tickMsg:
 		return m.handleTickMsg(msg)
 	case spinner.TickMsg:
@@ -106,6 +108,10 @@ func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if cmd := m.enterLogsModeIfContainerSelected(); cmd != nil {
+			return m, cmd
+		}
+	case key.Matches(msg, keys.OpenShell):
+		if cmd := m.execTerminalIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}
 	case key.Matches(msg, keys.OpenFilter):
@@ -269,6 +275,12 @@ func (m *model) handleLogsResult(msg logs.ResultMsg) tea.Cmd {
 }
 
 func (m *model) applyLogsTransition(transition logs.Transition) tea.Cmd {
+	if transition.LaunchTerminal {
+		if container, ok := m.selectedLogsContainer(); ok {
+			return m.execTerminalCmd(container.FullID)
+		}
+		return nil
+	}
 	if transition.ExitToBrowse {
 		targetScreen, _ := mode.ExitLogsTransition(transition.ForceTab)
 		m.screen = fromModeScreen(targetScreen)

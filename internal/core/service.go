@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"io"
 	"time"
 )
 
@@ -10,6 +11,7 @@ type Repository interface {
 	LoadSupportingResources(ctx context.Context) (Snapshot, error)
 	LoadContainerMetrics(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error)
 	LoadContainerLiveData(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error)
+	ExecShell(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error
 }
 
 type ServiceConfig struct {
@@ -96,6 +98,10 @@ func (s *Service) liveDataTimeoutForTail(tail int) time.Duration {
 		return s.config.LiveDataMediumTailTimeout
 	}
 	return s.config.RequestTimeout
+}
+
+func (s *Service) ExecShell(containerID string, stdin io.Reader, stdout, stderr io.Writer) error {
+	return s.repo.ExecShell(context.Background(), containerID, stdin, stdout, stderr)
 }
 
 func (s *Service) LoadSnapshot() (Snapshot, error) {

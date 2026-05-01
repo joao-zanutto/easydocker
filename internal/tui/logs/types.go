@@ -34,10 +34,11 @@ type LoadRequest struct {
 }
 
 type Transition struct {
-	ExitToBrowse bool
-	ForceTab     int
-	Load         *LoadRequest
-	Err          error
+	ExitToBrowse   bool
+	ForceTab       int
+	Load           *LoadRequest
+	Err            error
+	LaunchTerminal bool
 }
 
 type State struct {

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"io"
 	"reflect"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ type mockRepository struct {
 	loadSupportingResourcesFn func(ctx context.Context) (Snapshot, error)
 	loadContainerMetricsFn    func(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error)
 	loadContainerLiveDataFn   func(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error)
+	execShellFn               func(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error
 
 	calls []string
 }
@@ -47,6 +49,14 @@ func (m *mockRepository) LoadContainerLiveData(ctx context.Context, containerID 
 		return m.loadContainerLiveDataFn(ctx, containerID, previousCPU, previousMem, tail)
 	}
 	return ContainerLiveData{}, nil
+}
+
+func (m *mockRepository) ExecShell(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error {
+	m.calls = append(m.calls, "exec")
+	if m.execShellFn != nil {
+		return m.execShellFn(ctx, containerID, stdin, stdout, stderr)
+	}
+	return nil
 }
 
 func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {

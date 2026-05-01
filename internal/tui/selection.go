@@ -43,6 +43,21 @@ func (m *model) enterLogsModeIfContainerSelected() tea.Cmd {
 	return m.enterLogsMode(container)
 }
 
+func (m *model) execTerminalIfContainerSelected() tea.Cmd {
+	if m.activeTab != tabContainers {
+		return nil
+	}
+	container, ok := m.selectedContainer()
+	if !ok {
+		return nil
+	}
+	// Only allow shell on running containers
+	if !isShellCompatibleState(container.State) {
+		return nil
+	}
+	return m.execTerminalCmd(container.FullID)
+}
+
 func (m *model) toggleSelectedComposeProject() bool {
 	if m.activeTab != tabContainers {
 		return false
