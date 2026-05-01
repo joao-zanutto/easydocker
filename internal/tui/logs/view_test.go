@@ -117,8 +117,8 @@ func TestRenderContent_KeepsLineCountIndicatorOnOneLine(t *testing.T) {
 			FollowOff:    lipgloss.NewStyle(),
 			Muted:        lipgloss.NewStyle(),
 			Divider:      lipgloss.NewStyle(),
-SubpageFrame: lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(0, 1),
-	},
+			SubpageFrame: lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(0, 1),
+		},
 	})
 
 	if !strings.Contains(view, "lines:") {

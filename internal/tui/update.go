@@ -198,13 +198,13 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 			if !m.logs.Follow && newRows > previousRows {
 				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
 			}
-return nil
-	case key.Matches(msg, keys.Up),
-	key.Matches(msg, keys.Down),
-	key.Matches(msg, keys.PageUp),
-	key.Matches(msg, keys.PageDown),
-	key.Matches(msg, keys.Home),
-	key.Matches(msg, keys.End):
+			return nil
+		case key.Matches(msg, keys.Up),
+			key.Matches(msg, keys.Down),
+			key.Matches(msg, keys.PageUp),
+			key.Matches(msg, keys.PageDown),
+			key.Matches(msg, keys.Home),
+			key.Matches(msg, keys.End):
 			transition := logsController.HandleKey(&m.logs, msg, keys, tabContainers)
 			return m.applyLogsTransition(transition)
 		default:

@@ -164,21 +164,21 @@ func (m model) detailLineWithWidth(label, value string, width int) string {
 
 func (m model) renderBrowseContent(width, height int) string {
 	return browse.RenderContent(browse.ViewModel{
-		Loading: m.loading,
-		Snapshot: m.snapshot,
-		ActiveTab: m.activeTab,
+		Loading:                 m.loading,
+		Snapshot:                m.snapshot,
+		ActiveTab:               m.activeTab,
 		MetricsLoadingIndicator: m.containerMetricsLoadingIndicator(),
-		Width: width,
-		Height: height,
+		Width:                   width,
+		Height:                  height,
 		Styles: browse.ViewStyles{
 			Divider: m.styles.Divider,
-			Muted: m.styles.Muted,
+			Muted:   m.styles.Muted,
 			Section: m.styles.Section,
 		},
-		Selections: m.browseSelections(),
+		Selections:   m.browseSelections(),
 		FilterActive: m.browseFilterActive,
-		FilterQuery: m.browseFilterQuery,
-		FilterInput: m.renderBrowseFilterInputView(width),
+		FilterQuery:  m.browseFilterQuery,
+		FilterInput:  m.renderBrowseFilterInputView(width),
 	}, m.renderResourceList(width, browse.ListHeightForContent(height, m.browseFilterActive)), m.browseDetailRenderer())
 }
 
