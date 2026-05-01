@@ -87,7 +87,7 @@ func ViewportRange(state State, total int) (int, int) {
 	if total <= 0 {
 		return 0, 0
 	}
-	start := util.Clamp(state.Viewport.YOffset, 0, max(0, total-1))
+	start := util.Clamp(state.Viewport.YOffset(), 0, max(0, total-1))
 	visible := max(1, state.Viewport.VisibleLineCount())
 	end := min(total, start+visible)
 	return start, end
@@ -104,7 +104,7 @@ func VisibleLogRange(state State, logLines []string) (int, int) {
 		return ViewportRange(state, total)
 	}
 
-	wrapWidth := max(1, state.Viewport.Width)
+	wrapWidth := max(1, state.Viewport.Width())
 	totalRows := 0
 	for _, line := range logLines {
 		totalRows += wrappedRowCount(line, wrapWidth)
@@ -113,7 +113,7 @@ func VisibleLogRange(state State, logLines []string) (int, int) {
 		return 0, 0
 	}
 
-	startRow := util.Clamp(state.Viewport.YOffset, 0, totalRows-1)
+	startRow := util.Clamp(state.Viewport.YOffset(), 0, totalRows-1)
 	visibleRows := max(1, state.Viewport.VisibleLineCount())
 	endRowExclusive := min(totalRows, startRow+visibleRows)
 

@@ -7,7 +7,7 @@ import (
 	tuistate "easydocker/internal/tui/state"
 	"easydocker/internal/tui/tables"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func (m *model) moveActiveTab(delta int) {

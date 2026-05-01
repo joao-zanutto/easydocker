@@ -10,25 +10,28 @@ import (
 	"easydocker/internal/tui/tables"
 	"easydocker/internal/tui/util"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
-func (m model) View() string {
-	if m.width == 0 || m.height == 0 {
-		return "Loading EasyDocker..."
+func (m model) View() tea.View {
+	content := "Loading EasyDocker..."
+	if m.width > 0 && m.height > 0 {
+		header := m.renderHeader()
+		footer := m.renderFooter()
+		mainHeight := util.MainAreaHeight(m.height, header, footer)
+		main := m.renderMain(mainHeight)
+		used := lipgloss.Height(header) + lipgloss.Height(main) + lipgloss.Height(footer)
+		spacer := ""
+		if used < m.height {
+			spacer = strings.Repeat("\n", m.height-used)
+		}
+		content = m.styles.Page.Render(lipgloss.JoinVertical(lipgloss.Left, header, main, spacer, footer))
 	}
 
-	header := m.renderHeader()
-	footer := m.renderFooter()
-	mainHeight := util.MainAreaHeight(m.height, header, footer)
-	main := m.renderMain(mainHeight)
-	used := lipgloss.Height(header) + lipgloss.Height(main) + lipgloss.Height(footer)
-	spacer := ""
-	if used < m.height {
-		spacer = strings.Repeat("\n", m.height-used)
-	}
-
-	return m.styles.Page.Render(lipgloss.JoinVertical(lipgloss.Left, header, main, spacer, footer))
+	v := tea.NewView(content)
+	v.AltScreen = true
+	return v
 }
 
 func (m model) renderMain(height int) string {
@@ -75,8 +78,7 @@ func (m model) logVisibleRows() int {
 func (m model) logVisibleWidth() int {
 	totalWidth := max(1, m.width)
 	if m.screen == screenModeLogs {
-		pageContentWidth := m.logsPageContentWidth(totalWidth)
-		return max(1, pageContentWidth-2)
+		return m.logsPageContentWidth(totalWidth)
 	}
 	innerWidth := util.FrameContentWidth(totalWidth, m.styles.MainFrame)
 	return max(1, innerWidth-2)
@@ -161,30 +163,28 @@ func (m model) detailLineWithWidth(label, value string, width int) string {
 }
 
 func (m model) renderBrowseContent(width, height int) string {
-	safeContentWidth := max(1, width-2)
 	return browse.RenderContent(browse.ViewModel{
-		Loading:                 m.loading,
-		Snapshot:                m.snapshot,
-		ActiveTab:               m.activeTab,
+		Loading: m.loading,
+		Snapshot: m.snapshot,
+		ActiveTab: m.activeTab,
 		MetricsLoadingIndicator: m.containerMetricsLoadingIndicator(),
-		Width:                   safeContentWidth,
-		Height:                  height,
+		Width: width,
+		Height: height,
 		Styles: browse.ViewStyles{
 			Divider: m.styles.Divider,
-			Muted:   m.styles.Muted,
+			Muted: m.styles.Muted,
 			Section: m.styles.Section,
 		},
 		Selections: m.browseSelections(),
-		// Add filter state
 		FilterActive: m.browseFilterActive,
-		FilterQuery:  m.browseFilterQuery,
-		FilterInput:  m.renderBrowseFilterInputView(safeContentWidth),
-	}, m.renderResourceList(safeContentWidth, browse.ListHeightForContent(height, m.browseFilterActive)), m.browseDetailRenderer())
+		FilterQuery: m.browseFilterQuery,
+		FilterInput: m.renderBrowseFilterInputView(width),
+	}, m.renderResourceList(width, browse.ListHeightForContent(height, m.browseFilterActive)), m.browseDetailRenderer())
 }
 
 func (m model) renderBrowseFilterInputView(lineWidth int) string {
 	input := m.browseFilterInput
-	input.Width = max(1, lineWidth-util.DisplayWidth(input.Prompt))
+	input.SetWidth(max(1, lineWidth-util.DisplayWidth(input.Prompt)))
 	return input.View()
 }
 

@@ -6,14 +6,14 @@ import (
 
 	"easydocker/internal/core"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
-func keyMsg(keyType tea.KeyType, runes ...rune) tea.KeyMsg {
-	if keyType != tea.KeyRunes {
-		return tea.KeyMsg{Type: keyType}
+func keyMsg(code rune, textArgs ...rune) tea.KeyPressMsg {
+	if len(textArgs) > 0 {
+		return tea.KeyPressMsg{Code: code, Text: string(textArgs[0])}
 	}
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: runes}
+	return tea.KeyPressMsg{Code: code}
 }
 
 func TestControllerEnterReturnsInitialLoadTransition(t *testing.T) {
@@ -69,7 +69,7 @@ func TestControllerHandleKeyExitRequestsBrowse(t *testing.T) {
 	state.SessionID = 3
 	state.ContainerID = "ctr-1"
 
-	transition := controller.HandleKey(&state, keyMsg(tea.KeyEsc), NewKeyMap(), 2)
+	transition := controller.HandleKey(&state, keyMsg(tea.KeyEscape), NewKeyMap(), 2)
 	if !transition.ExitToBrowse {
 		t.Fatalf("exit transition expected")
 	}
@@ -111,7 +111,7 @@ func TestControllerHandleResultMapsErrorsAndSyncsViewport(t *testing.T) {
 	if okTransition.Err != nil {
 		t.Fatalf("unexpected error transition: %v", okTransition.Err)
 	}
-	if state.Viewport.Width != 30 || state.Viewport.Height != 2 {
-		t.Fatalf("viewport size = (%d,%d), want (30,2)", state.Viewport.Width, state.Viewport.Height)
+	if state.Viewport.Width() != 30 || state.Viewport.Height() != 2 {
+		t.Fatalf("viewport size = (%d,%d), want (30,2)", state.Viewport.Width(), state.Viewport.Height())
 	}
 }
