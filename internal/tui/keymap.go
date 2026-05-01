@@ -19,7 +19,7 @@ type BrowseKeyMap struct {
 	ToggleScope  key.Binding
 	OpenLogs     key.Binding
 	OpenFilter   key.Binding
-	OpenShell		 key.Binding
+	OpenShell    key.Binding
 	Quit         key.Binding
 	HelpNavigate key.Binding
 	HelpSwitch   key.Binding

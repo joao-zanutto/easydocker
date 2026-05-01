@@ -15,7 +15,7 @@ type KeyMap struct {
 	ToggleFollow key.Binding
 	ToggleWrap   key.Binding
 	OpenFilter   key.Binding
-	OpenShell		 key.Binding
+	OpenShell    key.Binding
 	Back         key.Binding
 	HelpNavigate key.Binding
 	HelpPage     key.Binding
