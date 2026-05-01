@@ -106,8 +106,8 @@ func (s *State) ApplyPoll(data core.ContainerLiveData, previousYOffset int) {
 }
 
 func (s *State) SyncViewport(lines []string, visibleWidth, visibleRows int) {
-	s.Viewport.Width = visibleWidth
-	s.Viewport.Height = visibleRows
+	s.Viewport.SetWidth(visibleWidth)
+	s.Viewport.SetHeight(visibleRows)
 	s.Viewport.SetContent(strings.Join(lines, "\n"))
 	if s.Follow {
 		s.Viewport.GotoBottom()
@@ -139,7 +139,7 @@ func renderedViewportLineDelta(state *State, allLines []string, prepended int) i
 		return len(added)
 	}
 
-	width := max(1, state.Viewport.Width)
+	width := max(1, state.Viewport.Width())
 	delta := 0
 	for _, line := range added {
 		delta += wrappedRowCount(SanitizeLogRenderLine(line), width)

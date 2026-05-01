@@ -1,6 +1,6 @@
 package logs
 
-import "github.com/charmbracelet/bubbles/key"
+import "charm.land/bubbles/v2/key"
 
 // KeyMap defines logs-mode bindings and corresponding help metadata.
 type KeyMap struct {

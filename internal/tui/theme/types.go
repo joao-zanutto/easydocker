@@ -1,6 +1,10 @@
 package theme
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"image/color"
+
+	"charm.land/lipgloss/v2"
+)
 
 // Set contains all style primitives used by the root TUI orchestrator.
 type Set struct {
@@ -34,5 +38,5 @@ type Set struct {
 	StateStop    lipgloss.Style
 	StateDead    lipgloss.Style
 	StateOther   lipgloss.Style
-	ActiveBG     lipgloss.Color
+	ActiveBG     color.Color
 }

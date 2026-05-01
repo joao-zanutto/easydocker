@@ -1,6 +1,6 @@
 package theme
 
-import "github.com/charmbracelet/lipgloss"
+import "charm.land/lipgloss/v2"
 
 func applyTableStyles(s *Set) {
 	s.HeaderRow = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("230"))

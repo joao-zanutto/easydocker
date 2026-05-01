@@ -7,8 +7,8 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/util"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/lipgloss/v2"
 )
 
 type TabSpec struct {
@@ -117,7 +117,7 @@ func RenderHeader(input HeaderInput) string {
 func RenderFooter(input FooterInput) string {
 	innerWidth := max(1, input.Width-input.Styles.Footer.GetHorizontalFrameSize())
 	helpModel := help.New()
-	helpModel.Width = innerWidth
+	helpModel.SetWidth(innerWidth)
 	helpModel.ShortSeparator = "   "
 	helpModel.Ellipsis = "…"
 	helpModel.Styles = help.Styles{

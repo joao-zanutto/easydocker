@@ -7,7 +7,7 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/logs"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func tickCmd() tea.Cmd {

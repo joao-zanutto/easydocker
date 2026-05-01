@@ -3,7 +3,7 @@ package util
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // AllocateColumns distributes total width across desired column widths.
@@ -90,20 +90,16 @@ func ComputeFrameLayout(outerWidth, outerHeight int, frame lipgloss.Style) Frame
 
 // RenderFramedContent wraps content in a frame with calculated dimensions.
 func RenderFramedContent(frame lipgloss.Style, layout FrameLayout, content string) string {
-	content = strings.Join(clampFrameLines(content, layout.ContentWidth), "\n")
+	innerWidth := max(1, layout.OuterWidth-frame.GetHorizontalFrameSize())
+	clampedLines := make([]string, 0)
+	for _, line := range strings.Split(content, "\n") {
+		clampedLines = append(clampedLines, ClampSingleLine(line, innerWidth))
+	}
+	content = strings.Join(clampedLines, "\n")
 	return frame.
-		Width(layout.ContentWidth).
+		Width(layout.OuterWidth).
 		Height(layout.ContentHeight).
 		MaxWidth(layout.OuterWidth).
 		MaxHeight(layout.OuterHeight).
 		Render(content)
-}
-
-func clampFrameLines(content string, width int) []string {
-	lines := strings.Split(content, "\n")
-	out := make([]string, 0, len(lines))
-	for _, line := range lines {
-		out = append(out, ClampSingleLine(line, width))
-	}
-	return out
 }

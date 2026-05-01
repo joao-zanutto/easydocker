@@ -3,8 +3,8 @@ package logs
 import (
 	"easydocker/internal/core"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
 )
 
 type Source string
@@ -63,7 +63,7 @@ type State struct {
 }
 
 func NewState() State {
-	vp := viewport.New(1, 1)
+	vp := viewport.New(viewport.WithWidth(1), viewport.WithHeight(1))
 	vp.SetHorizontalStep(8)
 	vp.SetContent("")
 
