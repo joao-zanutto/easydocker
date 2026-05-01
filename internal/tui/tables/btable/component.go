@@ -5,8 +5,8 @@ import (
 
 	"easydocker/internal/tui/util"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/viewport"
+	"charm.land/lipgloss/v2"
 )
 
 type Row []string
@@ -44,7 +44,7 @@ type Option func(*Model)
 func New(opts ...Option) Model {
 	m := Model{
 		styles:   DefaultStyles(),
-		viewport: viewport.New(0, 20),
+		viewport: viewport.New(viewport.WithWidth(0), viewport.WithHeight(20)),
 	}
 	for _, opt := range opts {
 		opt(&m)
@@ -68,13 +68,13 @@ func WithRows(rows []Row) Option {
 func WithHeight(h int) Option {
 	return func(m *Model) {
 		headerHeight := lipgloss.Height(m.headersView())
-		m.viewport.Height = max(1, h-headerHeight)
+		m.viewport.SetHeight(max(1, h-headerHeight))
 	}
 }
 
 func WithWidth(w int) Option {
 	return func(m *Model) {
-		m.viewport.Width = max(1, w)
+		m.viewport.SetWidth(max(1, w))
 	}
 }
 
@@ -104,11 +104,11 @@ func (m Model) View() string {
 }
 
 func (m *Model) updateViewport() {
-	if m.viewport.Width <= 0 {
-		m.viewport.Width = 1
+	if m.viewport.Width() <= 0 {
+		m.viewport.SetWidth(1)
 	}
-	if m.viewport.Height <= 0 {
-		m.viewport.Height = 1
+	if m.viewport.Height() <= 0 {
+		m.viewport.SetHeight(1)
 	}
 
 	if len(m.rows) == 0 {
@@ -117,7 +117,7 @@ func (m *Model) updateViewport() {
 		return
 	}
 
-	visible := max(1, m.viewport.Height)
+	visible := max(1, m.viewport.Height())
 	start, end := scrollWindow(len(m.rows), m.cursor, visible)
 	renderedRows := make([]string, 0, max(0, end-start))
 	for i := start; i < end; i++ {

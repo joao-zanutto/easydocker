@@ -9,9 +9,9 @@ import (
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/mode"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
 )
 
 var logsController = logs.Controller{}
@@ -20,7 +20,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSizeMsg(msg)
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	case containersResultMsg:
 		return m.handleContainersResultMsg(msg)
@@ -43,7 +43,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 const browseCursorPageStep = 5
 
-func (m model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	keys := browseKeyMap()
 
 	// If filter mode is active, handle filter input first
@@ -62,16 +62,16 @@ func (m model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.browseFilterActive = false
 			m.browseFilterInput.Blur()
 			return m, nil
-		case msg.Type == tea.KeyUp:
+		case key.Matches(msg, keys.MoveUp):
 			m.moveCursor(-1)
 			return m, nil
-		case msg.Type == tea.KeyDown:
+		case key.Matches(msg, keys.MoveDown):
 			m.moveCursor(1)
 			return m, nil
-		case msg.Type == tea.KeyPgUp:
+		case key.Matches(msg, keys.PageUp):
 			m.moveCursor(-browseCursorPageStep)
 			return m, nil
-		case msg.Type == tea.KeyPgDown:
+		case key.Matches(msg, keys.PageDown):
 			m.moveCursor(browseCursorPageStep)
 			return m, nil
 		default:
@@ -128,7 +128,7 @@ func (m model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if msg.String() == "ctrl+c" {
 		return m, tea.Quit
 	}
@@ -170,14 +170,14 @@ func fromModeScreen(screen mode.Screen) screenMode {
 	return screenModeBrowse
 }
 
-func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
+func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 	keys := logsKeyMap()
 
 	if m.logs.FilterActive {
 		switch {
 		case key.Matches(msg, keys.Back):
 			previousRows := m.logVisibleRows()
-			previousYOffset := m.logs.Viewport.YOffset
+			previousYOffset := m.logs.Viewport.YOffset()
 			m.logs.FilterActive = false
 			m.logs.FilterInput.Blur()
 			m.logs.FilterQuery = ""
@@ -190,7 +190,7 @@ func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
 			return nil
 		case msg.String() == "enter":
 			previousRows := m.logVisibleRows()
-			previousYOffset := m.logs.Viewport.YOffset
+			previousYOffset := m.logs.Viewport.YOffset()
 			m.logs.FilterActive = false
 			m.logs.FilterInput.Blur()
 			newRows := m.logVisibleRows()
@@ -199,12 +199,12 @@ func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
 				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
 			}
 			return nil
-		case msg.Type == tea.KeyUp,
-			msg.Type == tea.KeyDown,
-			msg.Type == tea.KeyPgUp,
-			msg.Type == tea.KeyPgDown,
-			msg.Type == tea.KeyHome,
-			msg.Type == tea.KeyEnd:
+		case key.Matches(msg, keys.Up),
+			key.Matches(msg, keys.Down),
+			key.Matches(msg, keys.PageUp),
+			key.Matches(msg, keys.PageDown),
+			key.Matches(msg, keys.Home),
+			key.Matches(msg, keys.End):
 			transition := logsController.HandleKey(&m.logs, msg, keys, tabContainers)
 			return m.applyLogsTransition(transition)
 		default:
@@ -218,7 +218,7 @@ func (m *model) handleLogsKey(msg tea.KeyMsg) tea.Cmd {
 
 	if key.Matches(msg, keys.OpenFilter) {
 		previousRows := m.logVisibleRows()
-		previousYOffset := m.logs.Viewport.YOffset
+		previousYOffset := m.logs.Viewport.YOffset()
 		m.logs.FilterActive = true
 		m.logs.FilterInput.Focus()
 		m.logs.FilterInput.SetValue(m.logs.FilterQuery)

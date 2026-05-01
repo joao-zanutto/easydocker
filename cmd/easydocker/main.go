@@ -7,13 +7,13 @@ import (
 	"easydocker/internal/docker"
 	"easydocker/internal/tui"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func main() {
 	repo := docker.NewRepository()
 	svc := core.NewService(repo)
-	p := tea.NewProgram(tui.New(svc), tea.WithAltScreen())
+	p := tea.NewProgram(tui.New(svc))
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("run easydocker: %v", err)
 	}

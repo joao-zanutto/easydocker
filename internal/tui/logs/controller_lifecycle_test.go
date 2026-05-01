@@ -9,7 +9,7 @@ import (
 
 	"easydocker/internal/core"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestControllerHandleResult_IgnoresMismatchedMessage(t *testing.T) {
@@ -93,7 +93,7 @@ func TestControllerHandleResult_HistorySource(t *testing.T) {
 		state.HistoryLoad = true
 		state.Follow = false
 		state.Viewport.SetYOffset(2)
-		previousYOffset := state.Viewport.YOffset
+		previousYOffset := state.Viewport.YOffset()
 
 		history := append(logLines("older", 5), state.Data.Logs...)
 		_ = controller.HandleResult(&state, ResultMsg{
@@ -109,7 +109,7 @@ func TestControllerHandleResult_HistorySource(t *testing.T) {
 		if state.HistoryDone {
 			t.Fatalf("historyDone should remain false when history grows")
 		}
-		if got, want := state.Viewport.YOffset, previousYOffset+5; got != want {
+		if got, want := state.Viewport.YOffset(), previousYOffset+5; got != want {
 			t.Fatalf("YOffset = %d, want %d", got, want)
 		}
 	})
@@ -125,7 +125,7 @@ func TestControllerHandleResult_HistorySource(t *testing.T) {
 		state.HistoryLoad = true
 		state.Follow = false
 		state.Viewport.SetYOffset(2)
-		previousYOffset := state.Viewport.YOffset
+		previousYOffset := state.Viewport.YOffset()
 
 		older := make([]string, 0, 5)
 		for i := 0; i < 5; i++ {
@@ -146,7 +146,7 @@ func TestControllerHandleResult_HistorySource(t *testing.T) {
 		if state.HistoryDone {
 			t.Fatalf("historyDone should remain false when history grows")
 		}
-		if got, want := state.Viewport.YOffset, previousYOffset+expectedDelta; got != want {
+		if got, want := state.Viewport.YOffset(), previousYOffset+expectedDelta; got != want {
 			t.Fatalf("wrapped YOffset = %d, want %d", got, want)
 		}
 	})
@@ -199,7 +199,7 @@ func TestControllerHandleResult_HistorySource(t *testing.T) {
 			Src:         SourceHistory,
 		}, 80, 8)
 
-		if got, want := state.Viewport.YOffset, TailStep; got != want {
+		if got, want := state.Viewport.YOffset(), TailStep; got != want {
 			t.Fatalf("YOffset = %d, want %d", got, want)
 		}
 		if state.HistoryDone {
@@ -235,7 +235,7 @@ func TestControllerHandleResult_HistorySource(t *testing.T) {
 		if !state.HistoryDone {
 			t.Fatalf("historyDone should be true after three unchanged history responses")
 		}
-		if got, want := state.Viewport.YOffset, 0; got != want {
+		if got, want := state.Viewport.YOffset(), 0; got != want {
 			t.Fatalf("YOffset = %d, want %d", got, want)
 		}
 	})
@@ -247,7 +247,7 @@ func TestControllerHandleResult_PollSourcePreservesOffsetWhenNotFollowing(t *tes
 	state.InitialLoad = true
 	state.Follow = false
 	state.Viewport.SetYOffset(4)
-	previousYOffset := state.Viewport.YOffset
+	previousYOffset := state.Viewport.YOffset()
 
 	polled := core.ContainerLiveData{Logs: logLines("poll", 30)}
 	_ = controller.HandleResult(&state, ResultMsg{
@@ -260,7 +260,7 @@ func TestControllerHandleResult_PollSourcePreservesOffsetWhenNotFollowing(t *tes
 	if state.InitialLoad {
 		t.Fatalf("initialLoad should be false after poll")
 	}
-	if got, want := state.Viewport.YOffset, previousYOffset; got != want {
+	if got, want := state.Viewport.YOffset(), previousYOffset; got != want {
 		t.Fatalf("YOffset = %d, want %d", got, want)
 	}
 	if !reflect.DeepEqual(state.Data.Logs, polled.Logs) {
@@ -273,13 +273,13 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 
 	t.Run("f toggles follow", func(t *testing.T) {
 		state := newControllerState(logLines("base", 100))
-		_ = controller.HandleKey(&state, keyMsg(tea.KeyRunes, 'f'), NewKeyMap(), 0)
+		_ = controller.HandleKey(&state, keyMsg('f'), NewKeyMap(), 0)
 		if state.Follow {
 			t.Fatalf("follow should be disabled")
 		}
 
 		state.Viewport.GotoTop()
-		_ = controller.HandleKey(&state, keyMsg(tea.KeyRunes, 'f'), NewKeyMap(), 0)
+		_ = controller.HandleKey(&state, keyMsg('f'), NewKeyMap(), 0)
 		if !state.Follow {
 			t.Fatalf("follow should be enabled")
 		}
@@ -339,20 +339,20 @@ func TestControllerHandleKey_Behavior(t *testing.T) {
 		state := newControllerState(logLines("base", 100))
 		state.Follow = true
 		state.Viewport.GotoTop()
-		before := state.Viewport.YOffset
+		before := state.Viewport.YOffset()
 
 		_ = controller.HandleKey(&state, keyMsg(tea.KeyDown), NewKeyMap(), 0)
 		if state.Follow {
 			t.Fatalf("follow should be disabled")
 		}
-		if state.Viewport.YOffset <= before {
+		if state.Viewport.YOffset() <= before {
 			t.Fatalf("down should move viewport")
 		}
 	})
 
 	t.Run("esc exits with forced tab", func(t *testing.T) {
 		state := newControllerState(logLines("base", 20))
-		tr := controller.HandleKey(&state, keyMsg(tea.KeyEsc), NewKeyMap(), 3)
+		tr := controller.HandleKey(&state, keyMsg(tea.KeyEscape), NewKeyMap(), 3)
 		if !tr.ExitToBrowse || tr.ForceTab != 3 {
 			t.Fatalf("esc should request exit to browse with tab 3")
 		}

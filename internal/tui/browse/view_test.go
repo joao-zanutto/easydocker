@@ -7,7 +7,7 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/util"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 type fakeProvider struct{}

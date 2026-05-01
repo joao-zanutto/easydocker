@@ -4,8 +4,8 @@ import (
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/tables"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
 )
 
 // BrowseKeyMap defines browse-mode key bindings and help metadata.

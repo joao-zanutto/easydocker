@@ -3,8 +3,8 @@ package logs
 import (
 	"easydocker/internal/core"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 type Controller struct{}
@@ -28,7 +28,7 @@ func (Controller) Exit(state *State, containersTab int) Transition {
 	return Transition{ExitToBrowse: true, ForceTab: containersTab}
 }
 
-func (Controller) HandleKey(state *State, msg tea.KeyMsg, keys KeyMap, containersTab int) Transition {
+func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap, containersTab int) Transition {
 	switch {
 	case key.Matches(msg, keys.Right):
 		return handleHorizontalScroll(state, true)
@@ -87,9 +87,9 @@ func handleVerticalScroll(state *State, direction int, isPage bool) Transition {
 		}
 	} else {
 		if direction > 0 {
-			state.Viewport.LineDown(1)
+			state.Viewport.ScrollDown(1)
 		} else {
-			state.Viewport.LineUp(1)
+			state.Viewport.ScrollUp(1)
 		}
 	}
 
@@ -148,11 +148,11 @@ func (Controller) HandleResult(state *State, msg ResultMsg, visibleWidth, visibl
 
 	switch msg.Src {
 	case SourceHistory:
-		state.ApplyHistory(msg.Data, state.Viewport.YOffset)
+		state.ApplyHistory(msg.Data, state.Viewport.YOffset())
 	case SourceInitial:
 		state.ApplyInitial(msg.Data)
 	default:
-		state.ApplyPoll(msg.Data, state.Viewport.YOffset)
+		state.ApplyPoll(msg.Data, state.Viewport.YOffset())
 	}
 	state.SyncViewportFromData(visibleWidth, visibleRows)
 	return Transition{}

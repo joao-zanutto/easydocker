@@ -4,7 +4,7 @@ import (
 	"easydocker/internal/tui/tables/btable"
 	"easydocker/internal/tui/util"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 type Row []string

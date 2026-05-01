@@ -8,9 +8,9 @@ import (
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/theme"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 )
 
 const (
@@ -117,7 +117,14 @@ func New(service *core.Service) tea.Model {
 func (m model) Init() tea.Cmd {
 	cmds := []tea.Cmd{m.loadContainersCmd(), tickCmd()}
 	if m.shouldAnimateMetricsLoadingIndicator() {
-		cmds = append(cmds, m.metricsSpinner.Tick, m.containerSpinner.Tick)
+		spinnerTickInterval := time.Second / 7
+		cmds = append(cmds,
+			tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
+				return spinner.TickMsg{Time: t, ID: m.metricsSpinner.ID()}
+			}),
+			tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
+				return spinner.TickMsg{Time: t, ID: m.containerSpinner.ID()}
+			}))
 	}
 	return tea.Batch(cmds...)
 }

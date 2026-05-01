@@ -6,7 +6,7 @@ import (
 
 	"easydocker/internal/tui/util"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 type ViewStyles struct {
@@ -34,24 +34,23 @@ func RenderContent(vm ViewModel) string {
 		return ""
 	}
 	layout := util.ComputeFrameLayout(vm.Width, vm.Height, vm.Styles.SubpageFrame)
-	safeContentWidth := max(1, layout.ContentWidth-2)
 	headerVM := vm
-	headerVM.Width = safeContentWidth
-	breadcrumb := util.ClampSingleLine("Containers / "+vm.ContainerName+" / Logs", safeContentWidth)
+	headerVM.Width = layout.ContentWidth
+	breadcrumb := util.ClampSingleLine("Containers / "+vm.ContainerName+" / Logs", layout.ContentWidth)
 	logsHeight := VisibleRowsForContent(layout.ContentHeight, vm.State.FilterActive)
 	logList := FilterLogLines(vm.State.Data.Logs, vm.State.FilterQuery)
 	start, end := VisibleLogRange(vm.State, logList)
 	headline := RenderHeader(headerVM, breadcrumb, len(logList), start, end)
-	logsPanel := RenderPanel(vm, safeContentWidth, logsHeight)
+	logsPanel := RenderPanel(vm, layout.ContentWidth, logsHeight)
 
 	if vm.State.FilterActive {
 		filterInput := vm.State.FilterInput
-		filterInput.Width = dynamicInputWidth(filterInput.Prompt, safeContentWidth)
-		filterHeader := renderFilterHeader(filterInput.View(), safeContentWidth, vm.Styles.Divider)
+		filterInput.SetWidth(dynamicInputWidth(filterInput.Prompt, layout.ContentWidth))
+		filterHeader := renderFilterHeader(filterInput.View(), layout.ContentWidth, vm.Styles.Divider)
 		return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(headline, filterHeader, logsPanel))
 	}
 
-	return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(headline, renderTitleDivider(vm.Styles.Divider, safeContentWidth), logsPanel))
+	return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(headline, renderTitleDivider(vm.Styles.Divider, layout.ContentWidth), logsPanel))
 }
 
 func VisibleRowsForContent(contentHeight int, filterActive bool) int {
@@ -119,7 +118,7 @@ func RenderPanel(vm ViewModel, width, height int) string {
 	}
 
 	lines := strings.Split(vm.State.Viewport.View(), "\n")
-	lines = renderHorizontalScrollIndicators(vm.State, lines, renderLines, max(1, vm.State.Viewport.Width), vm.Styles.Muted.Reverse(true))
+	lines = renderHorizontalScrollIndicators(vm.State, lines, renderLines, max(1, vm.State.Viewport.Width()), vm.Styles.Muted.Reverse(true))
 	if vm.State.HistoryLoad {
 		lines = append([]string{renderHistoryLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator)}, lines...)
 	}
@@ -178,18 +177,17 @@ func renderHorizontalScrollIndicators(state State, lines, renderLines []string, 
 		return lines
 	}
 
-	xOffset := max(0, state.HorizontalOffset)
+	xOffset := max(0, state.Viewport.XOffset())
+	anyCanScrollLeft := xOffset > 0
 	out := append([]string(nil), lines...)
 	for i := 0; i < len(out) && i < len(visible); i++ {
 		lineWidth := util.DisplayWidth(visible[i])
 		maxOffset := max(0, lineWidth-width)
-		effectiveOffset := min(xOffset, maxOffset)
-		canScrollLeft := effectiveOffset > 0
-		canScrollRight := effectiveOffset < maxOffset
-		if !canScrollLeft && !canScrollRight {
+		canScrollRight := xOffset < maxOffset
+		if !anyCanScrollLeft && !canScrollRight {
 			continue
 		}
-		out[i] = applyScrollIndicator(out[i], width, canScrollLeft, canScrollRight, indicatorStyle)
+		out[i] = applyScrollIndicator(out[i], width, anyCanScrollLeft, canScrollRight, indicatorStyle)
 	}
 
 	return out
