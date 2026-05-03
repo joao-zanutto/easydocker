@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/joao-zanutto/easydocker/compare/v1.2.0...v1.3.0) (2026-05-03)
+
+
+### Features
+
+* add compose support ([#54](https://github.com/joao-zanutto/easydocker/issues/54)) ([8d0e38b](https://github.com/joao-zanutto/easydocker/commit/8d0e38bc1fca65090cce54809c1b2b9686e0acad))
+* add visual cues to compose rows ([#55](https://github.com/joao-zanutto/easydocker/issues/55)) ([85c6991](https://github.com/joao-zanutto/easydocker/commit/85c699126c3e3e4d11cd6bf99cd3ce95dbfe1f2b))
+* **easydocker:** add interactive terminal access for containers  ([#11](https://github.com/joao-zanutto/easydocker/issues/11)) ([721999d](https://github.com/joao-zanutto/easydocker/commit/721999d3b0f1052fb939f20340ac8c70c972e831))
+
+
+### Bug Fixes
+
+* **docs:** rebuild docs on new releases ([#52](https://github.com/joao-zanutto/easydocker/issues/52)) ([707634f](https://github.com/joao-zanutto/easydocker/commit/707634f7ec9a014f9be6f218337c15a1959a0a5b))
+
 ## [1.2.0](https://github.com/joao-zanutto/easydocker/compare/v1.1.0...v1.2.0) (2026-04-24)
 
 
