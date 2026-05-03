@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"easydocker/internal/tui/components"
 	"easydocker/internal/tui/util"
 
 	"charm.land/lipgloss/v2"
@@ -194,9 +195,9 @@ func TestVisibleRowsForContent_FilterAdjustsHeight(t *testing.T) {
 
 func TestRenderContent_FilterHeaderBelowTitleAndFilteredCounts(t *testing.T) {
 	state := NewState()
-	state.FilterActive = true
-	state.FilterQuery = "match"
-	state.FilterInput.SetValue("match")
+	state.Filter.Active = true
+	state.Filter.Query = "match"
+	state.Filter.Input.SetValue("match")
 	state.Data.Logs = []string{"nope", "match one", "match two", "other"}
 	state.SyncViewportFromData(60, 6)
 
@@ -235,7 +236,7 @@ func TestRenderContent_FilterHeaderBelowTitleAndFilteredCounts(t *testing.T) {
 func TestRenderPanel_FilterNoMatchesMessage(t *testing.T) {
 	state := NewState()
 	state.InitialLoad = false
-	state.FilterQuery = "missing"
+	state.Filter.Query = "missing"
 	state.Data.Logs = []string{"line-1", "line-2"}
 	state.SyncViewportFromData(60, 4)
 
@@ -337,18 +338,18 @@ func TestRenderPanel_HorizontalScrollIndicatorIgnoresStaleTrackedOffset(t *testi
 }
 
 func TestRenderDivider_FillsRequestedWidth(t *testing.T) {
-	line := renderDivider(lipgloss.NewStyle(), 24)
+	line := components.RenderTitleDivider(lipgloss.NewStyle(), 24)
 	if util.DisplayWidth(line) != 24 {
 		t.Fatalf("divider width = %d, want 24", util.DisplayWidth(line))
 	}
 }
 
 func TestDynamicInputWidth_UsesFullLineMinusPrompt(t *testing.T) {
-	if got := dynamicInputWidth("🔎︎ ", 20); got != 17 {
-		t.Fatalf("dynamicInputWidth = %d, want 17", got)
+	if got := components.DynamicInputWidth("🔎︎ ", 20); got != 17 {
+		t.Fatalf("components.DynamicInputWidth = %d, want 17", got)
 	}
-	if got := dynamicInputWidth("", 8); got != 8 {
-		t.Fatalf("dynamicInputWidth with empty prompt = %d, want 8", got)
+	if got := components.DynamicInputWidth("", 8); got != 8 {
+		t.Fatalf("components.DynamicInputWidth with empty prompt = %d, want 8", got)
 	}
 }
 

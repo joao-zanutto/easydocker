@@ -115,7 +115,7 @@ func (s *State) SyncViewport(lines []string, visibleWidth, visibleRows int) {
 }
 
 func (s *State) SyncViewportFromData(visibleWidth, visibleRows int) {
-	logLines := FilterLogLines(s.Data.Logs, s.FilterQuery)
+	logLines := FilterLogLines(s.Data.Logs, s.Filter.Query)
 	lines := make([]string, 0, len(logLines))
 	for _, line := range logLines {
 		lines = append(lines, SanitizeLogRenderLine(line))
@@ -134,7 +134,7 @@ func renderedViewportLineDelta(state *State, allLines []string, prepended int) i
 		prepended = len(allLines)
 	}
 
-	added := FilterLogLines(allLines[:prepended], state.FilterQuery)
+	added := FilterLogLines(allLines[:prepended], state.Filter.Query)
 	if !state.WrapLines {
 		return len(added)
 	}

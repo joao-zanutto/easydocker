@@ -87,7 +87,7 @@ func (m model) logVisibleWidth() int {
 func (m model) logSectionHeight() int {
 	mainHeight := util.MainAreaHeight(m.height, m.renderHeader(), m.renderFooter())
 	if m.screen == screenModeLogs {
-		return logs.VisibleRowsForContent(m.logsPageContentHeight(mainHeight), m.logs.FilterActive)
+		return logs.VisibleRowsForContent(m.logsPageContentHeight(mainHeight), m.logs.Filter.Active)
 	}
 	innerHeight := util.FrameContentHeight(mainHeight, m.styles.MainFrame)
 	return max(1, innerHeight-2)
@@ -163,6 +163,11 @@ func (m model) detailLineWithWidth(label, value string, width int) string {
 }
 
 func (m model) renderBrowseContent(width, height int) string {
+	filterCopy := m.browseFilter
+	if filterCopy.Active {
+		filterCopy.Input.SetWidth(max(1, width-util.DisplayWidth(filterCopy.Input.Prompt)))
+	}
+
 	return browse.RenderContent(browse.ViewModel{
 		Loading:                 m.loading,
 		Snapshot:                m.snapshot,
@@ -175,17 +180,9 @@ func (m model) renderBrowseContent(width, height int) string {
 			Muted:   m.styles.Muted,
 			Section: m.styles.Section,
 		},
-		Selections:   m.browseSelections(),
-		FilterActive: m.browseFilterActive,
-		FilterQuery:  m.browseFilterQuery,
-		FilterInput:  m.renderBrowseFilterInputView(width),
-	}, m.renderResourceList(width, browse.ListHeightForContent(height, m.browseFilterActive)), m.browseDetailRenderer())
-}
-
-func (m model) renderBrowseFilterInputView(lineWidth int) string {
-	input := m.browseFilterInput
-	input.SetWidth(max(1, lineWidth-util.DisplayWidth(input.Prompt)))
-	return input.View()
+		Selections: m.browseSelections(),
+		Filter:     filterCopy,
+	}, m.renderResourceList(width, browse.ListHeightForContent(height, m.browseFilter.Active)), m.browseDetailRenderer())
 }
 
 func (m model) metricsLoadingIndicator() string {

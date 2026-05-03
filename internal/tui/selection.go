@@ -19,8 +19,8 @@ func (m *model) moveActiveTab(delta int) {
 }
 
 func (m *model) clearBrowseFilter() {
-	m.browseFilterQuery = ""
-	m.browseFilterInput.SetValue("")
+	m.browseFilter.Query = ""
+	m.browseFilter.Input.SetValue("")
 }
 
 func (m *model) toggleContainerScope() {
@@ -100,19 +100,19 @@ func (m model) itemCountForTab(tab int) int {
 
 func (m model) filteredContainers() []core.ContainerRow {
 	scoped := core.FilterContainersByScope(m.snapshot.Containers, m.showAll)
-	return core.FilterContainersByQuery(scoped, m.browseFilterQuery)
+	return core.FilterContainersByQuery(scoped, m.browseFilter.Query)
 }
 
 func (m model) filteredImages() []core.ImageRow {
-	return core.FilterImagesByQuery(m.snapshot.Images, m.browseFilterQuery)
+	return core.FilterImagesByQuery(m.snapshot.Images, m.browseFilter.Query)
 }
 
 func (m model) filteredNetworks() []core.NetworkRow {
-	return core.FilterNetworksByQuery(m.snapshot.Networks, m.browseFilterQuery)
+	return core.FilterNetworksByQuery(m.snapshot.Networks, m.browseFilter.Query)
 }
 
 func (m model) filteredVolumes() []core.VolumeRow {
-	return core.FilterVolumesByQuery(m.snapshot.Volumes, m.browseFilterQuery)
+	return core.FilterVolumesByQuery(m.snapshot.Volumes, m.browseFilter.Query)
 }
 
 func (m model) findContainerIndexByID(id string) (int, bool) {

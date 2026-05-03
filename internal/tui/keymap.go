@@ -106,7 +106,7 @@ func isShellCompatibleState(state string) bool {
 
 func (m model) footerKeyMap() help.KeyMap {
 	if m.screen == screenModeLogs {
-		if m.logs.FilterActive {
+		if m.logs.Filter.Active {
 			logsKeys := logsKeyMap()
 			logsFilterVerticalNavigate := key.NewBinding(
 				key.WithKeys("up", "down"),
@@ -133,7 +133,7 @@ func (m model) footerKeyMap() help.KeyMap {
 	browseKeys := browseKeyMap()
 
 	// If filter mode is active, show filter-specific controls
-	if m.browseFilterActive {
+	if m.browseFilter.Active {
 		bindings := []key.Binding{
 			browseKeys.HelpNavigate,
 			key.NewBinding(
