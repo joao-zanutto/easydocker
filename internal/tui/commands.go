@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/logs"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -75,12 +74,4 @@ func (m model) execTerminalCmd(containerID string) tea.Cmd {
 		&execShellCommand{service: m.service, containerID: containerID},
 		func(err error) tea.Msg { return execDoneMsg{err: err} },
 	)
-}
-
-func (m model) loadLogsDataCmd(containerID string, sessionID int, previousCPU, previousMem []float64, tail int, src logs.Source) tea.Cmd {
-	svc := m.service
-	return func() tea.Msg {
-		data, err := svc.LoadContainerLiveData(containerID, previousCPU, previousMem, tail)
-		return logs.ResultMsg{ContainerID: containerID, SessionID: sessionID, Data: data, Err: err, Tail: tail, Src: src}
-	}
 }

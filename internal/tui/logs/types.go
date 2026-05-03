@@ -2,8 +2,8 @@ package logs
 
 import (
 	"easydocker/internal/core"
+	"easydocker/internal/tui/components"
 
-	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 )
 
@@ -49,15 +49,13 @@ type State struct {
 	HistoryBaseLen            int
 	HistoryAppendedDuringLoad int
 	HistoryNoProgressCount    int
-	FilterActive              bool
-	FilterQuery               string
-	FilterInput               textinput.Model
+	Filter                   components.FilterState
 	HorizontalOffset          int
 	WrapLines                 bool
 	WrapXOffset               int
 	InitialLoad               bool
 	HistoryDone               bool
-	HistoryLoad               bool
+	HistoryLoad              bool
 	Follow                    bool
 	Viewport                  viewport.Model
 }
@@ -67,10 +65,7 @@ func NewState() State {
 	vp.SetHorizontalStep(8)
 	vp.SetContent("")
 
-	filterInput := textinput.New()
-	filterInput.Prompt = "🔎︎ "
-	filterInput.Placeholder = ""
-	filterInput.CharLimit = 200
+	filterState := components.NewFilterState()
 
-	return State{Follow: true, Viewport: vp, FilterInput: filterInput}
+	return State{Follow: true, Viewport: vp, Filter: filterState}
 }

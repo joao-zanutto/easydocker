@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"easydocker/internal/tui/components"
 	"easydocker/internal/tui/util"
 
 	"charm.land/lipgloss/v2"
@@ -37,20 +38,21 @@ func RenderContent(vm ViewModel) string {
 	headerVM := vm
 	headerVM.Width = layout.ContentWidth
 	breadcrumb := util.ClampSingleLine("Containers / "+vm.ContainerName+" / Logs", layout.ContentWidth)
-	logsHeight := VisibleRowsForContent(layout.ContentHeight, vm.State.FilterActive)
-	logList := FilterLogLines(vm.State.Data.Logs, vm.State.FilterQuery)
+	logsHeight := VisibleRowsForContent(layout.ContentHeight, vm.State.Filter.Active)
+	logList := FilterLogLines(vm.State.Data.Logs, vm.State.Filter.Query)
 	start, end := VisibleLogRange(vm.State, logList)
 	headline := RenderHeader(headerVM, breadcrumb, len(logList), start, end)
 	logsPanel := RenderPanel(vm, layout.ContentWidth, logsHeight)
 
-	if vm.State.FilterActive {
-		filterInput := vm.State.FilterInput
-		filterInput.SetWidth(dynamicInputWidth(filterInput.Prompt, layout.ContentWidth))
+	if vm.State.Filter.Active {
+		filterInput := vm.State.Filter.Input
+		filterInput.SetWidth(components.DynamicInputWidth(filterInput.Prompt, layout.ContentWidth))
 		filterHeader := renderFilterHeader(filterInput.View(), layout.ContentWidth, vm.Styles.Divider)
 		return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(headline, filterHeader, logsPanel))
 	}
 
-	return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(headline, renderTitleDivider(vm.Styles.Divider, layout.ContentWidth), logsPanel))
+	headerDivider := components.RenderTitleDivider(vm.Styles.Divider, layout.ContentWidth)
+	return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(headline, headerDivider, logsPanel))
 }
 
 func VisibleRowsForContent(contentHeight int, filterActive bool) int {
@@ -103,10 +105,10 @@ func RenderPanel(vm ViewModel, width, height int) string {
 		return strings.Join(util.ClipAndPadLines([]string{renderLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator)}, height, ""), "\n")
 	}
 
-	logList := FilterLogLines(vm.State.Data.Logs, vm.State.FilterQuery)
+	logList := FilterLogLines(vm.State.Data.Logs, vm.State.Filter.Query)
 	if len(logList) == 0 {
 		empty := "No logs found for this container."
-		if strings.TrimSpace(vm.State.FilterQuery) != "" {
+		if strings.TrimSpace(vm.State.Filter.Query) != "" {
 			empty = "No log lines match current filter."
 		}
 		return strings.Join(util.ClipAndPadLines([]string{util.ClampSingleLine(vm.Styles.Muted.Render(empty), contentWidth)}, height, ""), "\n")
@@ -126,28 +128,12 @@ func RenderPanel(vm ViewModel, width, height int) string {
 	return strings.Join(lines, "\n")
 }
 
-func renderDivider(style lipgloss.Style, width int) string {
-	return style.Render(strings.Repeat("─", max(1, width)))
-}
-
-func renderTitleDivider(style lipgloss.Style, width int) string {
-	return style.Bold(true).Render(strings.Repeat("━", max(1, width)))
-}
-
 func renderFilterHeader(input string, width int, dividerStyle lipgloss.Style) string {
-	line := padVisibleWidth(input, width)
-	titleDivider := renderTitleDivider(dividerStyle, width)
-	divider := renderDivider(dividerStyle, width)
-	return util.JoinSections(titleDivider, line, divider)
+	return components.RenderFilterHeader(input, width, dividerStyle)
 }
 
 func padVisibleWidth(line string, width int) string {
-	constrained := util.ClampSingleLine(line, width)
-	padding := width - util.DisplayWidth(constrained)
-	if padding <= 0 {
-		return constrained
-	}
-	return constrained + strings.Repeat(" ", padding)
+	return components.PadVisibleWidth(line, width)
 }
 
 func renderLoadingLine(style lipgloss.Style, width int, indicator string) string {
@@ -226,8 +212,4 @@ func renderRightPriorityLine(left, right string, width int) string {
 	leftRenderedWidth := util.DisplayWidth(left)
 	spacing := max(0, width-leftRenderedWidth-rightWidth)
 	return left + strings.Repeat(" ", spacing) + right
-}
-
-func dynamicInputWidth(prompt string, lineWidth int) int {
-	return max(1, lineWidth-util.DisplayWidth(prompt))
 }

@@ -8,6 +8,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/docker/docker v27.5.1+incompatible
+	github.com/moby/term v0.5.2
 )
 
 require (
@@ -32,7 +33,6 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
-	github.com/moby/term v0.5.2 // indirect
 	github.com/morikuni/aec v1.1.0 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

@@ -55,8 +55,8 @@ func TestListHeightForContent_FilterShrinksTableFromTop(t *testing.T) {
 	base := ListHeight(height)
 	withFilter := ListHeightForContent(height, true)
 
-	if withFilter != base-filterHeaderHeight {
-		t.Fatalf("ListHeightForContent(%d, true) = %d, want %d", height, withFilter, base-filterHeaderHeight)
+	if withFilter != base-FilterHeaderHeight {
+		t.Fatalf("ListHeightForContent(%d, true) = %d, want %d", height, withFilter, base-FilterHeaderHeight)
 	}
 }
 
@@ -69,8 +69,8 @@ func TestRenderFilterHeader_InputAndDivider(t *testing.T) {
 	if util.DisplayWidth(lines[0]) != 24 {
 		t.Fatalf("input line width = %d, want 24 (%q)", util.DisplayWidth(lines[0]), lines[0])
 	}
-	if util.DisplayWidth(lines[1]) != 22 {
-		t.Fatalf("divider line width = %d, want 22 (%q)", util.DisplayWidth(lines[1]), lines[1])
+	if util.DisplayWidth(lines[1]) != 24 {
+		t.Fatalf("divider line width = %d, want 24 (%q)", util.DisplayWidth(lines[1]), lines[1])
 	}
 	if strings.Contains(lines[0], "┌") || strings.Contains(lines[0], "┐") || strings.Contains(lines[0], "└") || strings.Contains(lines[0], "┘") {
 		t.Fatalf("input line should not render a box: %q", lines[0])
@@ -96,8 +96,8 @@ func TestRenderContent_FilterKeepsDividerAnchored(t *testing.T) {
 	baseList := strings.Join(util.ClipAndPadLines([]string{"row"}, ListHeightForContent(vm.Height, false), ""), "\n")
 	withoutFilter := RenderContent(vm, baseList, fakeProvider{})
 
-	vm.FilterActive = true
-	vm.FilterInput = "> abc"
+	vm.Filter.Active = true
+	vm.Filter.Input.SetValue("abc")
 	filterList := strings.Join(util.ClipAndPadLines([]string{"row"}, ListHeightForContent(vm.Height, true), ""), "\n")
 	withFilter := RenderContent(vm, filterList, fakeProvider{})
 

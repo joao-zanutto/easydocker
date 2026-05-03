@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/browse"
 	"easydocker/internal/tui/loading"
 	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/theme"
 
 	"charm.land/bubbles/v2/spinner"
-	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -81,10 +81,7 @@ type model struct {
 	metricsSpinner   spinner.Model
 	containerSpinner spinner.Model
 	logsSpinner      spinner.Model
-	// Browse filter mode state
-	browseFilterActive bool
-	browseFilterInput  textinput.Model
-	browseFilterQuery  string
+	browseFilter     browse.FilterState
 	composeExpanded    map[string]bool
 }
 
@@ -92,12 +89,6 @@ func New(service *core.Service) tea.Model {
 	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
 	containerSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
 	logsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
-
-	// Initialize filter input
-	filterInput := textinput.New()
-	filterInput.Prompt = "🔎︎ "
-	filterInput.Placeholder = ""
-	filterInput.CharLimit = 200
 
 	return model{
 		service:           service,
@@ -111,7 +102,7 @@ func New(service *core.Service) tea.Model {
 		metricsSpinner:    metricsSpinner,
 		containerSpinner:  containerSpinner,
 		logsSpinner:       logsSpinner,
-		browseFilterInput: filterInput,
+		browseFilter:     browse.NewFilterState(),
 		composeExpanded:   map[string]bool{},
 	}
 }

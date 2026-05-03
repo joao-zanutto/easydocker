@@ -219,22 +219,22 @@ func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
 	if cmd != nil {
 		t.Fatalf("backspace in browse mode should not trigger a command")
 	}
-	if current.browseFilterActive {
+	if current.browseFilter.Active {
 		t.Fatalf("backspace in browse mode should not activate filter mode")
 	}
 
-	current.browseFilterActive = true
-	current.browseFilterInput.Focus()
-	current.browseFilterInput.SetValue("abc")
-	current.browseFilterQuery = "abc"
+	current.browseFilter.Active = true
+	current.browseFilter.Input.Focus()
+	current.browseFilter.Input.SetValue("abc")
+	current.browseFilter.Query = "abc"
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	after := updated.(model)
-	if !after.browseFilterActive {
+	if !after.browseFilter.Active {
 		t.Fatalf("backspace in filter mode should not exit filter mode")
 	}
-	if after.browseFilterQuery != "ab" {
-		t.Fatalf("backspace in filter mode should edit text, got %q", after.browseFilterQuery)
+	if after.browseFilter.Query != "ab" {
+		t.Fatalf("backspace in filter mode should edit text, got %q", after.browseFilter.Query)
 	}
 }
 
@@ -297,7 +297,7 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 	nearBottom := max(0, len(logsData)-m.logVisibleRows()-1)
 	m.logs.Viewport.SetYOffset(nearBottom)
 
-	beforeList := logs.FilterLogLines(m.logs.Data.Logs, m.logs.FilterQuery)
+	beforeList := logs.FilterLogLines(m.logs.Data.Logs, m.logs.Filter.Query)
 	beforeStart, _ := logs.VisibleLogRange(m.logs, beforeList)
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
@@ -306,7 +306,7 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 		t.Fatalf("wrap should be enabled after pressing w")
 	}
 
-	afterList := logs.FilterLogLines(after.logs.Data.Logs, after.logs.FilterQuery)
+	afterList := logs.FilterLogLines(after.logs.Data.Logs, after.logs.Filter.Query)
 	afterStart, _ := logs.VisibleLogRange(after.logs, afterList)
 	if afterStart != beforeStart {
 		t.Fatalf("visible raw log anchor changed across wrap toggle, before=%d after=%d", beforeStart, afterStart)
@@ -315,8 +315,8 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 
 func TestIntegration_FilterPromptIcon(t *testing.T) {
 	m := New(nil).(model)
-	if m.browseFilterInput.Prompt != "🔎︎ " {
-		t.Fatalf("filter prompt = %q, want %q", m.browseFilterInput.Prompt, "🔎︎ ")
+	if m.browseFilter.Input.Prompt != "🔎︎ " {
+		t.Fatalf("filter prompt = %q, want %q", m.browseFilter.Input.Prompt, "🔎︎ ")
 	}
 }
 
@@ -326,10 +326,10 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 	m.activeTab = tabContainers
 	m.showAll = true
 	m.containerCursor = 0
-	m.browseFilterActive = true
-	m.browseFilterInput.Focus()
-	m.browseFilterInput.SetValue("api")
-	m.browseFilterQuery = "api"
+	m.browseFilter.Active = true
+	m.browseFilter.Input.Focus()
+	m.browseFilter.Input.SetValue("api")
+	m.browseFilter.Query = "api"
 	m.snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{
 			{FullID: "ctr-1", Name: "api-1", State: "running"},
@@ -342,11 +342,11 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 	if after.containerCursor != 1 {
 		t.Fatalf("filter mode down should move cursor to 1, got %d", after.containerCursor)
 	}
-	if !after.browseFilterActive {
+	if !after.browseFilter.Active {
 		t.Fatalf("filter mode should remain active while navigating")
 	}
-	if after.browseFilterQuery != "api" {
-		t.Fatalf("filter query should remain unchanged while navigating, got %q", after.browseFilterQuery)
+	if after.browseFilter.Query != "api" {
+		t.Fatalf("filter query should remain unchanged while navigating, got %q", after.browseFilter.Query)
 	}
 }
 
@@ -452,8 +452,8 @@ func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
 	m.screen = screenModeBrowse
 	m.activeTab = tabContainers
 	m.showAll = true
-	m.browseFilterQuery = "redis"
-	m.browseFilterInput.SetValue("redis")
+	m.browseFilter.Query = "redis"
+	m.browseFilter.Input.SetValue("redis")
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	after := updated.(model)
@@ -461,11 +461,11 @@ func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
 	if after.activeTab != tabImages {
 		t.Fatalf("active tab = %d, want %d", after.activeTab, tabImages)
 	}
-	if after.browseFilterQuery != "" {
-		t.Fatalf("filter query should be cleared on horizontal tab switch, got %q", after.browseFilterQuery)
+	if after.browseFilter.Query != "" {
+		t.Fatalf("filter query should be cleared on horizontal tab switch, got %q", after.browseFilter.Query)
 	}
-	if after.browseFilterInput.Value() != "" {
-		t.Fatalf("filter input value should be cleared on horizontal tab switch, got %q", after.browseFilterInput.Value())
+	if after.browseFilter.Input.Value() != "" {
+		t.Fatalf("filter input value should be cleared on horizontal tab switch, got %q", after.browseFilter.Input.Value())
 	}
 }
 
@@ -484,14 +484,14 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	current := updated.(model)
-	if !current.logs.FilterActive {
+	if !current.logs.Filter.Active {
 		t.Fatalf("slash should activate logs filter mode")
 	}
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	current = updated.(model)
-	if current.logs.FilterQuery != "q" {
-		t.Fatalf("logs filter query = %q, want q", current.logs.FilterQuery)
+	if current.logs.Filter.Query != "q" {
+		t.Fatalf("logs filter query = %q, want q", current.logs.Filter.Query)
 	}
 	filtered := current.logs.Viewport.View()
 	if !strings.Contains(filtered, "quick match") {
@@ -503,11 +503,11 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	after := updated.(model)
-	if after.logs.FilterActive {
+	if after.logs.Filter.Active {
 		t.Fatalf("esc should exit logs filter mode")
 	}
-	if after.logs.FilterQuery != "" {
-		t.Fatalf("esc should clear logs filter query, got %q", after.logs.FilterQuery)
+	if after.logs.Filter.Query != "" {
+		t.Fatalf("esc should clear logs filter query, got %q", after.logs.Filter.Query)
 	}
 	restored := after.logs.Viewport.View()
 	if !strings.Contains(restored, "alpha line") || !strings.Contains(restored, "quick match") || !strings.Contains(restored, "zeta line") {
@@ -531,9 +531,9 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 		lines = append(lines, "line-"+strconv.Itoa(i))
 	}
 	m.logs.Data = core.ContainerLiveData{Logs: lines}
-	m.logs.FilterActive = true
-	m.logs.FilterInput.Focus()
-	m.logs.FilterQuery = ""
+	m.logs.Filter.Active = true
+	m.logs.Filter.Input.Focus()
+	m.logs.Filter.Query = ""
 	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
 	m.logs.SetFollow(false)
 	m.logs.Viewport.GotoTop()
@@ -545,11 +545,11 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 	if after.logs.Viewport.YOffset() <= before {
 		t.Fatalf("expected vertical navigation in logs filter mode to move viewport, before=%d after=%d", before, after.logs.Viewport.YOffset())
 	}
-	if !after.logs.FilterActive {
+	if !after.logs.Filter.Active {
 		t.Fatalf("logs filter mode should remain active while navigating")
 	}
-	if after.logs.FilterQuery != "" {
-		t.Fatalf("logs filter query should remain unchanged while navigating, got %q", after.logs.FilterQuery)
+	if after.logs.Filter.Query != "" {
+		t.Fatalf("logs filter query should remain unchanged while navigating, got %q", after.logs.Filter.Query)
 	}
 }
 
@@ -559,8 +559,8 @@ func TestIntegration_LogsFilterFooterShowsNavigationHelp(t *testing.T) {
 	m.height = 34
 	m.screen = screenModeLogs
 	m.activeTab = tabContainers
-	m.logs.FilterActive = true
-	m.logs.FilterInput.Focus()
+	m.logs.Filter.Active = true
+	m.logs.Filter.Input.Focus()
 
 	view := m.View().Content
 	if !strings.Contains(view, "navigate") {
@@ -598,7 +598,7 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 	updated, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	after := updated.(model)
 
-	if !after.logs.FilterActive {
+	if !after.logs.Filter.Active {
 		t.Fatalf("slash should activate logs filter mode")
 	}
 	afterRows := after.logVisibleRows()
@@ -638,13 +638,13 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		updated, _ := current.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 		current = updated.(model)
-		if !current.logs.FilterActive {
+		if !current.logs.Filter.Active {
 			t.Fatalf("cycle %d: slash should activate logs filter mode", i)
 		}
 
 		updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		current = updated.(model)
-		if current.logs.FilterActive {
+		if current.logs.Filter.Active {
 			t.Fatalf("cycle %d: enter should close logs filter mode", i)
 		}
 
@@ -652,18 +652,6 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 		if bottom != baseBottom {
 			t.Fatalf("cycle %d: viewport drift detected, bottom=%d want=%d", i, bottom, baseBottom)
 		}
-	}
-}
-
-func TestIntegration_BrowseFilterInputView_UsesDynamicLineWidth(t *testing.T) {
-	m := New(nil).(model)
-	m.browseFilterInput.SetValue("abc")
-	view := m.renderBrowseFilterInputView(20)
-	if !strings.Contains(view, "🔎︎") || !strings.Contains(view, "abc") {
-		t.Fatalf("expected prompt and value in browse filter input view, got %q", view)
-	}
-	if m.browseFilterInput.Width() != 0 {
-		t.Fatalf("render helper should not mutate model input width, got %d", m.browseFilterInput.Width())
 	}
 }
 
