@@ -82,7 +82,7 @@ type model struct {
 	containerSpinner spinner.Model
 	logsSpinner      spinner.Model
 	browseFilter     browse.FilterState
-	composeExpanded    map[string]bool
+	composeExpanded  map[string]bool
 }
 
 func New(service *core.Service) tea.Model {
@@ -91,19 +91,19 @@ func New(service *core.Service) tea.Model {
 	logsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
 
 	return model{
-		service:           service,
-		activeTab:         tabContainers,
-		showAll:           true,
-		loading:           true,
-		screen:            screenModeBrowse,
-		loadingStage:      loadStageContainers,
-		logs:              logs.NewState(),
-		styles:            defaultStyles(),
-		metricsSpinner:    metricsSpinner,
-		containerSpinner:  containerSpinner,
-		logsSpinner:       logsSpinner,
+		service:          service,
+		activeTab:        tabContainers,
+		showAll:          true,
+		loading:          true,
+		screen:           screenModeBrowse,
+		loadingStage:     loadStageContainers,
+		logs:             logs.NewState(),
+		styles:           defaultStyles(),
+		metricsSpinner:   metricsSpinner,
+		containerSpinner: containerSpinner,
+		logsSpinner:      logsSpinner,
 		browseFilter:     browse.NewFilterState(),
-		composeExpanded:   map[string]bool{},
+		composeExpanded:  map[string]bool{},
 	}
 }
 

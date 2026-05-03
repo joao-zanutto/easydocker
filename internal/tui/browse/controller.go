@@ -8,14 +8,14 @@ import (
 type Controller struct{}
 
 type Transition struct {
-	ChangeTab       int
-	CursorMove     int
-	ActivateFilter bool
+	ChangeTab        int
+	CursorMove       int
+	ActivateFilter   bool
 	DeactivateFilter bool
-	OpenResource  bool
-	OpenShell     bool
-	Quit          bool
-	ToggleScope    bool
+	OpenResource     bool
+	OpenShell        bool
+	Quit             bool
+	ToggleScope      bool
 }
 
 func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Transition {

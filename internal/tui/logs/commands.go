@@ -12,10 +12,10 @@ func LoadLogsDataCmd(service *core.Service, containerID string, sessionID int, p
 		return ResultMsg{
 			ContainerID: containerID,
 			SessionID:   sessionID,
-			Data:       data,
-			Err:        err,
-			Tail:       tail,
-			Src:        src,
+			Data:        data,
+			Err:         err,
+			Tail:        tail,
+			Src:         src,
 		}
 	}
 }

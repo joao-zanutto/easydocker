@@ -49,13 +49,13 @@ type State struct {
 	HistoryBaseLen            int
 	HistoryAppendedDuringLoad int
 	HistoryNoProgressCount    int
-	Filter                   components.FilterState
+	Filter                    components.FilterState
 	HorizontalOffset          int
 	WrapLines                 bool
 	WrapXOffset               int
 	InitialLoad               bool
 	HistoryDone               bool
-	HistoryLoad              bool
+	HistoryLoad               bool
 	Follow                    bool
 	Viewport                  viewport.Model
 }

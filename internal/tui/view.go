@@ -180,8 +180,8 @@ func (m model) renderBrowseContent(width, height int) string {
 			Muted:   m.styles.Muted,
 			Section: m.styles.Section,
 		},
-		Selections:   m.browseSelections(),
-		Filter:       filterCopy,
+		Selections: m.browseSelections(),
+		Filter:     filterCopy,
 	}, m.renderResourceList(width, browse.ListHeightForContent(height, m.browseFilter.Active)), m.browseDetailRenderer())
 }
 

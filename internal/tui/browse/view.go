@@ -21,7 +21,7 @@ type ViewModel struct {
 	Height                  int
 	Styles                  ViewStyles
 	Selections              SelectionSet
-	Filter                 FilterState
+	Filter                  FilterState
 }
 
 type ViewStyles struct {

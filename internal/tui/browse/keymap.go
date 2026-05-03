@@ -5,16 +5,16 @@ import (
 )
 
 type KeyMap struct {
-	TabRight     key.Binding
-	TabLeft      key.Binding
-	MoveUp       key.Binding
-	MoveDown     key.Binding
-	PageUp       key.Binding
-	PageDown     key.Binding
-	ToggleScope  key.Binding
-	OpenLogs     key.Binding
-	OpenFilter   key.Binding
-	OpenShell    key.Binding
+	TabRight    key.Binding
+	TabLeft     key.Binding
+	MoveUp      key.Binding
+	MoveDown    key.Binding
+	PageUp      key.Binding
+	PageDown    key.Binding
+	ToggleScope key.Binding
+	OpenLogs    key.Binding
+	OpenFilter  key.Binding
+	OpenShell   key.Binding
 	Quit        key.Binding
 }
 

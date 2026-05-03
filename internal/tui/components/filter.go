@@ -12,9 +12,9 @@ import (
 const FilterHeaderHeight = 2
 
 type FilterState struct {
-	Active  bool
-	Query   string
-	Input   textinput.Model
+	Active bool
+	Query  string
+	Input  textinput.Model
 }
 
 func NewFilterState() FilterState {
