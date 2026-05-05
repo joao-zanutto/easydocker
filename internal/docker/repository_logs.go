@@ -72,6 +72,36 @@ func (r *Repository) LoadContainerLiveData(ctx context.Context, containerID stri
 	}, nil
 }
 
+func (r *Repository) LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error) {
+	cli, err := r.dockerClient()
+	if err != nil {
+		return nil, err
+	}
+
+	logReader, err := cli.ContainerLogs(ctx, containerID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Tail:       tailOption(tail),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("container logs: %w", err)
+	}
+	defer logReader.Close()
+
+	rawLogBytes, err := io.ReadAll(logReader)
+	if err != nil {
+		return nil, fmt.Errorf("read container logs: %w", err)
+	}
+
+	var merged bytes.Buffer
+	if _, err := stdcopy.StdCopy(&merged, &merged, bytes.NewReader(rawLogBytes)); err != nil {
+		merged.Reset()
+		_, _ = merged.Write(rawLogBytes)
+	}
+
+	return normalizeLogs(merged.String(), ""), nil
+}
+
 func tailOption(tail int) string {
 	if tail <= 0 {
 		return "all"

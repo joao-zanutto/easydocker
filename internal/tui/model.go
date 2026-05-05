@@ -6,7 +6,6 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/browse"
 	"easydocker/internal/tui/loading"
-	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/theme"
 
 	"charm.land/bubbles/v2/spinner"
@@ -74,7 +73,7 @@ type model struct {
 	networkCursor    int
 	volumeCursor     int
 	screen           screenMode
-	logs             logs.State
+logs LogsState
 	loadingStage     int
 	styles           theme.Set
 	metricsLoaded    bool
@@ -97,7 +96,7 @@ func New(service *core.Service) tea.Model {
 		loading:          true,
 		screen:           screenModeBrowse,
 		loadingStage:     loadStageContainers,
-		logs:             logs.NewState(),
+logs: NewLogsState(),
 		styles:           defaultStyles(),
 		metricsSpinner:   metricsSpinner,
 		containerSpinner: containerSpinner,

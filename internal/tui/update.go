@@ -7,15 +7,13 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/browse"
 	"easydocker/internal/tui/loading"
-	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/mode"
+	"easydocker/internal/tui/viewer"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 )
-
-var logsController = logs.Controller{}
 var browseController = browse.Controller{}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -32,8 +30,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleMetricsResultMsg(msg)
 	case loadResultMsg:
 		return m.handleLoadResultMsg(msg)
-	case logs.ResultMsg:
-		return m.handleLogsResultMsg(msg)
+case viewer.ContentMsg:
+	return m.handleLogsResultMsg(msg)
 	case execDoneMsg:
 		return m, nil
 	case tickMsg:
@@ -132,7 +130,7 @@ func (m model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
 	if m.screen == screenModeLogs {
-		m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+		m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 	}
 	return m, nil
 }
@@ -180,7 +178,7 @@ func fromModeScreen(screen mode.Screen) screenMode {
 }
 
 func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
-	keys := logsKeyMap()
+	keys := viewer.NewKeyMap()
 
 	if m.logs.Filter.Active {
 		switch {
@@ -192,7 +190,7 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 			m.logs.Filter.Query = ""
 			m.logs.Filter.Input.SetValue("")
 			newRows := m.logVisibleRows()
-			m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+			m.logs.SyncFromData(m.logVisibleWidth(), newRows)
 			if !m.logs.Follow && newRows > previousRows {
 				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
 			}
@@ -203,7 +201,7 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 			m.logs.Filter.Active = false
 			m.logs.Filter.Input.Blur()
 			newRows := m.logVisibleRows()
-			m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+			m.logs.SyncFromData(m.logVisibleWidth(), newRows)
 			if !m.logs.Follow && newRows > previousRows {
 				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
 			}
@@ -214,13 +212,16 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 			key.Matches(msg, keys.PageDown),
 			key.Matches(msg, keys.Home),
 			key.Matches(msg, keys.End):
-			transition := logsController.HandleKey(&m.logs, msg, keys, tabContainers)
-			return m.applyLogsTransition(transition)
+			transition := viewer.Controller{}.HandleKey(&m.logs, msg, keys)
+			if historyReq := HistoryLoadRequest(&m.logs); historyReq != nil {
+				transition.Load = historyReq
+			}
+			return m.applyLogsTransition(viewer.Transition{Load: transition.Load})
 		default:
 			var cmd tea.Cmd
 			m.logs.Filter.Input, cmd = m.logs.Filter.Input.Update(msg)
 			m.logs.Filter.Query = m.logs.Filter.Input.Value()
-			m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+			m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 			return cmd
 		}
 	}
@@ -232,52 +233,60 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 		m.logs.Filter.Input.Focus()
 		m.logs.Filter.Input.SetValue(m.logs.Filter.Query)
 		newRows := m.logVisibleRows()
-		m.logs.SyncViewportFromData(m.logVisibleWidth(), newRows)
+		m.logs.SyncFromData(m.logVisibleWidth(), newRows)
 		if !m.logs.Follow && newRows < previousRows {
 			m.logs.Viewport.SetYOffset(previousYOffset + (previousRows - newRows))
 		}
 		return nil
 	}
 
+	if key.Matches(msg, keys.Back) {
+		m.exitLogsMode()
+		return nil
+	}
+
 	if key.Matches(msg, keys.ToggleWrap) {
-		logList := logs.FilterLogLines(m.logs.Data.Logs, m.logs.Filter.Query)
-		startLine, _ := logs.VisibleLogRange(m.logs, logList)
+		logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
+		startLine, _ := viewer.VisibleContentRange(&m.logs, logList)
 		visibleWidth := m.logVisibleWidth()
 		visibleRows := m.logVisibleRows()
 		m.logs.SetWrapLines(!m.logs.WrapLines)
-		m.logs.SyncViewportFromData(visibleWidth, visibleRows)
+		m.logs.SyncFromData(visibleWidth, visibleRows)
 		if !m.logs.Follow {
 			targetYOffset := startLine
 			if m.logs.WrapLines {
-				targetYOffset = logs.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
+				targetYOffset = viewer.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
 			}
 			m.logs.Viewport.SetYOffset(targetYOffset)
 		}
 		return nil
 	}
 
-	transition := logsController.HandleKey(&m.logs, msg, logsKeyMap(), tabContainers)
+	transition := viewer.Controller{}.HandleKey(&m.logs, msg, viewer.NewKeyMap())
+	if historyReq := HistoryLoadRequest(&m.logs); historyReq != nil {
+		transition.Load = historyReq
+	}
 	return m.applyLogsTransition(transition)
 }
 
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
-	transition := logsController.Enter(&m.logs, container.FullID)
+	transition := EnterLogsState(&m.logs, container.FullID)
 	m.err = nil
 	m.screen = fromModeScreen(mode.EnterLogsTransition())
 	return m.applyLogsTransition(transition)
 }
 
 func (m *model) exitLogsMode() {
-	transition := logsController.Exit(&m.logs, tabContainers)
+	transition := ExitLogsState(&m.logs, tabContainers)
 	_ = m.applyLogsTransition(transition)
 }
 
-func (m *model) handleLogsResult(msg logs.ResultMsg) tea.Cmd {
-	transition := logsController.HandleResult(&m.logs, msg, m.logVisibleWidth(), m.logVisibleRows())
+func (m *model) handleLogsResult(msg viewer.ContentMsg) tea.Cmd {
+	transition := HandleLogsResult(&m.logs, msg, m.logVisibleWidth(), m.logVisibleRows())
 	return m.applyLogsTransition(transition)
 }
 
-func (m *model) applyLogsTransition(transition logs.Transition) tea.Cmd {
+func (m *model) applyLogsTransition(transition viewer.Transition) tea.Cmd {
 	if transition.LaunchTerminal {
 		if container, ok := m.selectedLogsContainer(); ok {
 			return m.execTerminalCmd(container.FullID)
@@ -296,12 +305,10 @@ func (m *model) applyLogsTransition(transition logs.Transition) tea.Cmd {
 		return nil
 	}
 	request := transition.Load
-	loadCmd := logs.LoadLogsDataCmd(
+	loadCmd := LoadLogsCmd(
 		m.service,
 		request.ContainerID,
 		request.SessionID,
-		request.PrevCPU,
-		request.PrevMem,
 		request.Tail,
 		request.Src,
 	)
@@ -356,7 +363,7 @@ func (m model) shouldPollLogsOnTick() bool {
 
 func (m model) logsPollTail() int {
 	if m.logs.TailLines <= 0 {
-		return logs.InitialTail
+		return InitialTail
 	}
 	return m.logs.TailLines
 }
@@ -431,7 +438,7 @@ func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
 	return m.respond(noSideEffect())
 }
 
-func (m model) handleLogsResultMsg(msg logs.ResultMsg) (tea.Model, tea.Cmd) {
+func (m model) handleLogsResultMsg(msg viewer.ContentMsg) (tea.Model, tea.Cmd) {
 	return m.respond(withSideEffect(m.handleLogsResult(msg)))
 }
 
@@ -440,12 +447,12 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	if m.shouldReloadSnapshotOnTick() {
 		cmds = append(cmds, m.loadDockerCmd())
 	}
-	if m.shouldLoadHistoryOnTick() {
-		tail := len(m.logs.Data.Logs) + logs.TailStep
-		cmds = append(cmds, logs.LoadLogsDataCmd(m.service, m.logs.ContainerID, m.logs.SessionID, m.logs.Data.CPUHistory, m.logs.Data.MemHistory, tail, logs.SourceHistory))
+if m.shouldLoadHistoryOnTick() {
+		tail := len(m.logs.Data) + TailStep
+		cmds = append(cmds, LoadLogsCmd(m.service, m.logs.ContainerID, m.logs.SessionID, tail, viewer.SourceHistory))
 	} else if m.shouldPollLogsOnTick() {
 		tail := m.logsPollTail()
-		cmds = append(cmds, logs.LoadLogsDataCmd(m.service, m.logs.ContainerID, m.logs.SessionID, m.logs.Data.CPUHistory, m.logs.Data.MemHistory, tail, logs.SourcePoll))
+		cmds = append(cmds, LoadLogsCmd(m.service, m.logs.ContainerID, m.logs.SessionID, tail, viewer.SourcePoll))
 	}
 	return m.respond(withSideEffect(tea.Batch(cmds...)))
 }

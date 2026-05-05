@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/util"
+	"easydocker/internal/tui/viewer"
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
@@ -21,7 +21,7 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 		activeTab:        tabContainers,
 		showAll:          true,
 		styles:           defaultStyles(),
-		logs:             logs.NewState(),
+logs: NewLogsState(),
 		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
 		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
@@ -69,7 +69,7 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 		showAll:          true,
 		screen:           screenModeBrowse,
 		styles:           defaultStyles(),
-		logs:             logs.NewState(),
+logs: NewLogsState(),
 		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
 		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
@@ -85,8 +85,8 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 
 	m.screen = screenModeLogs
 	m.logs.ContainerID = "ctr-1"
-	m.logs.Data = core.ContainerLiveData{Logs: []string{"line-1", "line-2"}}
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.Data = []string{"line-1", "line-2"}
+		m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 
 	logsView := m.View().Content
 	if !strings.Contains(logsView, "Logs") || !strings.Contains(logsView, "api") {
@@ -100,7 +100,7 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 		loading:          true,
 		loadingStage:     loadStageContainers,
 		styles:           defaultStyles(),
-		logs:             logs.NewState(),
+logs: NewLogsState(),
 		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
 		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
@@ -143,7 +143,7 @@ func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 		loading:          false,
 		loadingStage:     loadStageIdle,
 		styles:           defaultStyles(),
-		logs:             logs.NewState(),
+logs: NewLogsState(),
 		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
 		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
@@ -187,7 +187,7 @@ func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 		loading:          true,
 		loadingStage:     loadStageMetrics,
 		styles:           defaultStyles(),
-		logs:             logs.NewState(),
+logs: NewLogsState(),
 		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
 		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 		logsSpinner:      spinner.New(spinner.WithSpinner(spinner.Dot)),
@@ -248,8 +248,8 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
 	m.logs.ContainerID = "ctr-1"
-	m.logs.Data = core.ContainerLiveData{Logs: []string{"abcdefghijklmnopqrstuvwxyz"}}
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.Data = []string{"abcdefghijklmnopqrstuvwxyz"}
+		m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
 	current := updated.(model)
@@ -290,15 +290,15 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 	for i := 0; i < 300; i++ {
 		logsData = append(logsData, strconv.Itoa(i)+" "+strings.Repeat("x", 48))
 	}
-	m.logs.Data = core.ContainerLiveData{Logs: logsData}
+	m.logs.Data = logsData
 	m.logs.SetFollow(false)
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 
 	nearBottom := max(0, len(logsData)-m.logVisibleRows()-1)
 	m.logs.Viewport.SetYOffset(nearBottom)
 
-	beforeList := logs.FilterLogLines(m.logs.Data.Logs, m.logs.Filter.Query)
-	beforeStart, _ := logs.VisibleLogRange(m.logs, beforeList)
+	beforeList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
+	beforeStart, _ := viewer.VisibleContentRange(&m.logs, beforeList)
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
 	after := updated.(model)
@@ -306,8 +306,8 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 		t.Fatalf("wrap should be enabled after pressing w")
 	}
 
-	afterList := logs.FilterLogLines(after.logs.Data.Logs, after.logs.Filter.Query)
-	afterStart, _ := logs.VisibleLogRange(after.logs, afterList)
+	afterList := viewer.FilterLines(after.logs.Data, after.logs.Filter.Query)
+	afterStart, _ := viewer.VisibleContentRange(&after.logs, afterList)
 	if afterStart != beforeStart {
 		t.Fatalf("visible raw log anchor changed across wrap toggle, before=%d after=%d", beforeStart, afterStart)
 	}
@@ -479,8 +479,8 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
 	m.logs.ContainerID = "ctr-1"
-	m.logs.Data = core.ContainerLiveData{Logs: []string{"alpha line", "quick match", "zeta line"}}
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.Data = []string{"alpha line", "quick match", "zeta line"}
+		m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	current := updated.(model)
@@ -530,11 +530,11 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 	for i := 0; i < 80; i++ {
 		lines = append(lines, "line-"+strconv.Itoa(i))
 	}
-	m.logs.Data = core.ContainerLiveData{Logs: lines}
-	m.logs.Filter.Active = true
+	m.logs.Data = lines
+		m.logs.Filter.Active = true
 	m.logs.Filter.Input.Focus()
 	m.logs.Filter.Query = ""
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 	m.logs.SetFollow(false)
 	m.logs.Viewport.GotoTop()
 
@@ -586,9 +586,9 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		lines = append(lines, "line-"+strconv.Itoa(i))
 	}
-	m.logs.Data = core.ContainerLiveData{Logs: lines}
+	m.logs.Data = lines
 	m.logs.SetFollow(false)
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 	m.logs.Viewport.SetYOffset(10)
 
 	beforeRows := m.logVisibleRows()
@@ -626,9 +626,9 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		lines = append(lines, "line-"+strconv.Itoa(i))
 	}
-	m.logs.Data = core.ContainerLiveData{Logs: lines}
+	m.logs.Data = lines
 	m.logs.SetFollow(false)
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 	m.logs.Viewport.SetYOffset(20)
 
 	baseRows := m.logVisibleRows()
@@ -659,11 +659,11 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 	m := New(nil).(model)
 	m.screen = screenModeLogs
 	m.logs.ContainerID = "ctr-1"
-	m.logs.Data = core.ContainerLiveData{Logs: make([]string, 220)}
-	for i := range m.logs.Data.Logs {
-		m.logs.Data.Logs[i] = "line"
+	m.logs.Data = make([]string, 220)
+		for i := range m.logs.Data {
+		m.logs.Data[i] = "line"
 	}
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 	m.logs.Viewport.GotoTop()
 
 	if !m.shouldLoadHistoryOnTick() {
@@ -710,11 +710,11 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 	m := New(nil).(model)
 	m.screen = screenModeLogs
 	m.logs.ContainerID = "ctr-1"
-	m.logs.Data = core.ContainerLiveData{Logs: make([]string, 220)}
-	for i := range m.logs.Data.Logs {
-		m.logs.Data.Logs[i] = "line"
+	m.logs.Data = make([]string, 220)
+		for i := range m.logs.Data {
+		m.logs.Data[i] = "line"
 	}
-	m.logs.SyncViewportFromData(m.logVisibleWidth(), m.logVisibleRows())
+	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 	m.logs.Viewport.GotoTop()
 	m.logs.InitialLoad = false
 	m.logs.HistoryLoad = false

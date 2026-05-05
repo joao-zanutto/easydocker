@@ -6,9 +6,9 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/browse"
 	"easydocker/internal/tui/chrome"
-	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/tables"
 	"easydocker/internal/tui/util"
+	"easydocker/internal/tui/viewer"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -42,20 +42,30 @@ func (m model) renderMain(height int) string {
 		if !ok {
 			return m.styles.ErrorText.Render("Selected container is no longer available.")
 		}
-		return logs.RenderContent(logs.ViewModel{
-			State:            m.logs,
+
+logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
+		start, end := viewer.VisibleContentRange(&m.logs, logList)
+
+	return viewer.RenderContent(viewer.ViewModel{
+			State:            &m.logs,
 			ContainerName:    container.Name,
+			Breadcrumb:       "Containers / " + container.Name + " / Logs",
+			LineCount:        &viewer.LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)},
+			LoadingMessage:   "Loading logs...",
+			EmptyMessage:     "No logs found for this container.",
 			LoadingIndicator: m.logsLoadingIndicator(),
 			Width:            totalWidth,
 			Height:           totalHeight,
-			Styles: logs.ViewStyles{
+			ContentType:      viewer.ContentTypeLogs,
+			ResourceType:     viewer.ResourceTypeContainer,
+			Styles: viewer.ViewStyles{
 				Breadcrumb:   m.styles.Breadcrumb,
-				FollowOn:     m.styles.FollowOn,
-				FollowOff:    m.styles.FollowOff,
-				Muted:        m.styles.Muted,
-				Divider:      m.styles.Divider,
+				FollowOn:    m.styles.FollowOn,
+				FollowOff:   m.styles.FollowOff,
+				Muted:       m.styles.Muted,
+				Divider:     m.styles.Divider,
 				SubpageFrame: m.styles.SubpageFrame,
-			},
+},
 		})
 	}
 
@@ -87,7 +97,7 @@ func (m model) logVisibleWidth() int {
 func (m model) logSectionHeight() int {
 	mainHeight := util.MainAreaHeight(m.height, m.renderHeader(), m.renderFooter())
 	if m.screen == screenModeLogs {
-		return logs.VisibleRowsForContent(m.logsPageContentHeight(mainHeight), m.logs.Filter.Active)
+		return viewer.VisibleRowsForContent(m.logsPageContentHeight(mainHeight), m.logs.Filter.Active)
 	}
 	innerHeight := util.FrameContentHeight(mainHeight, m.styles.MainFrame)
 	return max(1, innerHeight-2)

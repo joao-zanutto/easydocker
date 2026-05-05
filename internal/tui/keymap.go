@@ -1,8 +1,8 @@
 package tui
 
 import (
-	"easydocker/internal/tui/logs"
 	"easydocker/internal/tui/tables"
+	"easydocker/internal/tui/viewer"
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
@@ -27,7 +27,7 @@ type BrowseKeyMap struct {
 
 var (
 	defaultBrowseKeyMap = newBrowseKeyMap()
-	defaultLogsKeyMap   = logs.NewKeyMap()
+	defaultViewerKeyMap = viewer.NewKeyMap()
 )
 
 func newBrowseKeyMap() BrowseKeyMap {
@@ -95,8 +95,8 @@ func browseKeyMap() BrowseKeyMap {
 	return defaultBrowseKeyMap
 }
 
-func logsKeyMap() logs.KeyMap {
-	return defaultLogsKeyMap
+func viewerKeyMap() viewer.KeyMap {
+	return defaultViewerKeyMap
 }
 
 func isShellCompatibleState(state string) bool {
@@ -106,16 +106,16 @@ func isShellCompatibleState(state string) bool {
 
 func (m model) footerKeyMap() help.KeyMap {
 	if m.screen == screenModeLogs {
+		viewerKeys := viewerKeyMap()
 		if m.logs.Filter.Active {
-			logsKeys := logsKeyMap()
 			logsFilterVerticalNavigate := key.NewBinding(
 				key.WithKeys("up", "down"),
 				key.WithHelp(helpKeyLabel("↑/↓"), "navigate"),
 			)
 			bindings := []key.Binding{
 				logsFilterVerticalNavigate,
-				logsKeys.HelpPage,
-				logsKeys.HelpHomeEnd,
+				viewerKeys.HelpPage(),
+				viewerKeys.HelpHomeEnd(),
 				key.NewBinding(
 					key.WithKeys("esc"),
 					key.WithHelp(helpKeyLabel("esc"), "clear/exit filter"),
@@ -127,7 +127,7 @@ func (m model) footerKeyMap() help.KeyMap {
 			}
 			return footerKeyMap{bindings: bindings}
 		}
-		return logsKeyMap()
+		return footerKeyMap{bindings: viewerKeys.ShortHelp(viewer.ResourceTypeContainer)}
 	}
 
 	browseKeys := browseKeyMap()
