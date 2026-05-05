@@ -31,11 +31,11 @@ type LoadRequest struct {
 
 type ResultMsg struct {
 	ContainerID string
-	SessionID int
-	Data any
-	Err error
-	Tail int
-	Src Source
+	SessionID   int
+	Data        any
+	Err         error
+	Tail        int
+	Src         Source
 }
 
 type ContentMsg struct {
@@ -70,22 +70,22 @@ const (
 )
 
 type State struct {
-	ContainerID string
-	SessionID   int
-	Data        []string
-	TailLines   int
+	ContainerID               string
+	SessionID                 int
+	Data                      []string
+	TailLines                 int
 	HistoryBaseLen            int
 	HistoryAppendedDuringLoad int
 	HistoryNoProgressCount    int
-	Filter      components.FilterState
-	HorizontalOffset int
-	WrapLines    bool
-	WrapXOffset  int
-	InitialLoad bool
-	HistoryDone  bool
-	HistoryLoad  bool
-	Follow       bool
-	Viewport     viewport.Model
+	Filter                    components.FilterState
+	HorizontalOffset          int
+	WrapLines                 bool
+	WrapXOffset               int
+	InitialLoad               bool
+	HistoryDone               bool
+	HistoryLoad               bool
+	Follow                    bool
+	Viewport                  viewport.Model
 }
 
 func NewState() State {

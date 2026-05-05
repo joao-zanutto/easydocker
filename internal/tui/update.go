@@ -14,6 +14,7 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 )
+
 var browseController = browse.Controller{}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -30,8 +31,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleMetricsResultMsg(msg)
 	case loadResultMsg:
 		return m.handleLoadResultMsg(msg)
-case viewer.ContentMsg:
-	return m.handleLogsResultMsg(msg)
+	case viewer.ContentMsg:
+		return m.handleLogsResultMsg(msg)
 	case execDoneMsg:
 		return m, nil
 	case tickMsg:
@@ -447,7 +448,7 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	if m.shouldReloadSnapshotOnTick() {
 		cmds = append(cmds, m.loadDockerCmd())
 	}
-if m.shouldLoadHistoryOnTick() {
+	if m.shouldLoadHistoryOnTick() {
 		tail := len(m.logs.Data) + TailStep
 		cmds = append(cmds, LoadLogsCmd(m.service, m.logs.ContainerID, m.logs.SessionID, tail, viewer.SourceHistory))
 	} else if m.shouldPollLogsOnTick() {

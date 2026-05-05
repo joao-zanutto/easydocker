@@ -73,7 +73,7 @@ type model struct {
 	networkCursor    int
 	volumeCursor     int
 	screen           screenMode
-logs LogsState
+	logs             LogsState
 	loadingStage     int
 	styles           theme.Set
 	metricsLoaded    bool
@@ -96,7 +96,7 @@ func New(service *core.Service) tea.Model {
 		loading:          true,
 		screen:           screenModeBrowse,
 		loadingStage:     loadStageContainers,
-logs: NewLogsState(),
+		logs:             NewLogsState(),
 		styles:           defaultStyles(),
 		metricsSpinner:   metricsSpinner,
 		containerSpinner: containerSpinner,

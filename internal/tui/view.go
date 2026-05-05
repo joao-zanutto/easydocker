@@ -43,10 +43,10 @@ func (m model) renderMain(height int) string {
 			return m.styles.ErrorText.Render("Selected container is no longer available.")
 		}
 
-logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
+		logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
 		start, end := viewer.VisibleContentRange(&m.logs, logList)
 
-	return viewer.RenderContent(viewer.ViewModel{
+		return viewer.RenderContent(viewer.ViewModel{
 			State:            &m.logs,
 			ContainerName:    container.Name,
 			Breadcrumb:       "Containers / " + container.Name + " / Logs",
@@ -60,12 +60,12 @@ logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
 			ResourceType:     viewer.ResourceTypeContainer,
 			Styles: viewer.ViewStyles{
 				Breadcrumb:   m.styles.Breadcrumb,
-				FollowOn:    m.styles.FollowOn,
-				FollowOff:   m.styles.FollowOff,
-				Muted:       m.styles.Muted,
-				Divider:     m.styles.Divider,
+				FollowOn:     m.styles.FollowOn,
+				FollowOff:    m.styles.FollowOff,
+				Muted:        m.styles.Muted,
+				Divider:      m.styles.Divider,
 				SubpageFrame: m.styles.SubpageFrame,
-},
+			},
 		})
 	}
 

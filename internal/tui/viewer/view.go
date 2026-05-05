@@ -12,10 +12,10 @@ import (
 
 type ViewStyles struct {
 	Breadcrumb   lipgloss.Style
-	FollowOn    lipgloss.Style
-	FollowOff   lipgloss.Style
-	Muted       lipgloss.Style
-	Divider     lipgloss.Style
+	FollowOn     lipgloss.Style
+	FollowOff    lipgloss.Style
+	Muted        lipgloss.Style
+	Divider      lipgloss.Style
 	SubpageFrame lipgloss.Style
 }
 
@@ -100,7 +100,7 @@ func renderHeader(vm ViewModel, breadcrumb string) string {
 
 	rightParts := []string{vm.Styles.Muted.Render("wrap:"), wrapText, vm.Styles.Muted.Render(" "), vm.Styles.Muted.Render("follow:"), followText}
 
-if vm.LineCount != nil {
+	if vm.LineCount != nil {
 		rightParts = append(rightParts, vm.Styles.Muted.Render(fmt.Sprintf(" lines:(%d-%d/%d)", vm.LineCount.Start, vm.LineCount.End, vm.LineCount.Total)))
 	}
 

@@ -6,19 +6,19 @@ import (
 )
 
 type KeyMap struct {
-	Up          key.Binding
-	Down        key.Binding
-	Left        key.Binding
-	Right       key.Binding
-	PageUp      key.Binding
-	PageDown    key.Binding
-	Home        key.Binding
-	End         key.Binding
-	ToggleWrap  key.Binding
+	Up           key.Binding
+	Down         key.Binding
+	Left         key.Binding
+	Right        key.Binding
+	PageUp       key.Binding
+	PageDown     key.Binding
+	Home         key.Binding
+	End          key.Binding
+	ToggleWrap   key.Binding
 	ToggleFollow key.Binding
-	OpenFilter  key.Binding
-	OpenShell   key.Binding
-	Back        key.Binding
+	OpenFilter   key.Binding
+	OpenShell    key.Binding
+	Back         key.Binding
 }
 
 func NewKeyMap() KeyMap {
