@@ -59,6 +59,11 @@ func (m *mockRepository) ExecShell(ctx context.Context, containerID string, stdi
 	return nil
 }
 
+func (m *mockRepository) LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error) {
+	m.calls = append(m.calls, "logs")
+	return nil, nil
+}
+
 func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 	rows := []ContainerRow{{FullID: "id-1", Name: "one", ComposeProject: "shop"}, {FullID: "id-2", Name: "two", ComposeProject: "shop"}}
 	metrics := map[string]ContainerMetrics{

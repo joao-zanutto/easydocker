@@ -152,7 +152,7 @@ func (m model) containerListRows() []tables.ContainerListRow {
 }
 
 func (m model) selectedLogsContainer() (core.ContainerRow, bool) {
-	return logsController.SelectedContainer(m.logs, m.snapshot.Containers)
+	return SelectedLogsContainer(m.logs, m.snapshot.Containers)
 }
 
 func (m model) selectedImage() (core.ImageRow, bool) {

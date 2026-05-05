@@ -1,37 +1,10 @@
-package logs
+package viewer
 
 import (
-	"easydocker/internal/core"
 	"easydocker/internal/tui/components"
 
 	"charm.land/bubbles/v2/viewport"
 )
-
-type Source string
-
-const (
-	SourceInitial Source = "initial"
-	SourceHistory Source = "history"
-	SourcePoll    Source = "poll"
-)
-
-type ResultMsg struct {
-	ContainerID string
-	SessionID   int
-	Data        core.ContainerLiveData
-	Err         error
-	Tail        int
-	Src         Source
-}
-
-type LoadRequest struct {
-	ContainerID string
-	SessionID   int
-	PrevCPU     []float64
-	PrevMem     []float64
-	Tail        int
-	Src         Source
-}
 
 type Transition struct {
 	ExitToBrowse   bool
@@ -41,10 +14,65 @@ type Transition struct {
 	LaunchTerminal bool
 }
 
+type Source string
+
+const (
+	SourceInitial Source = "initial"
+	SourceHistory Source = "history"
+	SourcePoll    Source = "poll"
+)
+
+type LoadRequest struct {
+	ContainerID string
+	SessionID   int
+	Tail        int
+	Src         Source
+}
+
+type ResultMsg struct {
+	ContainerID string
+	SessionID   int
+	Data        any
+	Err         error
+	Tail        int
+	Src         Source
+}
+
+type ContentMsg struct {
+	SessionID   int
+	ContainerID string
+	Data        []string
+	Err         error
+	Tail        int
+	Src         Source
+}
+
+type LineCountInfo struct {
+	Total int
+	Start int
+	End   int
+}
+
+type ContentType int
+
+const (
+	ContentTypeLogs ContentType = iota
+	ContentTypeInspect
+)
+
+type ResourceType int
+
+const (
+	ResourceTypeContainer ResourceType = iota
+	ResourceTypeVolume
+	ResourceTypeNetwork
+	ResourceTypeImage
+)
+
 type State struct {
 	ContainerID               string
 	SessionID                 int
-	Data                      core.ContainerLiveData
+	Data                      []string
 	TailLines                 int
 	HistoryBaseLen            int
 	HistoryAppendedDuringLoad int

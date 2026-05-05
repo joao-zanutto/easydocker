@@ -48,7 +48,7 @@ func NewKeyMap() KeyMap {
 			key.WithKeys("/"),
 		),
 		OpenShell: key.NewBinding(
-			key.WithKeys("t"),
+			key.WithKeys("s"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "esc"),
