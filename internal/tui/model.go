@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/browse"
-	"easydocker/internal/tui/loading"
-	"easydocker/internal/tui/theme"
+	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/shared"
+	"easydocker/internal/tui/ui/theme"
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
@@ -20,10 +20,10 @@ const (
 
 	pollInterval = time.Second
 
-	loadStageIdle       = int(loading.StageIdle)
-	loadStageContainers = int(loading.StageContainers)
-	loadStageResources  = int(loading.StageResources)
-	loadStageMetrics    = int(loading.StageMetrics)
+	loadStageIdle       = int(shared.StageIdle)
+	loadStageContainers = int(shared.StageContainers)
+	loadStageResources  = int(shared.StageResources)
+	loadStageMetrics    = int(shared.StageMetrics)
 )
 
 type screenMode int
@@ -57,7 +57,7 @@ type loadResultMsg struct {
 	err      error
 }
 
-type execDoneMsg struct{ err error }
+type shellDoneMsg struct{ err error }
 
 type model struct {
 	service          *core.Service

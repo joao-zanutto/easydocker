@@ -1,8 +1,10 @@
 package tui
 
 import (
-	"easydocker/internal/tui/tables"
-	"easydocker/internal/tui/viewer"
+	"easydocker/internal/tui/screens/viewer"
+	"easydocker/internal/tui/shared"
+	"easydocker/internal/tui/ui/tables"
+	"easydocker/internal/tui/util"
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
@@ -88,7 +90,7 @@ func newBrowseKeyMap() BrowseKeyMap {
 }
 
 func helpKeyLabel(label string) string {
-	return " " + label + " "
+	return util.HelpKeyLabel(label)
 }
 
 func browseKeyMap() BrowseKeyMap {
@@ -99,9 +101,8 @@ func viewerKeyMap() viewer.KeyMap {
 	return defaultViewerKeyMap
 }
 
-func isShellCompatibleState(state string) bool {
-	// Only running containers support shell execution
-	return state == "running"
+func canOpenShell(state string) bool {
+	return shared.CanOpenShell(state)
 }
 
 func (m model) footerKeyMap() help.KeyMap {
@@ -168,7 +169,7 @@ func (m model) footerKeyMap() help.KeyMap {
 		} else {
 			bindings = append(bindings, browseKeys.OpenLogs)
 			// Only show shell option for running containers
-			if container, ok := m.selectedContainer(); ok && isShellCompatibleState(container.State) {
+			if container, ok := m.selectedContainer(); ok && canOpenShell(container.State) {
 				bindings = append(bindings, browseKeys.OpenShell)
 			}
 		}

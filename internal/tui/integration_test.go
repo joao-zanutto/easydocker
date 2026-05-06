@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/util"
-	"easydocker/internal/tui/viewer"
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"

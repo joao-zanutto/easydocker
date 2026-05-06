@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/browse"
-	"easydocker/internal/tui/chrome"
-	"easydocker/internal/tui/tables"
+	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/viewer"
+	"easydocker/internal/tui/ui/chrome"
+	"easydocker/internal/tui/ui/tables"
 	"easydocker/internal/tui/util"
-	"easydocker/internal/tui/viewer"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"

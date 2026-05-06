@@ -1,10 +1,10 @@
 package tui
 
 import (
-	"io"
 	"time"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/shared"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -47,31 +47,6 @@ func (m model) loadDockerCmd() tea.Cmd {
 	}
 }
 
-type execShellCommand struct {
-	service     *core.Service
-	containerID string
-	stdin       io.Reader
-	stdout      io.Writer
-	stderr      io.Writer
-}
-
-func (e *execShellCommand) SetStdin(r io.Reader)  { e.stdin = r }
-func (e *execShellCommand) SetStdout(w io.Writer) { e.stdout = w }
-func (e *execShellCommand) SetStderr(w io.Writer) { e.stderr = w }
-
-func (e *execShellCommand) Run() error {
-	// Enter alternate screen buffer and move cursor to home position
-	_, _ = io.WriteString(e.stdout, "\033[?1049h\033[H")
-	defer func() {
-		// Exit alternate screen buffer
-		_, _ = io.WriteString(e.stdout, "\033[?1049l")
-	}()
-	return e.service.ExecShell(e.containerID, e.stdin, e.stdout, e.stderr)
-}
-
-func (m model) execTerminalCmd(containerID string) tea.Cmd {
-	return tea.Exec(
-		&execShellCommand{service: m.service, containerID: containerID},
-		func(err error) tea.Msg { return execDoneMsg{err: err} },
-	)
+func (m model) shellCmd(containerID string) tea.Cmd {
+	return shared.ShellCmd(m.service, containerID, shellDoneMsg{})
 }

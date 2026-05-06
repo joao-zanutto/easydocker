@@ -60,10 +60,3 @@ func PadVisibleWidth(line string, width int) string {
 func DynamicInputWidth(prompt string, lineWidth int) int {
 	return max(1, lineWidth-util.DisplayWidth(prompt))
 }
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}

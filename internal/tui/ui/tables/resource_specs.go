@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/browse"
+	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/util"
 )
 

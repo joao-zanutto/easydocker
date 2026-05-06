@@ -1,17 +1,17 @@
 package viewer
 
 import (
-	"easydocker/internal/tui/components"
+	"easydocker/internal/tui/ui/components"
 
 	"charm.land/bubbles/v2/viewport"
 )
 
 type Transition struct {
-	ExitToBrowse   bool
-	ForceTab       int
-	Load           *LoadRequest
-	Err            error
-	LaunchTerminal bool
+	ExitToBrowse bool
+	ForceTab     int
+	Load         *LoadRequest
+	Err          error
+	LaunchShell  bool
 }
 
 type Source string

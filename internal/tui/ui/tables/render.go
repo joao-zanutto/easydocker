@@ -1,7 +1,7 @@
 package tables
 
 import (
-	"easydocker/internal/tui/tables/btable"
+	"easydocker/internal/tui/ui/tables/btable"
 	"easydocker/internal/tui/util"
 
 	"charm.land/lipgloss/v2"

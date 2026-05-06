@@ -1,7 +1,7 @@
 package browse
 
 import (
-	"easydocker/internal/tui/components"
+	"easydocker/internal/tui/ui/components"
 )
 
 const FilterHeaderHeight = components.FilterHeaderHeight

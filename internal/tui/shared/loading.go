@@ -1,4 +1,4 @@
-package loading
+package shared
 
 // Stage represents the async loading lifecycle in the TUI.
 type Stage int

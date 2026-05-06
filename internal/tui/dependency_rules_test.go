@@ -20,7 +20,7 @@ func TestTUISubpackagesDoNotImportRootPackage(t *testing.T) {
 	}
 
 	tuiDir := filepath.Dir(thisFile)
-	subpackageDirs := []string{"browse", "chrome", "mode", "state", "tables", "util"}
+	subpackageDirs := []string{"screens/browse", "screens/viewer", "shared", "util", "ui/chrome", "ui/components", "ui/tables", "ui/theme"}
 
 	for _, rel := range subpackageDirs {
 		pkgDir := filepath.Join(tuiDir, rel)

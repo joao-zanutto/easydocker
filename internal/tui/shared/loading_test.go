@@ -1,4 +1,4 @@
-package loading
+package shared
 
 import (
 	"errors"

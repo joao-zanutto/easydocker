@@ -5,10 +5,9 @@ import (
 	"time"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/browse"
-	"easydocker/internal/tui/loading"
-	"easydocker/internal/tui/mode"
-	"easydocker/internal/tui/viewer"
+	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/viewer"
+	"easydocker/internal/tui/shared"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
@@ -33,7 +32,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleLoadResultMsg(msg)
 	case viewer.ContentMsg:
 		return m.handleLogsResultMsg(msg)
-	case execDoneMsg:
+	case shellDoneMsg:
 		return m, nil
 	case tickMsg:
 		return m.handleTickMsg(msg)
@@ -113,7 +112,7 @@ func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	if transition.OpenShell {
-		if cmd := m.execTerminalIfContainerSelected(); cmd != nil {
+		if cmd := m.openShellIfContainerSelected(); cmd != nil {
 			return m, cmd
 		}
 	}
@@ -149,30 +148,30 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, m.handleLogsKey(msg)
 	}
 
-	route := mode.RouteRootKey(msg.String(), toModeScreen(m.screen))
+	route := shared.RouteRootKey(msg.String(), toModeScreen(m.screen))
 	switch route {
-	case mode.RouteQuit:
+	case shared.RouteQuit:
 		return m, tea.Quit
-	case mode.RouteNoop:
+	case shared.RouteNoop:
 		return m, nil
-	case mode.RouteLogs:
+	case shared.RouteLogs:
 		return m, m.handleLogsKey(msg)
-	case mode.RouteBrowse:
+	case shared.RouteBrowse:
 		return m.handleBrowseKey(msg)
 	}
 
 	return m, nil
 }
 
-func toModeScreen(screen screenMode) mode.Screen {
+func toModeScreen(screen screenMode) shared.Screen {
 	if screen == screenModeLogs {
-		return mode.Logs
+		return shared.Logs
 	}
-	return mode.Browse
+	return shared.Browse
 }
 
-func fromModeScreen(screen mode.Screen) screenMode {
-	if screen == mode.Logs {
+func fromModeScreen(screen shared.Screen) screenMode {
+	if screen == shared.Logs {
 		return screenModeLogs
 	}
 	return screenModeBrowse
@@ -273,7 +272,7 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	transition := EnterLogsState(&m.logs, container.FullID)
 	m.err = nil
-	m.screen = fromModeScreen(mode.EnterLogsTransition())
+	m.screen = fromModeScreen(shared.EnterLogsTransition())
 	return m.applyLogsTransition(transition)
 }
 
@@ -288,14 +287,14 @@ func (m *model) handleLogsResult(msg viewer.ContentMsg) tea.Cmd {
 }
 
 func (m *model) applyLogsTransition(transition viewer.Transition) tea.Cmd {
-	if transition.LaunchTerminal {
+	if transition.LaunchShell {
 		if container, ok := m.selectedLogsContainer(); ok {
-			return m.execTerminalCmd(container.FullID)
+			return m.shellCmd(container.FullID)
 		}
 		return nil
 	}
 	if transition.ExitToBrowse {
-		targetScreen, _ := mode.ExitLogsTransition(transition.ForceTab)
+		targetScreen, _ := shared.ExitLogsTransition(transition.ForceTab)
 		m.screen = fromModeScreen(targetScreen)
 		m.activeTab = transition.ForceTab
 	}
@@ -319,24 +318,24 @@ func (m *model) applyLogsTransition(transition viewer.Transition) tea.Cmd {
 	return loadCmd
 }
 
-func (m *model) applyLoadingTransition(transition loading.Transition) {
+func (m *model) applyLoadingTransition(transition shared.Transition) {
 	m.loading = transition.Loading
 	m.loadingStage = int(transition.Stage)
 	m.err = transition.Err
 }
 
 func (m *model) setLoadError(err error) {
-	m.applyLoadingTransition(loading.Fail(err))
+	m.applyLoadingTransition(shared.Fail(err))
 }
 
 func (m *model) beginLoadingStage(stage int) {
-	m.applyLoadingTransition(loading.Begin(loading.Stage(stage)))
+	m.applyLoadingTransition(shared.Begin(shared.Stage(stage)))
 	m.snapshot.Timestamp = time.Now()
 	m.clampCursors()
 }
 
 func (m *model) finishLoadingStage(err error) bool {
-	transition, ok := loading.Finish(err)
+	transition, ok := shared.Finish(err)
 	m.applyLoadingTransition(transition)
 	return ok
 }
