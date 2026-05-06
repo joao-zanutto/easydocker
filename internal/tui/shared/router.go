@@ -1,4 +1,4 @@
-package mode
+package shared
 
 // Screen identifies a top-level TUI mode.
 type Screen int

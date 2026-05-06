@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"easydocker/internal/tui/components"
+	"easydocker/internal/tui/ui/components"
 	"easydocker/internal/tui/util"
 
 	"charm.land/lipgloss/v2"
@@ -118,7 +118,7 @@ func renderPanel(vm ViewModel, width, height int) string {
 		return strings.Join(util.ClipAndPadLines([]string{renderLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator, loadingMsg)}, height, ""), "\n")
 	}
 
-	filtered := filterContent(vm.State.Data, vm.State.Filter.Query)
+	filtered := FilterLines(vm.State.Data, vm.State.Filter.Query)
 	if len(filtered) == 0 {
 		empty := vm.EmptyMessage
 		if empty == "" {
@@ -221,19 +221,6 @@ func renderRightPriorityLine(left, right string, width int) string {
 	leftRenderedWidth := util.DisplayWidth(left)
 	spacing := max(0, width-leftRenderedWidth-rightWidth)
 	return left + strings.Repeat(" ", spacing) + right
-}
-
-func filterContent(lines []string, query string) []string {
-	if strings.TrimSpace(query) == "" {
-		return lines
-	}
-	filtered := make([]string, 0, len(lines))
-	for _, line := range lines {
-		if strings.Contains(line, query) {
-			filtered = append(filtered, line)
-		}
-	}
-	return filtered
 }
 
 func viewportRange(state *State, total int) (int, int) {

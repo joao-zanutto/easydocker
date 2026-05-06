@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/viewer"
+	"easydocker/internal/tui/screens/viewer"
 
 	tea "charm.land/bubbletea/v2"
 )

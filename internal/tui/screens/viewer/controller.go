@@ -1,6 +1,8 @@
 package viewer
 
 import (
+	"easydocker/internal/tui/util"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 )
@@ -79,7 +81,7 @@ func NewKeyMap() KeyMap {
 }
 
 func helpKeyLabel(label string) string {
-	return " " + label + " "
+	return util.HelpKeyLabel(label)
 }
 
 type Controller struct{}
@@ -119,7 +121,7 @@ func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Tran
 		}
 		return Transition{}
 	case key.Matches(msg, keys.OpenShell):
-		return Transition{LaunchTerminal: true}
+		return Transition{LaunchShell: true}
 	case key.Matches(msg, keys.Back):
 		return Transition{ExitToBrowse: true}
 	default:

@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"easydocker/internal/core"
-	tuistate "easydocker/internal/tui/state"
-	"easydocker/internal/tui/tables"
+	tuistate "easydocker/internal/tui/shared"
+	"easydocker/internal/tui/ui/tables"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -43,7 +43,7 @@ func (m *model) enterLogsModeIfContainerSelected() tea.Cmd {
 	return m.enterLogsMode(container)
 }
 
-func (m *model) execTerminalIfContainerSelected() tea.Cmd {
+func (m *model) openShellIfContainerSelected() tea.Cmd {
 	if m.activeTab != tabContainers {
 		return nil
 	}
@@ -52,10 +52,10 @@ func (m *model) execTerminalIfContainerSelected() tea.Cmd {
 		return nil
 	}
 	// Only allow shell on running containers
-	if !isShellCompatibleState(container.State) {
+	if !canOpenShell(container.State) {
 		return nil
 	}
-	return m.execTerminalCmd(container.FullID)
+	return m.shellCmd(container.FullID)
 }
 
 func (m *model) toggleSelectedComposeProject() bool {

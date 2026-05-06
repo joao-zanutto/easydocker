@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/components"
+	"easydocker/internal/tui/ui/components"
 	"easydocker/internal/tui/util"
 
 	"charm.land/lipgloss/v2"
@@ -310,13 +310,6 @@ func ContainerStateText(container core.ContainerRow) string {
 		return "● healthy"
 	}
 	return "● " + container.State
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 func dynamicInputWidth(prompt string, lineWidth int) int {

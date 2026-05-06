@@ -1,4 +1,4 @@
-package mode
+package shared
 
 import "testing"
 

@@ -1,4 +1,4 @@
-package state
+package shared
 
 import "easydocker/internal/tui/util"
 
@@ -100,11 +100,4 @@ func ReconcileCursorForTab(c *Cursors, tab, index int, found bool) bool {
 		return false
 	}
 	return SetCursorForTab(c, tab, index)
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
