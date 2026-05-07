@@ -152,8 +152,14 @@ func HandleLogsResult(s *LogsState, msg viewer.ContentMsg, w, h int) viewer.Tran
 
 	switch msg.Src {
 	case viewer.SourceHistory:
+		oldLen := len(s.Data)
 		ApplyHistoryWithMerge(s, msg.Data)
 		s.SyncFromData(w, h)
+		newLen := len(s.Data)
+		if newLen > oldLen {
+			delta := newLen - oldLen
+			s.Viewport.SetYOffset(s.Viewport.YOffset() + delta)
+		}
 	case viewer.SourceInitial:
 		ApplyInitial(s, msg.Data)
 		s.SyncFromData(w, h)
