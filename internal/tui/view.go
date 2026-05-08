@@ -69,13 +69,70 @@ func (m model) renderMain(height int) string {
 		})
 	}
 
+	if m.screen == screenModeInspect {
+		return m.renderInspectContent(totalWidth, totalHeight)
+	}
+
 	layout := util.ComputeFrameLayout(totalWidth, totalHeight, m.styles.MainFrame)
 	content := m.renderBrowseContent(layout.ContentWidth, layout.ContentHeight)
 	return util.RenderFramedContent(m.styles.MainFrame, layout, content)
 }
 
+func resourceTypeFromTab(tab int) viewer.ResourceType {
+	switch tab {
+	case tabContainers:
+		return viewer.ResourceTypeContainer
+	case tabImages:
+		return viewer.ResourceTypeImage
+	case tabNetworks:
+		return viewer.ResourceTypeNetwork
+	case tabVolumes:
+		return viewer.ResourceTypeVolume
+	default:
+		return viewer.ResourceTypeContainer
+	}
+}
+
+func (m model) renderInspectContent(totalWidth, totalHeight int) string {
+	resourceLabel := viewer.GetResourceLabel(resourceTypeFromTab(m.activeTab))
+	containerName := m.logs.ResourceName
+	breadcrumb := resourceLabel + " / " + containerName + " / Inspect"
+
+	logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
+	start, end := viewer.VisibleContentRange(&m.logs, logList)
+
+	return viewer.RenderContent(viewer.ViewModel{
+		State:            &m.logs,
+		ContainerName:    containerName,
+		Breadcrumb:       breadcrumb,
+		LineCount:        &viewer.LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)},
+		LoadingMessage:   "Loading inspect...",
+		EmptyMessage:     "No inspect data available.",
+		LoadingIndicator: m.logsLoadingIndicator(),
+		Width:            totalWidth,
+		Height:           totalHeight,
+		ContentType:      viewer.ContentTypeInspect,
+		ResourceType:     resourceTypeFromTab(m.activeTab),
+		Styles: viewer.ViewStyles{
+			Breadcrumb:   m.styles.Breadcrumb,
+			FollowOn:     m.styles.FollowOn,
+			FollowOff:    m.styles.FollowOff,
+			Muted:        m.styles.Muted,
+			Divider:      m.styles.Divider,
+			SubpageFrame: m.styles.SubpageFrame,
+		},
+	})
+}
+
 func (m model) logsLoadingIndicator() string {
 	if !m.shouldAnimateLogsLoadingIndicator() {
+		return ""
+	}
+	return strings.TrimSpace(m.logsSpinner.View())
+}
+
+func (m model) inspectLoadingIndicator() string {
+	if m.screen != screenModeInspect || !m.logs.InitialLoad {
 		return ""
 	}
 	return strings.TrimSpace(m.logsSpinner.View())

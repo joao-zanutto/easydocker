@@ -6,6 +6,7 @@ type Screen int
 const (
 	Browse Screen = iota
 	Logs
+	Inspect
 )
 
 // RootKeyRoute classifies top-level key routing decisions.
@@ -14,6 +15,7 @@ type RootKeyRoute int
 const (
 	RouteBrowse RootKeyRoute = iota
 	RouteLogs
+	RouteInspect
 	RouteNoop
 	RouteQuit
 )
@@ -29,6 +31,9 @@ func RouteRootKey(key string, screen Screen) RootKeyRoute {
 
 	if screen == Logs {
 		return RouteLogs
+	}
+	if screen == Inspect {
+		return RouteInspect
 	}
 	return RouteBrowse
 }

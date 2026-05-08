@@ -2,13 +2,16 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"easydocker/internal/core"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 )
 
@@ -81,6 +84,71 @@ func (r *Repository) LoadSupportingResources(ctx context.Context) (core.Snapshot
 	snapshot.TotalLimit = uint64(info.MemTotal)
 
 	return snapshot, nil
+}
+
+func (r *Repository) InspectContainer(ctx context.Context, containerID string) ([]string, error) {
+	cli, err := r.dockerClient()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return nil, fmt.Errorf("inspect container: %w", err)
+	}
+
+	return toInspectResult(data)
+}
+
+func (r *Repository) InspectImage(ctx context.Context, imageRef string) ([]string, error) {
+	cli, err := r.dockerClient()
+	if err != nil {
+		return nil, err
+	}
+
+	data, _, err := cli.ImageInspectWithRaw(ctx, imageRef)
+	if err != nil {
+		return nil, fmt.Errorf("inspect image: %w", err)
+	}
+
+	return toInspectResult(data)
+}
+
+func (r *Repository) InspectNetwork(ctx context.Context, networkID string) ([]string, error) {
+	cli, err := r.dockerClient()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := cli.NetworkInspect(ctx, networkID, network.InspectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("inspect network: %w", err)
+	}
+
+	return toInspectResult(data)
+}
+
+func (r *Repository) InspectVolume(ctx context.Context, volumeName string) ([]string, error) {
+	cli, err := r.dockerClient()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := cli.VolumeInspect(ctx, volumeName)
+	if err != nil {
+		return nil, fmt.Errorf("inspect volume: %w", err)
+	}
+
+	return toInspectResult(data)
+}
+
+func toInspectResult(data any) ([]string, error) {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal json: %w", err)
+	}
+	lines := strings.Split(string(jsonData), "\n")
+	return lines, nil
 }
 
 func (r *Repository) dockerClient() (*client.Client, error) {

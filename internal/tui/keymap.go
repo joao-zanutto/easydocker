@@ -22,6 +22,7 @@ type BrowseKeyMap struct {
 	OpenLogs     key.Binding
 	OpenFilter   key.Binding
 	OpenShell    key.Binding
+	OpenInspect  key.Binding
 	Quit         key.Binding
 	HelpNavigate key.Binding
 	HelpSwitch   key.Binding
@@ -74,6 +75,10 @@ func newBrowseKeyMap() BrowseKeyMap {
 			key.WithKeys("s"),
 			key.WithHelp(helpKeyLabel("s"), "shell"),
 		),
+		OpenInspect: key.NewBinding(
+			key.WithKeys("i"),
+			key.WithHelp(helpKeyLabel("i"), "inspect"),
+		),
 		Quit: key.NewBinding(
 			key.WithKeys("esc"),
 			key.WithHelp(helpKeyLabel("esc"), "quit"),
@@ -106,8 +111,12 @@ func canOpenShell(state string) bool {
 }
 
 func (m model) footerKeyMap() help.KeyMap {
-	if m.screen == screenModeLogs {
+	if m.screen == screenModeLogs || m.screen == screenModeInspect {
 		viewerKeys := viewerKeyMap()
+		contentType := viewer.ContentTypeLogs
+		if m.screen == screenModeInspect {
+			contentType = viewer.ContentTypeInspect
+		}
 		if m.logs.Filter.Active {
 			logsFilterVerticalNavigate := key.NewBinding(
 				key.WithKeys("up", "down"),
@@ -128,7 +137,7 @@ func (m model) footerKeyMap() help.KeyMap {
 			}
 			return footerKeyMap{bindings: bindings}
 		}
-		return footerKeyMap{bindings: viewerKeys.ShortHelp(viewer.ResourceTypeContainer)}
+		return footerKeyMap{bindings: viewerKeys.ShortHelp(viewer.ResourceType(m.activeTab), contentType)}
 	}
 
 	browseKeys := browseKeyMap()
@@ -150,8 +159,6 @@ func (m model) footerKeyMap() help.KeyMap {
 	}
 
 	bindings := []key.Binding{
-		browseKeys.HelpNavigate,
-		browseKeys.HelpSwitch,
 		browseKeys.OpenFilter,
 		browseKeys.Quit,
 	}
@@ -167,12 +174,14 @@ func (m model) footerKeyMap() help.KeyMap {
 				key.WithHelp(helpKeyLabel("enter"), action),
 			))
 		} else {
-			bindings = append(bindings, browseKeys.OpenLogs)
-			// Only show shell option for running containers
+			bindings = append(bindings, browseKeys.OpenLogs, browseKeys.OpenInspect)
 			if container, ok := m.selectedContainer(); ok && canOpenShell(container.State) {
 				bindings = append(bindings, browseKeys.OpenShell)
 			}
 		}
+	}
+	if m.activeTab == tabImages || m.activeTab == tabNetworks || m.activeTab == tabVolumes {
+		bindings = append(bindings, browseKeys.OpenInspect)
 	}
 	return footerKeyMap{bindings: bindings}
 }

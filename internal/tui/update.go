@@ -8,6 +8,7 @@ import (
 	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
+	"easydocker/internal/tui/util"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
@@ -32,6 +33,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleLoadResultMsg(msg)
 	case viewer.ContentMsg:
 		return m.handleLogsResultMsg(msg)
+	case inspectResultMsg:
+		return m.handleInspectResultMsg(msg)
 	case shellDoneMsg:
 		return m, nil
 	case tickMsg:
@@ -116,6 +119,9 @@ func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	}
+	if transition.OpenInspect {
+		return m.handleInspectTransition()
+	}
 	if transition.Quit {
 		return m, tea.Quit
 	}
@@ -131,6 +137,9 @@ func (m model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.height = msg.Height
 	if m.screen == screenModeLogs {
 		m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
+	}
+	if m.screen == screenModeInspect {
+		m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
 	}
 	return m, nil
 }
@@ -156,6 +165,8 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case shared.RouteLogs:
 		return m, m.handleLogsKey(msg)
+	case shared.RouteInspect:
+		return m, m.handleInspectKey(msg)
 	case shared.RouteBrowse:
 		return m.handleBrowseKey(msg)
 	}
@@ -164,15 +175,21 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 func toModeScreen(screen screenMode) shared.Screen {
-	if screen == screenModeLogs {
+	switch screen {
+	case screenModeLogs:
 		return shared.Logs
+	case screenModeInspect:
+		return shared.Inspect
 	}
 	return shared.Browse
 }
 
 func fromModeScreen(screen shared.Screen) screenMode {
-	if screen == shared.Logs {
+	switch screen {
+	case shared.Logs:
 		return screenModeLogs
+	case shared.Inspect:
+		return screenModeInspect
 	}
 	return screenModeBrowse
 }
@@ -490,6 +507,162 @@ func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
 
 func (m model) shouldAnimateLogsLoadingIndicator() bool {
 	return m.screen == screenModeLogs && (m.logs.InitialLoad || m.logs.HistoryLoad)
+}
+
+func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
+	resourceType, resourceID, resourceName, ok := m.selectedInspectResource()
+	if !ok {
+		return m, nil
+	}
+	m.previousScreen = m.screen
+	m.screen = screenModeInspect
+	m.logs.InitialLoad = true
+	m.logs.Data = nil
+	m.logs.ResourceType = viewer.ResourceType(resourceType)
+	m.logs.ContainerID = resourceID
+	m.logs.ResourceName = resourceName
+	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
+}
+
+func (m *model) loadInspectCmd(resourceType int, resourceID, resourceName string) tea.Cmd {
+	svc := m.service
+	return func() tea.Msg {
+		var data []string
+		var err error
+		switch resourceType {
+		case tabContainers:
+			data, err = svc.InspectContainer(resourceID)
+		case tabImages:
+			data, err = svc.InspectImage(resourceID)
+		case tabNetworks:
+			data, err = svc.InspectNetwork(resourceID)
+		case tabVolumes:
+			data, err = svc.InspectVolume(resourceID)
+		}
+		return inspectResultMsg{
+			resourceType: resourceType,
+			resourceID:   resourceID,
+			resourceName: resourceName,
+			data:         data,
+			err:          err,
+		}
+	}
+}
+
+func (m model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		m.err = msg.err
+		m.logs.InitialLoad = false
+		return m, nil
+	}
+	m.logs.ApplyContentInitial(msg.data)
+	m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
+	return m, nil
+}
+
+func (m *model) handleInspectKey(msg tea.KeyPressMsg) tea.Cmd {
+	keys := viewer.NewKeyMap()
+
+	if m.logs.Filter.Active {
+		switch {
+		case key.Matches(msg, keys.Back):
+			previousYOffset := m.logs.Viewport.YOffset()
+			m.logs.Filter.Active = false
+			m.logs.Filter.Input.Blur()
+			m.logs.Filter.Query = ""
+			m.logs.Filter.Input.SetValue("")
+			newRows := m.inspectVisibleRows()
+			m.logs.SyncFromData(m.inspectVisibleWidth(), newRows)
+			m.logs.Viewport.SetYOffset(max(0, previousYOffset))
+			return nil
+		case msg.String() == "enter":
+			m.logs.Filter.Active = false
+			m.logs.Filter.Input.Blur()
+			return nil
+		default:
+			var cmd tea.Cmd
+			m.logs.Filter.Input, cmd = m.logs.Filter.Input.Update(msg)
+			m.logs.Filter.Query = m.logs.Filter.Input.Value()
+			m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
+			return cmd
+		}
+	}
+
+	if key.Matches(msg, keys.OpenFilter) {
+		m.logs.Filter.Active = true
+		m.logs.Filter.Input.Focus()
+		m.logs.Filter.Input.SetValue(m.logs.Filter.Query)
+		return nil
+	}
+
+	if key.Matches(msg, keys.Back) {
+		m.exitInspectMode()
+		return nil
+	}
+
+	if key.Matches(msg, keys.ToggleWrap) {
+		logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
+		startLine, _ := viewer.VisibleContentRange(&m.logs, logList)
+		visibleWidth := m.inspectVisibleWidth()
+		visibleRows := m.inspectVisibleRows()
+		m.logs.SetWrapLines(!m.logs.WrapLines)
+		m.logs.SyncFromData(visibleWidth, visibleRows)
+		if !m.logs.WrapLines {
+			targetYOffset := viewer.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
+			m.logs.Viewport.SetYOffset(targetYOffset)
+		}
+		return nil
+	}
+
+	viewer.Controller{}.HandleKey(&m.logs, msg, viewer.NewKeyMap())
+	m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
+	return nil
+}
+
+func (m *model) exitInspectMode() {
+	m.screen = m.previousScreen
+}
+
+func (m model) selectedInspectResource() (int, string, string, bool) {
+	switch m.activeTab {
+	case tabContainers:
+		c, ok := m.selectedContainer()
+		if !ok {
+			return 0, "", "", false
+		}
+		return tabContainers, c.FullID, c.Name, true
+	case tabImages:
+		img, ok := m.selectedImage()
+		if !ok {
+			return 0, "", "", false
+		}
+		return tabImages, img.ID, img.Tags, true
+	case tabNetworks:
+		net, ok := m.selectedNetwork()
+		if !ok {
+			return 0, "", "", false
+		}
+		return tabNetworks, net.ID, net.Name, true
+	case tabVolumes:
+		vol, ok := m.selectedVolume()
+		if !ok {
+			return 0, "", "", false
+		}
+		return tabVolumes, vol.Name, vol.Name, true
+	default:
+		return 0, "", "", false
+	}
+}
+
+func (m model) inspectVisibleWidth() int {
+	totalWidth := max(1, m.width)
+	return m.logsPageContentWidth(totalWidth)
+}
+
+func (m model) inspectVisibleRows() int {
+	mainHeight := util.MainAreaHeight(m.height, m.renderHeader(), m.renderFooter())
+	contentHeight := m.logsPageContentHeight(mainHeight)
+	return viewer.VisibleRowsForContent(contentHeight, m.logs.Filter.Active)
 }
 
 func (m model) shouldAnimateMetricsLoadingIndicator() bool {

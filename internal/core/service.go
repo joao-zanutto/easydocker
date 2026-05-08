@@ -12,6 +12,10 @@ type Repository interface {
 	LoadContainerMetrics(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error)
 	LoadContainerLiveData(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error)
 	LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error)
+	InspectContainer(ctx context.Context, containerID string) ([]string, error)
+	InspectImage(ctx context.Context, imageRef string) ([]string, error)
+	InspectNetwork(ctx context.Context, networkID string) ([]string, error)
+	InspectVolume(ctx context.Context, volumeName string) ([]string, error)
 	ExecShell(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error
 }
 
@@ -135,4 +139,28 @@ func (s *Service) LoadSnapshot() (Snapshot, error) {
 	resources.Timestamp = time.Now()
 
 	return resources, nil
+}
+
+func (s *Service) InspectContainer(containerID string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
+	defer cancel()
+	return s.repo.InspectContainer(ctx, containerID)
+}
+
+func (s *Service) InspectImage(imageRef string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
+	defer cancel()
+	return s.repo.InspectImage(ctx, imageRef)
+}
+
+func (s *Service) InspectNetwork(networkID string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
+	defer cancel()
+	return s.repo.InspectNetwork(ctx, networkID)
+}
+
+func (s *Service) InspectVolume(volumeName string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
+	defer cancel()
+	return s.repo.InspectVolume(ctx, volumeName)
 }

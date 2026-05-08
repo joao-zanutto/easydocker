@@ -64,6 +64,26 @@ func (m *mockRepository) LoadContainerLogs(ctx context.Context, containerID stri
 	return nil, nil
 }
 
+func (m *mockRepository) InspectContainer(ctx context.Context, containerID string) ([]string, error) {
+	m.calls = append(m.calls, "inspect-container")
+	return nil, nil
+}
+
+func (m *mockRepository) InspectImage(ctx context.Context, imageRef string) ([]string, error) {
+	m.calls = append(m.calls, "inspect-image")
+	return nil, nil
+}
+
+func (m *mockRepository) InspectNetwork(ctx context.Context, networkID string) ([]string, error) {
+	m.calls = append(m.calls, "inspect-network")
+	return nil, nil
+}
+
+func (m *mockRepository) InspectVolume(ctx context.Context, volumeName string) ([]string, error) {
+	m.calls = append(m.calls, "inspect-volume")
+	return nil, nil
+}
+
 func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 	rows := []ContainerRow{{FullID: "id-1", Name: "one", ComposeProject: "shop"}, {FullID: "id-2", Name: "two", ComposeProject: "shop"}}
 	metrics := map[string]ContainerMetrics{

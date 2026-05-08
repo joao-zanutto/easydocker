@@ -84,21 +84,18 @@ func renderHeader(vm ViewModel, breadcrumb string) string {
 	if vm.State.WrapLines {
 		wrap = "on"
 	}
-	follow := "off"
-	if vm.State.Follow {
-		follow = "on"
-	}
 	left := vm.Styles.Breadcrumb.Render(breadcrumb)
 	wrapText := vm.Styles.FollowOff.Render(wrap)
 	if vm.State.WrapLines {
 		wrapText = vm.Styles.FollowOn.Render(wrap)
 	}
-	followText := vm.Styles.FollowOff.Render(follow)
-	if vm.State.Follow {
-		followText = vm.Styles.FollowOn.Render(follow)
-	}
 
-	rightParts := []string{vm.Styles.Muted.Render("wrap:"), wrapText, vm.Styles.Muted.Render(" "), vm.Styles.Muted.Render("follow:"), followText}
+	rightParts := []string{vm.Styles.Muted.Render("wrap:"), wrapText}
+
+	if vm.ContentType == ContentTypeLogs && vm.State.Follow {
+		followText := vm.Styles.FollowOn.Render("follow:on")
+		rightParts = append(rightParts, vm.Styles.Muted.Render(" "), followText)
+	}
 
 	if vm.LineCount != nil {
 		rightParts = append(rightParts, vm.Styles.Muted.Render(fmt.Sprintf(" lines:(%d-%d/%d)", vm.LineCount.Start, vm.LineCount.End, vm.LineCount.Total)))
@@ -246,6 +243,10 @@ func getResourceLabel(rt ResourceType) string {
 	default:
 		return "Containers"
 	}
+}
+
+func GetResourceLabel(rt ResourceType) string {
+	return getResourceLabel(rt)
 }
 
 func getContentLabel(ct ContentType) string {
