@@ -86,6 +86,9 @@ type State struct {
 	HistoryLoad               bool
 	Follow                    bool
 	Viewport                  viewport.Model
+	ContentType               ContentType
+	ResourceType              ResourceType
+	ResourceName              string
 }
 
 func NewState() State {

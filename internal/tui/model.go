@@ -31,6 +31,7 @@ type screenMode int
 const (
 	screenModeBrowse screenMode = iota
 	screenModeLogs
+	screenModeInspect
 )
 
 type tickMsg time.Time
@@ -59,6 +60,14 @@ type loadResultMsg struct {
 
 type shellDoneMsg struct{ err error }
 
+type inspectResultMsg struct {
+	resourceType int
+	resourceID   string
+	resourceName string
+	data         []string
+	err          error
+}
+
 type model struct {
 	service          *core.Service
 	width            int
@@ -73,6 +82,7 @@ type model struct {
 	networkCursor    int
 	volumeCursor     int
 	screen           screenMode
+	previousScreen   screenMode
 	logs             LogsState
 	loadingStage     int
 	styles           theme.Set

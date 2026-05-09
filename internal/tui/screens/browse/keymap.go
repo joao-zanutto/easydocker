@@ -15,6 +15,7 @@ type KeyMap struct {
 	OpenLogs    key.Binding
 	OpenFilter  key.Binding
 	OpenShell   key.Binding
+	OpenInspect key.Binding
 	Quit        key.Binding
 }
 
@@ -49,6 +50,9 @@ func NewKeyMap() KeyMap {
 		),
 		OpenShell: key.NewBinding(
 			key.WithKeys("s"),
+		),
+		OpenInspect: key.NewBinding(
+			key.WithKeys("i"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "esc"),

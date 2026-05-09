@@ -179,12 +179,16 @@ func handleEnd(state *State) Transition {
 	return Transition{}
 }
 
-func (k KeyMap) ShortHelp(resourceType ResourceType) []key.Binding {
+func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType) []key.Binding {
 	bindings := []key.Binding{
-		k.HelpNavigate(), k.HelpPage(), k.HelpHomeEnd(), k.ToggleFollow, k.ToggleWrap, k.Back,
+		k.HelpNavigate(), k.HelpPage(), k.HelpHomeEnd(), k.ToggleWrap, k.Back,
 	}
 
 	bindings = append(bindings, k.OpenFilter)
+
+	if contentType == ContentTypeLogs {
+		bindings = append(bindings, k.ToggleFollow)
+	}
 
 	if resourceType == ResourceTypeContainer {
 		bindings = append(bindings, k.OpenShell)
