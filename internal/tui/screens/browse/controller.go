@@ -15,7 +15,7 @@ type Transition struct {
 	OpenResource     bool
 	OpenShell        bool
 	OpenInspect      bool
-	Quit             bool
+	OpenMenu         bool
 	ToggleScope      bool
 }
 
@@ -43,8 +43,8 @@ func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Tran
 		return Transition{OpenInspect: true}
 	case key.Matches(msg, keys.OpenFilter):
 		return Transition{ActivateFilter: true}
-	case key.Matches(msg, keys.Quit):
-		return Transition{Quit: true}
+	case key.Matches(msg, keys.OpenMenu):
+		return Transition{OpenMenu: true}
 	default:
 		return Transition{}
 	}

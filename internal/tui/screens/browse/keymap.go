@@ -17,21 +17,22 @@ type KeyMap struct {
 	OpenShell   key.Binding
 	OpenInspect key.Binding
 	Quit        key.Binding
+	OpenMenu    key.Binding
 }
 
 func NewKeyMap() KeyMap {
 	return KeyMap{
 		TabRight: key.NewBinding(
-			key.WithKeys("right", "l"),
+			key.WithKeys("right"),
 		),
 		TabLeft: key.NewBinding(
-			key.WithKeys("left", "h"),
+			key.WithKeys("left"),
 		),
 		MoveUp: key.NewBinding(
-			key.WithKeys("up", "k"),
+			key.WithKeys("up"),
 		),
 		MoveDown: key.NewBinding(
-			key.WithKeys("down", "j"),
+			key.WithKeys("down"),
 		),
 		PageUp: key.NewBinding(
 			key.WithKeys("pgup"),
@@ -54,8 +55,11 @@ func NewKeyMap() KeyMap {
 		OpenInspect: key.NewBinding(
 			key.WithKeys("i"),
 		),
+		OpenMenu: key.NewBinding(
+			key.WithKeys("esc"),
+		),
 		Quit: key.NewBinding(
-			key.WithKeys("q", "esc"),
+			key.WithKeys("q"),
 		),
 	}
 }

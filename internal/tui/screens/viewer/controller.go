@@ -26,12 +26,12 @@ type KeyMap struct {
 func NewKeyMap() KeyMap {
 	return KeyMap{
 		Up: key.NewBinding(
-			key.WithKeys("up", "k"),
-			key.WithHelp("↑/k", "line up"),
+			key.WithKeys("up"),
+			key.WithHelp("↑", "line up"),
 		),
 		Down: key.NewBinding(
-			key.WithKeys("down", "j"),
-			key.WithHelp("↓/j", "line down"),
+			key.WithKeys("down"),
+			key.WithHelp("↓", "line down"),
 		),
 		Left: key.NewBinding(
 			key.WithKeys("left"),

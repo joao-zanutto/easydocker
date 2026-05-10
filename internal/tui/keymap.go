@@ -36,20 +36,20 @@ var (
 func newBrowseKeyMap() BrowseKeyMap {
 	return BrowseKeyMap{
 		TabRight: key.NewBinding(
-			key.WithKeys("right", "l"),
-			key.WithHelp("→/l", "next tab"),
+			key.WithKeys("right"),
+			key.WithHelp("→", "next tab"),
 		),
 		TabLeft: key.NewBinding(
-			key.WithKeys("left", "h"),
-			key.WithHelp("←/h", "prev tab"),
+			key.WithKeys("left"),
+			key.WithHelp("←", "prev tab"),
 		),
 		MoveUp: key.NewBinding(
-			key.WithKeys("up", "k"),
-			key.WithHelp("↑/k", "move up"),
+			key.WithKeys("up"),
+			key.WithHelp("↑", "move up"),
 		),
 		MoveDown: key.NewBinding(
-			key.WithKeys("down", "j"),
-			key.WithHelp("↓/j", "move down"),
+			key.WithKeys("down"),
+			key.WithHelp("↓", "move down"),
 		),
 		PageUp: key.NewBinding(
 			key.WithKeys("pgup"),
@@ -85,11 +85,11 @@ func newBrowseKeyMap() BrowseKeyMap {
 		),
 		HelpNavigate: key.NewBinding(
 			key.WithKeys("up", "down"),
-			key.WithHelp(helpKeyLabel("↑/↓"), "navigate"),
+			key.WithHelp("↑/↓", "navigate"),
 		),
 		HelpSwitch: key.NewBinding(
 			key.WithKeys("left", "right"),
-			key.WithHelp(helpKeyLabel("←/→"), "switch tabs"),
+			key.WithHelp("←/→", "switch tabs"),
 		),
 	}
 }

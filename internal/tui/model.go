@@ -5,6 +5,7 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/theme"
 
@@ -92,6 +93,8 @@ type model struct {
 	logsSpinner      spinner.Model
 	browseFilter     browse.FilterState
 	composeExpanded  map[string]bool
+	menu             menu.MenuState
+	help             menu.HelpState
 }
 
 func New(service *core.Service) tea.Model {
@@ -113,6 +116,8 @@ func New(service *core.Service) tea.Model {
 		logsSpinner:      logsSpinner,
 		browseFilter:     browse.NewFilterState(),
 		composeExpanded:  map[string]bool{},
+		menu:             menu.NewMenuState(),
+		help:             menu.NewHelpState(0, 0),
 	}
 }
 
