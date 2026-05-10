@@ -6,6 +6,7 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
@@ -122,8 +123,9 @@ func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if transition.OpenInspect {
 		return m.handleInspectTransition()
 	}
-	if transition.Quit {
-		return m, tea.Quit
+	if transition.OpenMenu {
+		m.menu.Active = true
+		m.menu.Cursor = 0
 	}
 	if transition.CursorMove != 0 {
 		m.moveCursor(transition.CursorMove)
@@ -147,6 +149,14 @@ func (m model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if msg.String() == "ctrl+c" {
 		return m, tea.Quit
+	}
+
+	if m.help.Active {
+		return m.handleHelpKey(msg)
+	}
+
+	if m.menu.Active {
+		return m.handleMenuKey(msg)
 	}
 
 	if m.screen == screenModeBrowse && m.browseFilter.Active {
@@ -702,4 +712,23 @@ func preserveRunningContainerMetrics(currentRows, previousRows []core.ContainerR
 	}
 
 	return merged
+}
+
+func (m model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	keys := menu.NewKeyMap()
+	transition := menu.Controller{}.HandleKey(&m.menu, &m.help, msg, keys)
+	if transition.Quit {
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	keys := menu.NewKeyMap()
+	transition := menu.Controller{}.HandleHelpKey(&m.help, &m.menu, msg, keys, menu.HelpContentHeight, m.height*9/10)
+	if transition.Back {
+		m.help.Active = false
+		m.menu.Active = true
+	}
+	return m, nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/ui/chrome"
 	"easydocker/internal/tui/ui/tables"
@@ -21,12 +22,30 @@ func (m model) View() tea.View {
 		footer := m.renderFooter()
 		mainHeight := util.MainAreaHeight(m.height, header, footer)
 		main := m.renderMain(mainHeight)
-		used := lipgloss.Height(header) + lipgloss.Height(main) + lipgloss.Height(footer)
+
 		spacer := ""
+		used := lipgloss.Height(header) + lipgloss.Height(main) + lipgloss.Height(footer)
 		if used < m.height {
 			spacer = strings.Repeat("\n", m.height-used)
 		}
-		content = m.styles.Page.Render(lipgloss.JoinVertical(lipgloss.Left, header, main, spacer, footer))
+		baseContent := lipgloss.JoinVertical(lipgloss.Left, header, main, spacer, footer)
+
+		styles := menu.DefaultMenuStyles(
+			m.styles.MenuFrame,
+			m.styles.MenuSelector,
+			m.styles.MenuItem,
+			m.styles.MenuDesc,
+			m.styles.HelpFrame,
+			m.styles.HelpTitle,
+			m.styles.HelpSection,
+			m.styles.HelpCommand,
+			m.styles.HelpKey,
+			m.styles.HelpContext,
+			m.styles.HelpFooter,
+			m.styles.Scrollbar,
+		)
+		content = menu.Render(baseContent, m.menu, m.help, styles, m.width, m.height)
+		content = m.styles.Page.Render(content)
 	}
 
 	v := tea.NewView(content)
@@ -126,13 +145,6 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 
 func (m model) logsLoadingIndicator() string {
 	if !m.shouldAnimateLogsLoadingIndicator() {
-		return ""
-	}
-	return strings.TrimSpace(m.logsSpinner.View())
-}
-
-func (m model) inspectLoadingIndicator() string {
-	if m.screen != screenModeInspect || !m.logs.InitialLoad {
 		return ""
 	}
 	return strings.TrimSpace(m.logsSpinner.View())

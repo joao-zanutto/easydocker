@@ -10,5 +10,6 @@ func Default() Set {
 	applyLogsStyles(&s)
 	applyTableStyles(&s)
 	applyFrameStyles(&s)
+	applyMenuStyles(&s)
 	return s
 }

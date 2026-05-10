@@ -38,5 +38,17 @@ type Set struct {
 	StateStop    lipgloss.Style
 	StateDead    lipgloss.Style
 	StateOther   lipgloss.Style
+	MenuFrame    lipgloss.Style
+	MenuSelector lipgloss.Style
+	MenuItem     lipgloss.Style
+	MenuDesc     lipgloss.Style
+	HelpFrame    lipgloss.Style
+	HelpTitle    lipgloss.Style
+	HelpSection  lipgloss.Style
+	HelpCommand  lipgloss.Style
+	HelpKey      lipgloss.Style
+	HelpContext  lipgloss.Style
+	HelpFooter   lipgloss.Style
+	Scrollbar    lipgloss.Style
 	ActiveBG     color.Color
 }
