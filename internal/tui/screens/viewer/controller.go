@@ -1,6 +1,7 @@
 package viewer
 
 import (
+	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
 
 	"charm.land/bubbles/v2/key"
@@ -82,6 +83,10 @@ func NewKeyMap() KeyMap {
 
 func helpKeyLabel(label string) string {
 	return util.HelpKeyLabel(label)
+}
+
+func canOpenShell(state string) bool {
+	return shared.CanOpenShell(state)
 }
 
 type Controller struct{}
@@ -179,7 +184,7 @@ func handleEnd(state *State) Transition {
 	return Transition{}
 }
 
-func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType) []key.Binding {
+func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType, containerState string) []key.Binding {
 	bindings := []key.Binding{
 		k.HelpNavigate(), k.HelpPage(), k.HelpHomeEnd(), k.ToggleWrap, k.Back,
 	}
@@ -190,7 +195,7 @@ func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType) []
 		bindings = append(bindings, k.ToggleFollow)
 	}
 
-	if resourceType == ResourceTypeContainer {
+	if resourceType == ResourceTypeContainer && canOpenShell(containerState) {
 		bindings = append(bindings, k.OpenShell)
 	}
 

@@ -137,7 +137,13 @@ func (m model) footerKeyMap() help.KeyMap {
 			}
 			return footerKeyMap{bindings: bindings}
 		}
-		return footerKeyMap{bindings: viewerKeys.ShortHelp(viewer.ResourceType(m.activeTab), contentType)}
+		containerState := ""
+		if m.activeTab == tabContainers {
+			if c, ok := m.selectedContainer(); ok {
+				containerState = c.State
+			}
+		}
+		return footerKeyMap{bindings: viewerKeys.ShortHelp(viewer.ResourceType(m.activeTab), contentType, containerState)}
 	}
 
 	browseKeys := browseKeyMap()

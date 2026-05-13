@@ -624,9 +624,9 @@ func (m *model) handleInspectKey(msg tea.KeyPressMsg) tea.Cmd {
 		return nil
 	}
 
-	viewer.Controller{}.HandleKey(&m.logs, msg, viewer.NewKeyMap())
+	transition := viewer.Controller{}.HandleKey(&m.logs, msg, viewer.NewKeyMap())
 	m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
-	return nil
+	return m.applyLogsTransition(transition)
 }
 
 func (m *model) exitInspectMode() {
