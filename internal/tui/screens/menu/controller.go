@@ -45,21 +45,26 @@ func (Controller) HandleKey(menu *MenuState, help *HelpState, msg tea.KeyPressMs
 }
 
 func (Controller) HandleHelpKey(help *HelpState, menu *MenuState, msg tea.KeyPressMsg, keys MenuKeyMap, contentHeight, visibleHeight int) Transition {
+	maxScroll := contentHeight - visibleHeight
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if help.Cursor > maxScroll {
+		help.Cursor = maxScroll
+	}
+	if help.Cursor < 0 {
+		help.Cursor = 0
+	}
+
 	switch {
 	case key.Matches(msg, keys.Up):
 		if help.Cursor > 0 {
 			help.Cursor--
 		}
 	case key.Matches(msg, keys.Down):
-		maxScroll := contentHeight - visibleHeight
-		if maxScroll < 0 {
-			maxScroll = 0
-		}
 		if help.Cursor < maxScroll {
 			help.Cursor++
 		}
 	}
 	return Transition{Back: key.Matches(msg, keys.Back)}
 }
-
-const HelpContentHeight = 23

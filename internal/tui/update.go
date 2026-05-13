@@ -725,7 +725,10 @@ func (m model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	keys := menu.NewKeyMap()
-	transition := menu.Controller{}.HandleHelpKey(&m.help, &m.menu, msg, keys, menu.HelpContentHeight, m.height*9/10)
+	helpHeight := m.height * 9 / 10
+	bodyHeight := menu.HelpBodyHeight(helpHeight, m.styles.HelpFrame)
+	contentHeight := menu.HelpBodyLineCount(m.help.Commands)
+	transition := menu.Controller{}.HandleHelpKey(&m.help, &m.menu, msg, keys, contentHeight, bodyHeight)
 	if transition.Back {
 		m.help.Active = false
 		m.menu.Active = true
