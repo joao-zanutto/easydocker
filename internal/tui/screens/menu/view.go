@@ -109,11 +109,6 @@ func RenderHelp(state HelpState, styles MenuStyles, containerWidth, containerHei
 		return ""
 	}
 
-	commands := state.Commands
-	if len(commands) == 0 {
-		commands = buildHelpCommands()
-	}
-
 	keyColWidth := 12
 	descColWidth := 20
 	contextColWidth := 23
@@ -122,50 +117,40 @@ func RenderHelp(state HelpState, styles MenuStyles, containerWidth, containerHei
 		styles.HelpCommand.Width(descColWidth).Render("DESCRIPTION") +
 		styles.HelpContext.Width(contextColWidth).Render("CONTEXT")
 
-	var bodyLines []string
-	var prevGroup string
-	for _, cmd := range commands {
-		if cmd.Group != "" && cmd.Group != prevGroup {
-			bodyLines = append(bodyLines, "")
-			prevGroup = cmd.Group
-		}
+	bodyLines := helpBodyLines(state.Commands, func(cmd HelpCommand) string {
 		keyStr := styles.HelpKey.Width(keyColWidth).Render(cmd.Key)
 		descStr := styles.HelpCommand.Width(descColWidth).Render(cmd.Description)
 		contextStr := styles.HelpContext.Width(contextColWidth).Render(cmd.Note)
-		bodyLines = append(bodyLines, keyStr+descStr+contextStr)
-	}
+		return keyStr + descStr + contextStr
+	})
 
-	contentHeight := 3 + len(bodyLines)
-
-	headerHeight := 3
-	visibleHeight := containerHeight - headerHeight
-	if visibleHeight < 1 {
-		visibleHeight = 1
-	}
+	innerHeight := util.FrameContentHeight(containerHeight, styles.HelpFrame)
+	bodyHeight := max(0, innerHeight-helpHeaderLines)
+	maxScroll := max(0, len(bodyLines)-bodyHeight)
+	scrollStart := min(max(state.Cursor, 0), maxScroll)
 
 	visibleBody := ""
-	if contentHeight > visibleHeight {
-		scrollRatio := float64(state.Cursor) / float64(max(1, contentHeight-visibleHeight))
-		scrollStart := int(float64(contentHeight-visibleHeight) * scrollRatio)
-
-		actualScrollStart := max(0, scrollStart)
-		copyLen := min(len(bodyLines)-actualScrollStart, visibleHeight-2)
-		if copyLen < 0 {
-			copyLen = 0
-		}
-
-		visibleLines := make([]string, copyLen)
-		copy(visibleLines, bodyLines[actualScrollStart:actualScrollStart+copyLen])
-		visibleBody = strings.Join(visibleLines, "\n")
-	} else {
-		visibleBody = strings.Join(bodyLines, "\n")
+	if bodyHeight > 0 && len(bodyLines) > 0 {
+		end := min(scrollStart+bodyHeight, len(bodyLines))
+		visibleBody = strings.Join(bodyLines[scrollStart:end], "\n")
 	}
 
-	content := styles.HelpTitle.Render("EasyDocker Help") + "\n" + headerLine + "\n" + visibleBody
+	contentLines := []string{
+		styles.HelpTitle.Render("EasyDocker Help"),
+		headerLine,
+	}
+	if visibleBody != "" {
+		contentLines = append(contentLines, visibleBody)
+	}
+	content := strings.Join(contentLines, "\n")
 
 	styledContent := lipgloss.NewStyle().
 		Width(keyColWidth + descColWidth + contextColWidth).
 		Render(content)
 
-	return styles.HelpFrame.Render(styledContent)
+	frame := styles.HelpFrame
+	if containerHeight > 0 {
+		frame = frame.Height(innerHeight).MaxHeight(containerHeight)
+	}
+	return frame.Render(styledContent)
 }
