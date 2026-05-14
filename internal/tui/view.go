@@ -23,12 +23,7 @@ func (m model) View() tea.View {
 		mainHeight := util.MainAreaHeight(m.height, header, footer)
 		main := m.renderMain(mainHeight)
 
-		spacer := ""
-		used := lipgloss.Height(header) + lipgloss.Height(main) + lipgloss.Height(footer)
-		if used < m.height {
-			spacer = strings.Repeat("\n", m.height-used)
-		}
-		baseContent := lipgloss.JoinVertical(lipgloss.Left, header, main, spacer, footer)
+		baseContent := lipgloss.JoinVertical(lipgloss.Left, header, main, footer)
 
 		styles := menu.DefaultMenuStyles(
 			m.styles.MenuFrame,
@@ -160,7 +155,7 @@ func (m model) logVisibleWidth() int {
 		return m.logsPageContentWidth(totalWidth)
 	}
 	innerWidth := util.FrameContentWidth(totalWidth, m.styles.MainFrame)
-	return max(1, innerWidth-2)
+	return max(1, innerWidth)
 }
 
 func (m model) logSectionHeight() int {
@@ -169,7 +164,7 @@ func (m model) logSectionHeight() int {
 		return viewer.VisibleRowsForContent(m.logsPageContentHeight(mainHeight), m.logs.Filter.Active)
 	}
 	innerHeight := util.FrameContentHeight(mainHeight, m.styles.MainFrame)
-	return max(1, innerHeight-2)
+	return max(1, innerHeight)
 }
 
 func (m model) logsPageContentWidth(width int) int {

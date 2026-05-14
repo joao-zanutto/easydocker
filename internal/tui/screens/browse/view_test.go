@@ -38,7 +38,7 @@ func TestListHeight(t *testing.T) {
 		w int
 	}{
 		{1, 1},
-		{3, 1},
+		{3, 3},
 		{5, 3},
 		{10, 6},
 		{20, 12},

@@ -106,7 +106,7 @@ func renderHeader(vm ViewModel, breadcrumb string) string {
 }
 
 func renderPanel(vm ViewModel, width, height int) string {
-	contentWidth := max(1, width-2)
+	contentWidth := max(1, width)
 	if vm.State.InitialLoad {
 		loadingMsg := vm.LoadingMessage
 		if loadingMsg == "" {
