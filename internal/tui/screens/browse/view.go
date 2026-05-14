@@ -90,7 +90,7 @@ func ListHeight(height int) int {
 		listHeight = 3
 	}
 	if listHeight > height-2 {
-		listHeight = max(1, height-2)
+		listHeight = max(1, height)
 	}
 	return listHeight
 }
@@ -136,8 +136,7 @@ func contentHeights(height int, filterActive bool) (int, int, int) {
 
 func RenderDetail(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
 	lines := append([]string{sectionStyle.Render("Details")}, activeDetailLines(activeTab, selections, loadingIndicator, provider, mutedStyle, width)...)
-	return strings.Join(util.ClipLines(util.ConstrainLines(lines, width), height), "\n")
-}
+	return strings.Join(util.ClipAndPadLines(util.ConstrainLines(lines, width), height, ""), "\n")}
 
 func activeDetailLines(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
 	switch activeTab {
