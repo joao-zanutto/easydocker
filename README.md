@@ -13,12 +13,22 @@ EasyDocker is a TUI for Docker inspired by lazydocker and k9s while leveraging b
 
 ## Features
 
-This project is under development but already has the following functionalities implemented:
+Already implemented features:
 
-- Browse containers, images, networks, and volumes .
-- View live container logs that loads as you scroll up.
-- Individual and aggregated container resource usage metrics.
-- Runs in really small terminal screens
+- 🧭 Browse containers, images, networks, and volumes.
+- 🪵 View live container logs that dynamic loads as you scroll up.
+- 📃 Inspect resources to get low level information about them.
+- 🔎 Filter resources, log lines and inspect output to look for specific strings.
+- 🤿 Dive into containers by entering interacting shell sessions.
+- 📊 Individual and aggregated container resource usage metrics.
+
+Roadmap:
+
+- 📡 Control containers in remote hosts.
+- ⚙️ Settings customization.
+- 🎨 Style customization.
+
+💬 Suggest your own features! We would love to hear what would be most valuable for our user community.
 
 ## Install and Run
 
@@ -47,5 +57,5 @@ easydocker
 ```bash
 docker run --rm -it \
 	-v /var/run/docker.sock:/var/run/docker.sock \
-	joaozanutto2/easydocker:latest
+	jpberno/easydocker:latest
 ```
