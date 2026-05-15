@@ -186,7 +186,7 @@ func handleEnd(state *State) Transition {
 
 func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType, containerState string) []key.Binding {
 	bindings := []key.Binding{
-		k.HelpNavigate(), k.HelpPage(), k.HelpHomeEnd(), k.ToggleWrap, k.Back,
+		k.ToggleWrap, k.Back,
 	}
 
 	bindings = append(bindings, k.OpenFilter)
@@ -200,25 +200,4 @@ func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType, co
 	}
 
 	return bindings
-}
-
-func (k KeyMap) HelpNavigate() key.Binding {
-	return key.NewBinding(
-		key.WithKeys("left", "up", "down", "right"),
-		key.WithHelp(helpKeyLabel("← ↑ ↓ →"), "navigate"),
-	)
-}
-
-func (k KeyMap) HelpPage() key.Binding {
-	return key.NewBinding(
-		key.WithKeys("pgup", "pgdown"),
-		key.WithHelp(helpKeyLabel("pgup/dn"), "jump up/down"),
-	)
-}
-
-func (k KeyMap) HelpHomeEnd() key.Binding {
-	return key.NewBinding(
-		key.WithKeys("home", "end"),
-		key.WithHelp(helpKeyLabel("home/end"), "go to top/bottom"),
-	)
 }
