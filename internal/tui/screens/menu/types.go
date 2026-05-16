@@ -51,12 +51,12 @@ const (
 )
 
 const (
-	noteModeLogsInspect    = "mode: logs/inspect"
-	noteModeBrowse         = "mode: browse"
-	noteModeLogs           = "mode: logs"
-	noteTabContainers      = "tab : containers"
-	noteRowCompose         = "row : compose"
-	noteRowContainer       = "row : container"
+	noteModeLogsInspect     = "mode: logs/inspect"
+	noteModeBrowse          = "mode: browse"
+	noteModeLogs            = "mode: logs"
+	noteTabContainers       = "tab : containers"
+	noteRowCompose          = "row : compose"
+	noteRowContainer        = "row : container"
 	noteRowRunningContainer = "row : running container"
 )
 

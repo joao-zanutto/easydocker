@@ -23,12 +23,12 @@ type KeyMap struct {
 
 func NewKeyMap() KeyMap {
 	return KeyMap{
-		TabRight: shared.RightBinding("next tab"),
-		TabLeft:  shared.LeftBinding("prev tab"),
-		MoveUp:   shared.UpBinding("move up"),
-		MoveDown: shared.DownBinding("move down"),
-		PageUp:   shared.PageUpBinding("page up"),
-		PageDown: shared.PageDownBinding("page down"),
+		TabRight:    shared.RightBinding("next tab"),
+		TabLeft:     shared.LeftBinding("prev tab"),
+		MoveUp:      shared.UpBinding("move up"),
+		MoveDown:    shared.DownBinding("move down"),
+		PageUp:      shared.PageUpBinding("page up"),
+		PageDown:    shared.PageDownBinding("page down"),
 		ToggleScope: shared.ActionBinding("a", "toggle running/all"),
 		OpenLogs:    shared.EnterBinding("logs"),
 		OpenFilter:  shared.SlashBinding("filter"),

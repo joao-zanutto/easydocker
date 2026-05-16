@@ -15,8 +15,8 @@ type MenuKeyMap struct {
 
 func NewKeyMap() MenuKeyMap {
 	return MenuKeyMap{
-		Up:   shared.UpBinding("navigate"),
-		Down: shared.DownBinding("navigate"),
+		Up:     shared.UpBinding("navigate"),
+		Down:   shared.DownBinding("navigate"),
 		Select: shared.EnterBinding("select"),
 		Back:   shared.EscBinding("back"),
 	}

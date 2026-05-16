@@ -24,14 +24,14 @@ type KeyMap struct {
 
 func NewKeyMap() KeyMap {
 	return KeyMap{
-		Up:       shared.UpBinding("line up"),
-		Down:     shared.DownBinding("line down"),
-		Left:     shared.LeftBinding("scroll left"),
-		Right:    shared.RightBinding("scroll right"),
-		PageUp:   shared.PageUpBinding("page up"),
-		PageDown: shared.PageDownBinding("page down"),
-		Home:     shared.HomeBinding("top"),
-		End:      shared.EndBinding("bottom"),
+		Up:           shared.UpBinding("line up"),
+		Down:         shared.DownBinding("line down"),
+		Left:         shared.LeftBinding("scroll left"),
+		Right:        shared.RightBinding("scroll right"),
+		PageUp:       shared.PageUpBinding("page up"),
+		PageDown:     shared.PageDownBinding("page down"),
+		Home:         shared.HomeBinding("top"),
+		End:          shared.EndBinding("bottom"),
 		ToggleWrap:   shared.ActionBinding("w", "toggle wrap"),
 		ToggleFollow: shared.ActionBinding("f", "toggle follow"),
 		OpenFilter:   shared.SlashBinding("filter"),
