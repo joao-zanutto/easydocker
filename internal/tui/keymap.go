@@ -83,10 +83,6 @@ func newBrowseKeyMap() BrowseKeyMap {
 			key.WithKeys("esc"),
 			key.WithHelp(helpKeyLabel("esc"), "quit"),
 		),
-		HelpNavigate: key.NewBinding(
-			key.WithKeys("up", "down"),
-			key.WithHelp("↑/↓", "navigate"),
-		),
 		HelpSwitch: key.NewBinding(
 			key.WithKeys("left", "right"),
 			key.WithHelp("←/→", "switch tabs"),
@@ -118,14 +114,7 @@ func (m model) footerKeyMap() help.KeyMap {
 			contentType = viewer.ContentTypeInspect
 		}
 		if m.logs.Filter.Active {
-			logsFilterVerticalNavigate := key.NewBinding(
-				key.WithKeys("up", "down"),
-				key.WithHelp(helpKeyLabel("↑/↓"), "navigate"),
-			)
 			bindings := []key.Binding{
-				logsFilterVerticalNavigate,
-				viewerKeys.HelpPage(),
-				viewerKeys.HelpHomeEnd(),
 				key.NewBinding(
 					key.WithKeys("esc"),
 					key.WithHelp(helpKeyLabel("esc"), "clear/exit filter"),

@@ -552,25 +552,6 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 		t.Fatalf("logs filter query should remain unchanged while navigating, got %q", after.logs.Filter.Query)
 	}
 }
-
-func TestIntegration_LogsFilterFooterShowsNavigationHelp(t *testing.T) {
-	m := New(nil).(model)
-	m.width = 120
-	m.height = 34
-	m.screen = screenModeLogs
-	m.activeTab = tabContainers
-	m.logs.Filter.Active = true
-	m.logs.Filter.Input.Focus()
-
-	view := m.View().Content
-	if !strings.Contains(view, "navigate") {
-		t.Fatalf("logs filter footer should show navigation help, got %q", view)
-	}
-	if strings.Contains(view, "←") || strings.Contains(view, "→") {
-		t.Fatalf("logs filter footer should only show vertical navigation hints, got %q", view)
-	}
-}
-
 func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 	m := New(nil).(model)
 	m.width = 120
