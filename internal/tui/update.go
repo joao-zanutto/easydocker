@@ -55,7 +55,7 @@ func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// If filter mode is active, handle filter input first
 	if m.browseFilter.Active {
 		switch {
-		case key.Matches(msg, keys.Quit):
+		case key.Matches(msg, keys.OpenMenu):
 			// Esc exits filter mode and clears query
 			m.browseFilter.Active = false
 			m.browseFilter.Input.Blur()
@@ -93,7 +93,7 @@ func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	// Use controller for normal browse mode key handling
 	browseState := browse.State{Filter: m.browseFilter}
-	transition := browseController.HandleKey(&browseState, msg, browse.NewKeyMap())
+	transition := browseController.HandleKey(&browseState, msg, keys)
 	m.browseFilter = browseState.Filter
 
 	if transition.ChangeTab != 0 {
@@ -210,28 +210,10 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.logs.Filter.Active {
 		switch {
 		case key.Matches(msg, keys.Back):
-			previousRows := m.logVisibleRows()
-			previousYOffset := m.logs.Viewport.YOffset()
-			m.logs.Filter.Active = false
-			m.logs.Filter.Input.Blur()
-			m.logs.Filter.Query = ""
-			m.logs.Filter.Input.SetValue("")
-			newRows := m.logVisibleRows()
-			m.logs.SyncFromData(m.logVisibleWidth(), newRows)
-			if !m.logs.Follow && newRows > previousRows {
-				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
-			}
+			m.closeLogsFilter(true)
 			return nil
 		case msg.String() == "enter":
-			previousRows := m.logVisibleRows()
-			previousYOffset := m.logs.Viewport.YOffset()
-			m.logs.Filter.Active = false
-			m.logs.Filter.Input.Blur()
-			newRows := m.logVisibleRows()
-			m.logs.SyncFromData(m.logVisibleWidth(), newRows)
-			if !m.logs.Follow && newRows > previousRows {
-				m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
-			}
+			m.closeLogsFilter(false)
 			return nil
 		case key.Matches(msg, keys.Up),
 			key.Matches(msg, keys.Down),
@@ -245,25 +227,12 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 			}
 			return m.applyLogsTransition(viewer.Transition{Load: transition.Load})
 		default:
-			var cmd tea.Cmd
-			m.logs.Filter.Input, cmd = m.logs.Filter.Input.Update(msg)
-			m.logs.Filter.Query = m.logs.Filter.Input.Value()
-			m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
-			return cmd
+			return m.updateViewerFilterInput(m.logVisibleWidth(), m.logVisibleRows(), msg)
 		}
 	}
 
 	if key.Matches(msg, keys.OpenFilter) {
-		previousRows := m.logVisibleRows()
-		previousYOffset := m.logs.Viewport.YOffset()
-		m.logs.Filter.Active = true
-		m.logs.Filter.Input.Focus()
-		m.logs.Filter.Input.SetValue(m.logs.Filter.Query)
-		newRows := m.logVisibleRows()
-		m.logs.SyncFromData(m.logVisibleWidth(), newRows)
-		if !m.logs.Follow && newRows < previousRows {
-			m.logs.Viewport.SetYOffset(previousYOffset + (previousRows - newRows))
-		}
+		m.openLogsFilter()
 		return nil
 	}
 
@@ -294,6 +263,48 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 		transition.Load = historyReq
 	}
 	return m.applyLogsTransition(transition)
+}
+
+func (m *model) updateViewerFilterInput(visibleWidth, visibleRows int, msg tea.KeyPressMsg) tea.Cmd {
+	var cmd tea.Cmd
+	m.logs.Filter.Input, cmd = m.logs.Filter.Input.Update(msg)
+	m.logs.Filter.Query = m.logs.Filter.Input.Value()
+	m.logs.SyncFromData(visibleWidth, visibleRows)
+	return cmd
+}
+
+func (m *model) openLogsFilter() {
+	previousRows := m.logVisibleRows()
+	previousYOffset := m.logs.Viewport.YOffset()
+	m.logs.OpenFilter()
+	newRows := m.logVisibleRows()
+	m.logs.SyncFromData(m.logVisibleWidth(), newRows)
+	if !m.logs.Follow && newRows < previousRows {
+		m.logs.Viewport.SetYOffset(previousYOffset + (previousRows - newRows))
+	}
+}
+
+func (m *model) closeLogsFilter(clear bool) {
+	previousRows := m.logVisibleRows()
+	previousYOffset := m.logs.Viewport.YOffset()
+	m.logs.CloseFilter(clear)
+	newRows := m.logVisibleRows()
+	m.logs.SyncFromData(m.logVisibleWidth(), newRows)
+	if !m.logs.Follow && newRows > previousRows {
+		m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
+	}
+}
+
+func (m *model) openInspectFilter() {
+	m.logs.OpenFilter()
+}
+
+func (m *model) closeInspectFilter(clear bool) {
+	previousYOffset := m.logs.Viewport.YOffset()
+	m.logs.CloseFilter(clear)
+	newRows := m.inspectVisibleRows()
+	m.logs.SyncFromData(m.inspectVisibleWidth(), newRows)
+	m.logs.Viewport.SetYOffset(max(0, previousYOffset))
 }
 
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
@@ -576,32 +587,18 @@ func (m *model) handleInspectKey(msg tea.KeyPressMsg) tea.Cmd {
 	if m.logs.Filter.Active {
 		switch {
 		case key.Matches(msg, keys.Back):
-			previousYOffset := m.logs.Viewport.YOffset()
-			m.logs.Filter.Active = false
-			m.logs.Filter.Input.Blur()
-			m.logs.Filter.Query = ""
-			m.logs.Filter.Input.SetValue("")
-			newRows := m.inspectVisibleRows()
-			m.logs.SyncFromData(m.inspectVisibleWidth(), newRows)
-			m.logs.Viewport.SetYOffset(max(0, previousYOffset))
+			m.closeInspectFilter(true)
 			return nil
 		case msg.String() == "enter":
-			m.logs.Filter.Active = false
-			m.logs.Filter.Input.Blur()
+			m.closeInspectFilter(false)
 			return nil
 		default:
-			var cmd tea.Cmd
-			m.logs.Filter.Input, cmd = m.logs.Filter.Input.Update(msg)
-			m.logs.Filter.Query = m.logs.Filter.Input.Value()
-			m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
-			return cmd
+			return m.updateViewerFilterInput(m.inspectVisibleWidth(), m.inspectVisibleRows(), msg)
 		}
 	}
 
 	if key.Matches(msg, keys.OpenFilter) {
-		m.logs.Filter.Active = true
-		m.logs.Filter.Input.Focus()
-		m.logs.Filter.Input.SetValue(m.logs.Filter.Query)
+		m.openInspectFilter()
 		return nil
 	}
 

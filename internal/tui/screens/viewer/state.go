@@ -20,6 +20,21 @@ func (s *State) SetWrapLines(enabled bool) {
 	s.WrapLines = enabled
 }
 
+func (s *State) OpenFilter() {
+	s.Filter.Active = true
+	s.Filter.Input.Focus()
+	s.Filter.Input.SetValue(s.Filter.Query)
+}
+
+func (s *State) CloseFilter(clear bool) {
+	s.Filter.Active = false
+	s.Filter.Input.Blur()
+	if clear {
+		s.Filter.Query = ""
+		s.Filter.Input.SetValue("")
+	}
+}
+
 func (s *State) ResetForContainer(sessionID int, containerID string) {
 	s.SessionID = sessionID
 	s.ContainerID = containerID
