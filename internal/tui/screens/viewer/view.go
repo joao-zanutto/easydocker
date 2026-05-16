@@ -92,8 +92,14 @@ func renderHeader(vm ViewModel, breadcrumb string) string {
 
 	rightParts := []string{vm.Styles.Muted.Render("wrap:"), wrapText}
 
-	if vm.ContentType == ContentTypeLogs && vm.State.Follow {
-		followText := vm.Styles.FollowOn.Render("follow:on")
+	if vm.ContentType == ContentTypeLogs {
+		followLabel := "follow:off"
+		followStyle := vm.Styles.FollowOff
+		if vm.State.Follow {
+			followLabel = "follow:on"
+			followStyle = vm.Styles.FollowOn
+		}
+		followText := followStyle.Render(followLabel)
 		rightParts = append(rightParts, vm.Styles.Muted.Render(" "), followText)
 	}
 
