@@ -1,100 +1,21 @@
 package tui
 
 import (
+	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/tables"
-	"easydocker/internal/tui/util"
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 )
 
-// BrowseKeyMap defines browse-mode key bindings and help metadata.
-type BrowseKeyMap struct {
-	TabRight     key.Binding
-	TabLeft      key.Binding
-	MoveUp       key.Binding
-	MoveDown     key.Binding
-	PageUp       key.Binding
-	PageDown     key.Binding
-	ToggleScope  key.Binding
-	OpenLogs     key.Binding
-	OpenFilter   key.Binding
-	OpenShell    key.Binding
-	OpenInspect  key.Binding
-	Quit         key.Binding
-	HelpNavigate key.Binding
-	HelpSwitch   key.Binding
-}
-
 var (
-	defaultBrowseKeyMap = newBrowseKeyMap()
+	defaultBrowseKeyMap = browse.NewKeyMap()
 	defaultViewerKeyMap = viewer.NewKeyMap()
 )
 
-func newBrowseKeyMap() BrowseKeyMap {
-	return BrowseKeyMap{
-		TabRight: key.NewBinding(
-			key.WithKeys("right"),
-			key.WithHelp("→", "next tab"),
-		),
-		TabLeft: key.NewBinding(
-			key.WithKeys("left"),
-			key.WithHelp("←", "prev tab"),
-		),
-		MoveUp: key.NewBinding(
-			key.WithKeys("up"),
-			key.WithHelp("↑", "move up"),
-		),
-		MoveDown: key.NewBinding(
-			key.WithKeys("down"),
-			key.WithHelp("↓", "move down"),
-		),
-		PageUp: key.NewBinding(
-			key.WithKeys("pgup"),
-			key.WithHelp("pgup", "page up"),
-		),
-		PageDown: key.NewBinding(
-			key.WithKeys("pgdown"),
-			key.WithHelp("pgdn", "page down"),
-		),
-		ToggleScope: key.NewBinding(
-			key.WithKeys("a"),
-			key.WithHelp(helpKeyLabel("a"), "toggle running/all"),
-		),
-		OpenLogs: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp(helpKeyLabel("enter"), "logs"),
-		),
-		OpenFilter: key.NewBinding(
-			key.WithKeys("/"),
-			key.WithHelp(helpKeyLabel("/"), "filter"),
-		),
-		OpenShell: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp(helpKeyLabel("s"), "shell"),
-		),
-		OpenInspect: key.NewBinding(
-			key.WithKeys("i"),
-			key.WithHelp(helpKeyLabel("i"), "inspect"),
-		),
-		Quit: key.NewBinding(
-			key.WithKeys("esc"),
-			key.WithHelp(helpKeyLabel("esc"), "quit"),
-		),
-		HelpSwitch: key.NewBinding(
-			key.WithKeys("left", "right"),
-			key.WithHelp("←/→", "switch tabs"),
-		),
-	}
-}
-
-func helpKeyLabel(label string) string {
-	return util.HelpKeyLabel(label)
-}
-
-func browseKeyMap() BrowseKeyMap {
+func browseKeyMap() browse.KeyMap {
 	return defaultBrowseKeyMap
 }
 
@@ -115,14 +36,8 @@ func (m model) footerKeyMap() help.KeyMap {
 		}
 		if m.logs.Filter.Active {
 			bindings := []key.Binding{
-				key.NewBinding(
-					key.WithKeys("esc"),
-					key.WithHelp(helpKeyLabel("esc"), "clear/exit filter"),
-				),
-				key.NewBinding(
-					key.WithKeys("enter"),
-					key.WithHelp(helpKeyLabel("enter"), "apply/close filter"),
-				),
+				shared.EscBinding("clear/exit filter"),
+				shared.EnterBinding("apply/close filter"),
 			}
 			return footerKeyMap{bindings: bindings}
 		}
@@ -140,22 +55,15 @@ func (m model) footerKeyMap() help.KeyMap {
 	// If filter mode is active, show filter-specific controls
 	if m.browseFilter.Active {
 		bindings := []key.Binding{
-			browseKeys.HelpNavigate,
-			key.NewBinding(
-				key.WithKeys("esc"),
-				key.WithHelp(helpKeyLabel("esc"), "clear/exit filter"),
-			),
-			key.NewBinding(
-				key.WithKeys("enter"),
-				key.WithHelp(helpKeyLabel("enter"), "apply/close filter"),
-			),
+			shared.EscBinding("clear/exit filter"),
+			shared.EnterBinding("apply/close filter"),
 		}
 		return footerKeyMap{bindings: bindings}
 	}
 
 	bindings := []key.Binding{
 		browseKeys.OpenFilter,
-		browseKeys.Quit,
+		browseKeys.OpenMenu,
 	}
 	if m.activeTab == tabContainers {
 		bindings = append(bindings, browseKeys.ToggleScope)
@@ -164,10 +72,7 @@ func (m model) footerKeyMap() help.KeyMap {
 			if row.ComposeExpanded {
 				action = "collapse"
 			}
-			bindings = append(bindings, key.NewBinding(
-				key.WithKeys("enter"),
-				key.WithHelp(helpKeyLabel("enter"), action),
-			))
+			bindings = append(bindings, shared.EnterBinding(action))
 		} else {
 			bindings = append(bindings, browseKeys.OpenLogs, browseKeys.OpenInspect)
 			if container, ok := m.selectedContainer(); ok && canOpenShell(container.State) {

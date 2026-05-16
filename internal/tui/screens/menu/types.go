@@ -1,6 +1,11 @@
 package menu
 
 import (
+	"strings"
+
+	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/viewer"
+
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
 )
@@ -39,12 +44,21 @@ type HelpCommand struct {
 	Group       string
 }
 
-type MenuKeyMap struct {
-	Up     key.Binding
-	Down   key.Binding
-	Select key.Binding
-	Back   key.Binding
-}
+const (
+	helpGroupNav    = "nav"
+	helpGroupEnter  = "enter"
+	helpGroupAction = "action"
+)
+
+const (
+	noteModeLogsInspect    = "mode: logs/inspect"
+	noteModeBrowse         = "mode: browse"
+	noteModeLogs           = "mode: logs"
+	noteTabContainers      = "tab : containers"
+	noteRowCompose         = "row : compose"
+	noteRowContainer       = "row : container"
+	noteRowRunningContainer = "row : running container"
+)
 
 type MenuStyles struct {
 	Frame           lipgloss.Style
@@ -72,27 +86,6 @@ func NewMenuState() MenuState {
 	}
 }
 
-func NewKeyMap() MenuKeyMap {
-	return MenuKeyMap{
-		Up: key.NewBinding(
-			key.WithKeys("up"),
-			key.WithHelp("↑", "navigate"),
-		),
-		Down: key.NewBinding(
-			key.WithKeys("down"),
-			key.WithHelp("↓", "navigate"),
-		),
-		Select: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("enter", "select"),
-		),
-		Back: key.NewBinding(
-			key.WithKeys("esc"),
-			key.WithHelp("esc", "back"),
-		),
-	}
-}
-
 func NewHelpState(width, height int) HelpState {
 	return HelpState{
 		Active:   false,
@@ -104,22 +97,54 @@ func NewHelpState(width, height int) HelpState {
 }
 
 func buildHelpCommands() []HelpCommand {
+	browseKeys := browse.NewKeyMap()
+	viewerKeys := viewer.NewKeyMap()
+	menuKeys := NewKeyMap()
+
 	return []HelpCommand{
-		{Key: "↑/↓", Description: "move up/down", Note: "", Group: "nav"},
-		{Key: "pgup/pgdn", Description: "page up/down", Note: "", Group: "nav"},
-		{Key: "home/end", Description: "go to top/bottom", Note: "mode: logs/inspect", Group: "nav"},
-		{Key: "←/→", Description: "prev/next tab", Note: "mode: browse", Group: "nav"},
-		{Key: "←/→", Description: "scroll left/right", Note: "mode: logs/inspect", Group: "nav"},
-		{Key: "enter", Description: "expand/collapse", Note: "row : compose", Group: "enter"},
-		{Key: "enter", Description: "open logs", Note: "row : container", Group: "enter"},
-		{Key: "/", Description: "filter", Note: "", Group: "action"},
-		{Key: "a", Description: "toggle running/all", Note: "tab : containers", Group: "action"},
-		{Key: "i", Description: "inspect", Note: "mode: browse", Group: "action"},
-		{Key: "s", Description: "interactive shell", Note: "row : running container", Group: "action"},
-		{Key: "w", Description: "toggle wrap", Note: "mode: logs/inspect", Group: "action"},
-		{Key: "f", Description: "toggle follow", Note: "mode: logs", Group: "action"},
-		{Key: "esc", Description: "back/close", Note: "", Group: "action"},
+		navCommand(joinKeyLabels("/", browseKeys.MoveUp, browseKeys.MoveDown), "move up/down", ""),
+		navCommand(joinKeyLabels("/", viewerKeys.PageUp, viewerKeys.PageDown), "page up/down", ""),
+		navCommand(joinKeyLabels("/", viewerKeys.Home, viewerKeys.End), "go to top/bottom", noteModeLogsInspect),
+		navCommand(joinKeyLabels("/", browseKeys.TabLeft, browseKeys.TabRight), "prev/next tab", noteModeBrowse),
+		navCommand(joinKeyLabels("/", viewerKeys.Left, viewerKeys.Right), "scroll left/right", noteModeLogsInspect),
+		enterCommand(keyLabel(browseKeys.OpenLogs), "expand/collapse", noteRowCompose),
+		enterCommand(keyLabel(browseKeys.OpenLogs), "open logs", noteRowContainer),
+		actionCommand(keyLabel(browseKeys.OpenFilter), "filter", ""),
+		actionCommand(keyLabel(browseKeys.ToggleScope), "toggle running/all", noteTabContainers),
+		actionCommand(keyLabel(browseKeys.OpenInspect), "inspect", noteModeBrowse),
+		actionCommand(keyLabel(browseKeys.OpenShell), "interactive shell", noteRowRunningContainer),
+		actionCommand(keyLabel(viewerKeys.ToggleWrap), "toggle wrap", noteModeLogsInspect),
+		actionCommand(keyLabel(viewerKeys.ToggleFollow), "toggle follow", noteModeLogs),
+		actionCommand(keyLabel(menuKeys.Back), "back/close", ""),
 	}
+}
+
+func keyLabel(binding key.Binding) string {
+	return strings.TrimSpace(binding.Help().Key)
+}
+
+func joinKeyLabels(sep string, bindings ...key.Binding) string {
+	labels := make([]string, 0, len(bindings))
+	for _, binding := range bindings {
+		label := keyLabel(binding)
+		if label == "" {
+			continue
+		}
+		labels = append(labels, label)
+	}
+	return strings.Join(labels, sep)
+}
+
+func navCommand(keyLabel, description, note string) HelpCommand {
+	return HelpCommand{Key: keyLabel, Description: description, Note: note, Group: helpGroupNav}
+}
+
+func enterCommand(keyLabel, description, note string) HelpCommand {
+	return HelpCommand{Key: keyLabel, Description: description, Note: note, Group: helpGroupEnter}
+}
+
+func actionCommand(keyLabel, description, note string) HelpCommand {
+	return HelpCommand{Key: keyLabel, Description: description, Note: note, Group: helpGroupAction}
 }
 
 func DefaultMenuStyles(frameStyle, selectorStyle, itemStyle, descStyle, helpFrameStyle, helpTitleStyle, helpSectionStyle, helpCmdStyle, helpKeyStyle, helpContextStyle, helpFooterStyle, scrollbarStyle lipgloss.Style) MenuStyles {

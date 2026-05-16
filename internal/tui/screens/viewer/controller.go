@@ -1,93 +1,9 @@
 package viewer
 
 import (
-	"easydocker/internal/tui/shared"
-	"easydocker/internal/tui/util"
-
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 )
-
-type KeyMap struct {
-	Up           key.Binding
-	Down         key.Binding
-	Left         key.Binding
-	Right        key.Binding
-	PageUp       key.Binding
-	PageDown     key.Binding
-	Home         key.Binding
-	End          key.Binding
-	ToggleWrap   key.Binding
-	ToggleFollow key.Binding
-	OpenFilter   key.Binding
-	OpenShell    key.Binding
-	Back         key.Binding
-}
-
-func NewKeyMap() KeyMap {
-	return KeyMap{
-		Up: key.NewBinding(
-			key.WithKeys("up"),
-			key.WithHelp("↑", "line up"),
-		),
-		Down: key.NewBinding(
-			key.WithKeys("down"),
-			key.WithHelp("↓", "line down"),
-		),
-		Left: key.NewBinding(
-			key.WithKeys("left"),
-			key.WithHelp("←", "scroll left"),
-		),
-		Right: key.NewBinding(
-			key.WithKeys("right"),
-			key.WithHelp("→", "scroll right"),
-		),
-		PageUp: key.NewBinding(
-			key.WithKeys("pgup"),
-			key.WithHelp("pgup", "page up"),
-		),
-		PageDown: key.NewBinding(
-			key.WithKeys("pgdown"),
-			key.WithHelp("pgdn", "page down"),
-		),
-		Home: key.NewBinding(
-			key.WithKeys("home"),
-			key.WithHelp("home", "top"),
-		),
-		End: key.NewBinding(
-			key.WithKeys("end"),
-			key.WithHelp("end", "bottom"),
-		),
-		ToggleWrap: key.NewBinding(
-			key.WithKeys("w"),
-			key.WithHelp(helpKeyLabel("w"), "toggle wrap"),
-		),
-		ToggleFollow: key.NewBinding(
-			key.WithKeys("f"),
-			key.WithHelp(helpKeyLabel("f"), "toggle follow"),
-		),
-		OpenFilter: key.NewBinding(
-			key.WithKeys("/"),
-			key.WithHelp(helpKeyLabel("/"), "filter"),
-		),
-		OpenShell: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp(helpKeyLabel("s"), "shell"),
-		),
-		Back: key.NewBinding(
-			key.WithKeys("esc"),
-			key.WithHelp(helpKeyLabel("esc"), "back"),
-		),
-	}
-}
-
-func helpKeyLabel(label string) string {
-	return util.HelpKeyLabel(label)
-}
-
-func canOpenShell(state string) bool {
-	return shared.CanOpenShell(state)
-}
 
 type Controller struct{}
 
@@ -182,22 +98,4 @@ func handleHome(state *State) Transition {
 func handleEnd(state *State) Transition {
 	state.SetFollow(true)
 	return Transition{}
-}
-
-func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType, containerState string) []key.Binding {
-	bindings := []key.Binding{
-		k.ToggleWrap, k.Back,
-	}
-
-	bindings = append(bindings, k.OpenFilter)
-
-	if contentType == ContentTypeLogs {
-		bindings = append(bindings, k.ToggleFollow)
-	}
-
-	if resourceType == ResourceTypeContainer && canOpenShell(containerState) {
-		bindings = append(bindings, k.OpenShell)
-	}
-
-	return bindings
 }
