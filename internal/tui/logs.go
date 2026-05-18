@@ -34,6 +34,9 @@ func ResetLogsForContainer(s *LogsState, sessionID int, containerID string, tail
 	s.HistoryDone = false
 	s.HistoryBaseLen = 0
 	s.HistoryAppendedDuringLoad = 0
+	s.HorizontalOffset = 0
+	s.WrapXOffset = 0
+	s.Viewport.SetXOffset(0)
 }
 
 func ResetLogsForExit(s *LogsState, sessionID int) {
