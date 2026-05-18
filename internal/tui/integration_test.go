@@ -313,6 +313,53 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 	}
 }
 
+func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
+	m := New(nil).(model)
+	m.logs.HorizontalOffset = 24
+	m.logs.WrapXOffset = 16
+	m.logs.Viewport.SetXOffset(24)
+	m.screen = screenModeBrowse
+	m.activeTab = tabContainers
+	m.snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
+
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	current := updated.(model)
+	if cmd == nil {
+		t.Fatalf("entering logs mode should return a command")
+	}
+	if current.logs.HorizontalOffset != 0 {
+		t.Fatalf("logs entry should reset horizontal offset, got %d", current.logs.HorizontalOffset)
+	}
+	if current.logs.WrapXOffset != 0 {
+		t.Fatalf("logs entry should reset wrap offset, got %d", current.logs.WrapXOffset)
+	}
+	if got := current.logs.Viewport.XOffset(); got != 0 {
+		t.Fatalf("logs entry should reset viewport x offset, got %d", got)
+	}
+
+	current.logs.HorizontalOffset = 32
+	current.logs.WrapXOffset = 8
+	current.logs.Viewport.SetXOffset(32)
+	current.activeTab = tabContainers
+	current.screen = screenModeBrowse
+	current.snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
+
+	updated, cmd = current.handleInspectTransition()
+	current = *updated.(*model)
+	if cmd == nil {
+		t.Fatalf("entering inspect mode should return a command")
+	}
+	if current.logs.HorizontalOffset != 0 {
+		t.Fatalf("inspect entry should reset horizontal offset, got %d", current.logs.HorizontalOffset)
+	}
+	if current.logs.WrapXOffset != 0 {
+		t.Fatalf("inspect entry should reset wrap offset, got %d", current.logs.WrapXOffset)
+	}
+	if got := current.logs.Viewport.XOffset(); got != 0 {
+		t.Fatalf("inspect entry should reset viewport x offset, got %d", got)
+	}
+}
+
 func TestIntegration_FilterPromptIcon(t *testing.T) {
 	m := New(nil).(model)
 	if m.browseFilter.Input.Prompt != "🔎︎ " {
