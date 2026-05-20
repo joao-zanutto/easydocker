@@ -528,12 +528,9 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	}
 	m.previousScreen = m.screen
 	m.screen = screenModeInspect
-	m.logs.HorizontalOffset = 0
-	m.logs.WrapXOffset = 0
 	m.logs.Viewport.SetXOffset(0)
 	m.logs.InitialLoad = true
 	m.logs.Data = nil
-	m.logs.ResourceType = resourceTypeFromTab(resourceType)
 	m.logs.ContainerID = resourceID
 	m.logs.ResourceName = resourceName
 	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)

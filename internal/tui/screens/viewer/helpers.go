@@ -167,24 +167,3 @@ func normalizeLine(line string) string {
 	line = strings.ReplaceAll(line, "\t", " ")
 	return line
 }
-
-func RenderedViewportLineDelta(state *State, allLines []string, prepended int) int {
-	if prepended <= 0 || len(allLines) == 0 {
-		return 0
-	}
-	if prepended > len(allLines) {
-		prepended = len(allLines)
-	}
-
-	added := FilterLines(allLines[:prepended], state.Filter.Query)
-	if !state.WrapLines {
-		return len(added)
-	}
-
-	width := max(1, state.Viewport.Width())
-	delta := 0
-	for _, line := range added {
-		delta += WrappedRowCount(SanitizeLine(line), width)
-	}
-	return delta
-}

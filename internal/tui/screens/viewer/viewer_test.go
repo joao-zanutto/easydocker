@@ -214,61 +214,6 @@ func TestStateWrap(t *testing.T) {
 	})
 }
 
-func TestRenderedViewportLineDelta(t *testing.T) {
-	t.Run("no prepended lines returns zero", func(t *testing.T) {
-		state := NewState()
-		state.Filter.Query = ""
-		state.WrapLines = false
-		allLines := []string{"a", "b", "c"}
-
-		delta := RenderedViewportLineDelta(&state, allLines, 0)
-
-		if delta != 0 {
-			t.Errorf("expected 0, got %d", delta)
-		}
-	})
-
-	t.Run("prepended lines without wrap returns count", func(t *testing.T) {
-		state := NewState()
-		state.Filter.Query = ""
-		state.WrapLines = false
-		allLines := []string{"a", "b", "c", "d", "e"}
-
-		delta := RenderedViewportLineDelta(&state, allLines, 2)
-
-		if delta != 2 {
-			t.Errorf("expected 2, got %d", delta)
-		}
-	})
-
-	t.Run("filter affects delta count", func(t *testing.T) {
-		state := NewState()
-		state.Filter.Query = "a"
-		state.WrapLines = false
-		allLines := []string{"a", "b", "a", "c", "a"}
-
-		delta := RenderedViewportLineDelta(&state, allLines, 3)
-
-		if delta != 2 {
-			t.Errorf("expected 2 (filtered lines), got %d", delta)
-		}
-	})
-
-	t.Run("wrapped lines calculate correctly", func(t *testing.T) {
-		state := NewState()
-		state.Filter.Query = ""
-		state.WrapLines = true
-		state.Viewport.SetWidth(10)
-		allLines := []string{"1234567890", "short", "123456789012345"}
-
-		delta := RenderedViewportLineDelta(&state, allLines, 3)
-
-		if delta != 4 {
-			t.Errorf("expected 4 (1+1+2 wrapped rows), got %d", delta)
-		}
-	})
-}
-
 func TestSyncFromData(t *testing.T) {
 	t.Run("syncs viewport with filtered and sanitized data", func(t *testing.T) {
 		state := NewState()

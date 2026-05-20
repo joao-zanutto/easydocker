@@ -78,16 +78,13 @@ type State struct {
 	HistoryAppendedDuringLoad int
 	HistoryNoProgressCount    int
 	Filter                    components.FilterState
-	HorizontalOffset          int
 	WrapLines                 bool
-	WrapXOffset               int
 	InitialLoad               bool
 	HistoryDone               bool
 	HistoryLoad               bool
 	Follow                    bool
 	Viewport                  viewport.Model
 	ContentType               ContentType
-	ResourceType              ResourceType
 	ResourceName              string
 }
 

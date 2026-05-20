@@ -256,9 +256,6 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 	if !current.logs.WrapLines {
 		t.Fatalf("wrap should be enabled after pressing w")
 	}
-	if current.logs.WrapXOffset != 0 {
-		t.Fatalf("wrap should preserve zero offset by default, got %d", current.logs.WrapXOffset)
-	}
 
 	wrappedView := current.logs.Viewport.View()
 	if !strings.Contains(wrappedView, "\n") {
@@ -271,8 +268,8 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	after := updated.(model)
-	if after.logs.HorizontalOffset != current.logs.HorizontalOffset {
-		t.Fatalf("horizontal scroll should be ignored while wrapped, got %d want %d", after.logs.HorizontalOffset, current.logs.HorizontalOffset)
+	if after.logs.Viewport.XOffset() != current.logs.Viewport.XOffset() {
+		t.Fatalf("horizontal scroll should be ignored while wrapped, got %d want %d", after.logs.Viewport.XOffset(), current.logs.Viewport.XOffset())
 	}
 }
 
@@ -315,8 +312,6 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 
 func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 	m := New(nil).(model)
-	m.logs.HorizontalOffset = 24
-	m.logs.WrapXOffset = 16
 	m.logs.Viewport.SetXOffset(24)
 	m.screen = screenModeBrowse
 	m.activeTab = tabContainers
@@ -327,18 +322,10 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("entering logs mode should return a command")
 	}
-	if current.logs.HorizontalOffset != 0 {
-		t.Fatalf("logs entry should reset horizontal offset, got %d", current.logs.HorizontalOffset)
-	}
-	if current.logs.WrapXOffset != 0 {
-		t.Fatalf("logs entry should reset wrap offset, got %d", current.logs.WrapXOffset)
-	}
 	if got := current.logs.Viewport.XOffset(); got != 0 {
 		t.Fatalf("logs entry should reset viewport x offset, got %d", got)
 	}
 
-	current.logs.HorizontalOffset = 32
-	current.logs.WrapXOffset = 8
 	current.logs.Viewport.SetXOffset(32)
 	current.activeTab = tabContainers
 	current.screen = screenModeBrowse
@@ -348,12 +335,6 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 	current = *updated.(*model)
 	if cmd == nil {
 		t.Fatalf("entering inspect mode should return a command")
-	}
-	if current.logs.HorizontalOffset != 0 {
-		t.Fatalf("inspect entry should reset horizontal offset, got %d", current.logs.HorizontalOffset)
-	}
-	if current.logs.WrapXOffset != 0 {
-		t.Fatalf("inspect entry should reset wrap offset, got %d", current.logs.WrapXOffset)
 	}
 	if got := current.logs.Viewport.XOffset(); got != 0 {
 		t.Fatalf("inspect entry should reset viewport x offset, got %d", got)
