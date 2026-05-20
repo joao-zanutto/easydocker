@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	tabContainers = iota
-	tabImages
-	tabNetworks
-	tabVolumes
+	tabContainers = shared.TabContainers
+	tabImages     = shared.TabImages
+	tabNetworks   = shared.TabNetworks
+	tabVolumes    = shared.TabVolumes
 
 	pollInterval = time.Second
 

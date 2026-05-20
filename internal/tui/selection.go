@@ -52,7 +52,7 @@ func (m *model) openShellIfContainerSelected() tea.Cmd {
 		return nil
 	}
 	// Only allow shell on running containers
-	if !canOpenShell(container.State) {
+	if !tuistate.CanOpenShell(container.State) {
 		return nil
 	}
 	return m.shellCmd(container.FullID)
@@ -79,7 +79,11 @@ func (m *model) moveCursor(delta int) {
 
 func (m *model) clampCursors() {
 	sel := m.selectionState()
-	tuistate.ClampAllCursors(&sel.Cursors, []int{tabContainers, tabImages, tabNetworks, tabVolumes}, m.itemCountForTab)
+	tabs := make([]int, tuistate.TabCount)
+	for i := range tabs {
+		tabs[i] = i
+	}
+	tuistate.ClampAllCursors(&sel.Cursors, tabs, m.itemCountForTab)
 	m.applySelectionState(sel)
 }
 

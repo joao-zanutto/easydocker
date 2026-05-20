@@ -50,7 +50,7 @@ func mapImageRow(item image.Summary) core.ImageRow {
 		ID:          shortID(item.ID),
 		Tags:        formatTags(item.RepoTags),
 		Size:        core.HumanBytes(item.Size),
-		Created:     humanAge(time.Unix(item.Created, 0)),
+		Created:     core.HumanAge(time.Unix(item.Created, 0)),
 		CreatedUnix: item.Created,
 		Containers:  item.Containers,
 	}
@@ -65,7 +65,7 @@ func mapNetworkRow(item network.Inspect) core.NetworkRow {
 		Internal:   yesNo(item.Internal),
 		Attachable: yesNo(item.Attachable),
 		Endpoints:  len(item.Containers),
-		Created:    humanAge(item.Created),
+		Created:    core.HumanAge(item.Created),
 		CreatedAt:  item.Created,
 	}
 }
@@ -173,25 +173,7 @@ func humanTimestamp(value string) string {
 	if err != nil {
 		return value
 	}
-	return humanAge(parsed)
-}
-
-func humanAge(then time.Time) string {
-	delta := time.Since(then)
-	switch {
-	case delta < time.Minute:
-		return "just now"
-	case delta < time.Hour:
-		return fmt.Sprintf("%dm ago", int(delta.Minutes()))
-	case delta < 24*time.Hour:
-		return fmt.Sprintf("%dh ago", int(delta.Hours()))
-	case delta < 30*24*time.Hour:
-		return fmt.Sprintf("%dd ago", int(delta.Hours()/24))
-	case delta < 365*24*time.Hour:
-		return fmt.Sprintf("%dmo ago", int(delta.Hours()/(24*30)))
-	default:
-		return fmt.Sprintf("%dy ago", int(delta.Hours()/(24*365)))
-	}
+	return core.HumanAge(parsed)
 }
 
 func yesNo(value bool) string {
