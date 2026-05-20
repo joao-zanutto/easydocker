@@ -14,10 +14,7 @@ func (s *State) SetWrapLines(enabled bool) {
 		return
 	}
 	if enabled {
-		s.WrapXOffset = s.HorizontalOffset
 		s.Viewport.SetXOffset(0)
-	} else {
-		s.Viewport.SetXOffset(s.WrapXOffset)
 	}
 	s.WrapLines = enabled
 }
@@ -49,8 +46,6 @@ func (s *State) ResetForContainer(sessionID int, containerID string, tail int) {
 	s.HistoryBaseLen = 0
 	s.HistoryAppendedDuringLoad = 0
 	s.HistoryNoProgressCount = 0
-	s.HorizontalOffset = 0
-	s.WrapXOffset = 0
 	s.Viewport.SetXOffset(0)
 	s.Filter.Active = false
 	s.Filter.Query = ""

@@ -58,10 +58,8 @@ func handleHorizontalScroll(state *State, right bool) Transition {
 	step := 8
 	if right {
 		state.Viewport.ScrollRight(step)
-		state.HorizontalOffset += step
 	} else {
 		state.Viewport.ScrollLeft(step)
-		state.HorizontalOffset = max(0, state.HorizontalOffset-step)
 	}
 	return Transition{}
 }
@@ -90,7 +88,6 @@ func handleVerticalScroll(state *State, direction int, isPage bool) Transition {
 func handleHome(state *State) Transition {
 	state.SetFollow(false)
 	state.Viewport.SetXOffset(0)
-	state.HorizontalOffset = 0
 	state.Viewport.GotoTop()
 	return Transition{}
 }
