@@ -24,23 +24,11 @@ func NewLogsState() LogsState {
 }
 
 func ResetLogsForContainer(s *LogsState, sessionID int, containerID string, tail int) {
-	s.SessionID = sessionID
-	s.ContainerID = containerID
-	s.TailLines = tail
-	s.InitialLoad = true
-	s.Follow = true
-	s.Data = nil
-	s.HistoryLoad = false
-	s.HistoryDone = false
-	s.HistoryBaseLen = 0
-	s.HistoryAppendedDuringLoad = 0
-	s.HorizontalOffset = 0
-	s.WrapXOffset = 0
-	s.Viewport.SetXOffset(0)
+	s.ResetForContainer(sessionID, containerID, tail)
 }
 
 func ResetLogsForExit(s *LogsState, sessionID int) {
-	s.SessionID = sessionID
+	s.ResetForExit(sessionID)
 }
 
 func CanLoadHistory(s LogsState) bool {

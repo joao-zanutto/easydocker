@@ -204,6 +204,20 @@ func fromModeScreen(screen shared.Screen) screenMode {
 	return screenModeBrowse
 }
 
+func (m *model) handleToggleWrap(visibleWidth, visibleRows int) {
+	logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
+	startLine, _ := viewer.VisibleContentRange(&m.logs, logList)
+	m.logs.SetWrapLines(!m.logs.WrapLines)
+	m.logs.SyncFromData(visibleWidth, visibleRows)
+	if !m.logs.Follow {
+		targetYOffset := startLine
+		if m.logs.WrapLines {
+			targetYOffset = viewer.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
+		}
+		m.logs.Viewport.SetYOffset(targetYOffset)
+	}
+}
+
 func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 	keys := viewer.NewKeyMap()
 
@@ -242,19 +256,7 @@ func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 
 	if key.Matches(msg, keys.ToggleWrap) {
-		logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
-		startLine, _ := viewer.VisibleContentRange(&m.logs, logList)
-		visibleWidth := m.logVisibleWidth()
-		visibleRows := m.logVisibleRows()
-		m.logs.SetWrapLines(!m.logs.WrapLines)
-		m.logs.SyncFromData(visibleWidth, visibleRows)
-		if !m.logs.Follow {
-			targetYOffset := startLine
-			if m.logs.WrapLines {
-				targetYOffset = viewer.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
-			}
-			m.logs.Viewport.SetYOffset(targetYOffset)
-		}
+		m.handleToggleWrap(m.logVisibleWidth(), m.logVisibleRows())
 		return nil
 	}
 
@@ -273,38 +275,43 @@ func (m *model) updateViewerFilterInput(visibleWidth, visibleRows int, msg tea.K
 	return cmd
 }
 
-func (m *model) openLogsFilter() {
-	previousRows := m.logVisibleRows()
+func (m *model) openViewerFilter(visibleWidth func() int, visibleRows func() int) {
+	previousRows := visibleRows()
 	previousYOffset := m.logs.Viewport.YOffset()
 	m.logs.OpenFilter()
-	newRows := m.logVisibleRows()
-	m.logs.SyncFromData(m.logVisibleWidth(), newRows)
-	if !m.logs.Follow && newRows < previousRows {
-		m.logs.Viewport.SetYOffset(previousYOffset + (previousRows - newRows))
+	newRows := visibleRows()
+	m.logs.SyncFromData(visibleWidth(), newRows)
+	if !m.logs.Follow {
+		targetYOffset := previousYOffset + (previousRows - newRows)
+		m.logs.Viewport.SetYOffset(targetYOffset)
 	}
 }
 
-func (m *model) closeLogsFilter(clear bool) {
-	previousRows := m.logVisibleRows()
+func (m *model) closeViewerFilter(clear bool, visibleWidth func() int, visibleRows func() int) {
+	previousRows := visibleRows()
 	previousYOffset := m.logs.Viewport.YOffset()
 	m.logs.CloseFilter(clear)
-	newRows := m.logVisibleRows()
-	m.logs.SyncFromData(m.logVisibleWidth(), newRows)
+	newRows := visibleRows()
+	m.logs.SyncFromData(visibleWidth(), newRows)
 	if !m.logs.Follow && newRows > previousRows {
 		m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
 	}
 }
 
+func (m *model) openLogsFilter() {
+	m.openViewerFilter(func() int { return m.logVisibleWidth() }, func() int { return m.logVisibleRows() })
+}
+
+func (m *model) closeLogsFilter(clear bool) {
+	m.closeViewerFilter(clear, func() int { return m.logVisibleWidth() }, func() int { return m.logVisibleRows() })
+}
+
 func (m *model) openInspectFilter() {
-	m.logs.OpenFilter()
+	m.openViewerFilter(func() int { return m.inspectVisibleWidth() }, func() int { return m.inspectVisibleRows() })
 }
 
 func (m *model) closeInspectFilter(clear bool) {
-	previousYOffset := m.logs.Viewport.YOffset()
-	m.logs.CloseFilter(clear)
-	newRows := m.inspectVisibleRows()
-	m.logs.SyncFromData(m.inspectVisibleWidth(), newRows)
-	m.logs.Viewport.SetYOffset(max(0, previousYOffset))
+	m.closeViewerFilter(clear, func() int { return m.inspectVisibleWidth() }, func() int { return m.inspectVisibleRows() })
 }
 
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
@@ -406,37 +413,21 @@ func (m model) logsPollTail() int {
 	return m.logs.TailLines
 }
 
-type handlerResult struct {
-	cmd tea.Cmd
-}
-
-func noSideEffect() handlerResult {
-	return handlerResult{}
-}
-
-func withSideEffect(cmd tea.Cmd) handlerResult {
-	return handlerResult{cmd: cmd}
-}
-
-func (m model) respond(result handlerResult) (tea.Model, tea.Cmd) {
-	return m, result.cmd
-}
-
 func (m model) handleContainersResultMsg(msg containersResultMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		m.setLoadError(msg.err)
-		return m.respond(noSideEffect())
+		return m, nil
 	}
 
 	m.snapshot.Containers = preserveRunningContainerMetrics(msg.containers, m.snapshot.Containers)
 	m.beginLoadingStage(loadStageResources)
-	return m.respond(withSideEffect(m.loadResourcesCmd()))
+	return m, m.loadResourcesCmd()
 }
 
 func (m model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		m.setLoadError(msg.err)
-		return m.respond(noSideEffect())
+		return m, nil
 	}
 
 	m.snapshot.Images = msg.snapshot.Images
@@ -444,12 +435,12 @@ func (m model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea.
 	m.snapshot.Volumes = msg.snapshot.Volumes
 	m.snapshot.TotalLimit = msg.snapshot.TotalLimit
 	m.beginLoadingStage(loadStageMetrics)
-	return m.respond(withSideEffect(m.loadMetricsCmd(m.snapshot.Containers)))
+	return m, m.loadMetricsCmd(m.snapshot.Containers)
 }
 
 func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd) {
 	if !m.finishLoadingStage(msg.err) {
-		return m.respond(noSideEffect())
+		return m, nil
 	}
 
 	m.snapshot.Containers = core.ApplyMetricsToContainers(m.snapshot.Containers, msg.metricsByID)
@@ -458,12 +449,12 @@ func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd)
 	m.snapshot.Timestamp = time.Now()
 	m.metricsLoaded = true
 	m.clampCursors()
-	return m.respond(noSideEffect())
+	return m, nil
 }
 
 func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
 	if !m.finishLoadingStage(msg.err) {
-		return m.respond(noSideEffect())
+		return m, nil
 	}
 
 	previousContainers := m.snapshot.Containers
@@ -473,11 +464,11 @@ func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
 		m.err = err
 	}
 	m.clampCursors()
-	return m.respond(noSideEffect())
+	return m, nil
 }
 
 func (m model) handleLogsResultMsg(msg viewer.ContentMsg) (tea.Model, tea.Cmd) {
-	return m.respond(withSideEffect(m.handleLogsResult(msg)))
+	return m, m.handleLogsResult(msg)
 }
 
 func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
@@ -492,7 +483,7 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 		tail := m.logsPollTail()
 		cmds = append(cmds, LoadLogsCmd(m.service, m.logs.ContainerID, m.logs.SessionID, tail, viewer.SourcePoll))
 	}
-	return m.respond(withSideEffect(tea.Batch(cmds...)))
+	return m, tea.Batch(cmds...)
 }
 
 func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
@@ -520,10 +511,10 @@ func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if len(cmds) == 0 {
-		return m.respond(noSideEffect())
+		return m, nil
 	}
 
-	return m.respond(withSideEffect(tea.Batch(cmds...)))
+	return m, tea.Batch(cmds...)
 }
 
 func (m model) shouldAnimateLogsLoadingIndicator() bool {
@@ -542,7 +533,7 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	m.logs.Viewport.SetXOffset(0)
 	m.logs.InitialLoad = true
 	m.logs.Data = nil
-	m.logs.ResourceType = viewer.ResourceType(resourceType)
+	m.logs.ResourceType = resourceTypeFromTab(resourceType)
 	m.logs.ContainerID = resourceID
 	m.logs.ResourceName = resourceName
 	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
@@ -611,16 +602,7 @@ func (m *model) handleInspectKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 
 	if key.Matches(msg, keys.ToggleWrap) {
-		logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
-		startLine, _ := viewer.VisibleContentRange(&m.logs, logList)
-		visibleWidth := m.inspectVisibleWidth()
-		visibleRows := m.inspectVisibleRows()
-		m.logs.SetWrapLines(!m.logs.WrapLines)
-		m.logs.SyncFromData(visibleWidth, visibleRows)
-		if !m.logs.WrapLines {
-			targetYOffset := viewer.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
-			m.logs.Viewport.SetYOffset(targetYOffset)
-		}
+		m.handleToggleWrap(m.inspectVisibleWidth(), m.inspectVisibleRows())
 		return nil
 	}
 

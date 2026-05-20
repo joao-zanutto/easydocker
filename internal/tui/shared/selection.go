@@ -10,6 +10,40 @@ type Cursors struct {
 	Volume    int
 }
 
+func (c Cursors) byTab(tab int) (int, bool) {
+	switch tab {
+	case TabContainers:
+		return c.Container, true
+	case TabImages:
+		return c.Image, true
+	case TabNetworks:
+		return c.Network, true
+	case TabVolumes:
+		return c.Volume, true
+	default:
+		return 0, false
+	}
+}
+
+func (c *Cursors) setByTab(tab, value int) bool {
+	switch tab {
+	case TabContainers:
+		c.Container = value
+		return true
+	case TabImages:
+		c.Image = value
+		return true
+	case TabNetworks:
+		c.Network = value
+		return true
+	case TabVolumes:
+		c.Volume = value
+		return true
+	default:
+		return false
+	}
+}
+
 // SelectionState groups browse tab/scope/cursor state.
 type SelectionState struct {
 	ActiveTab int
@@ -33,38 +67,12 @@ func ToggleContainerScope(activeTab, containersTab int, showAll bool) (bool, boo
 
 // CursorForTab returns the cursor value for a tab.
 func CursorForTab(c Cursors, tab int) (int, bool) {
-	switch tab {
-	case 0:
-		return c.Container, true
-	case 1:
-		return c.Image, true
-	case 2:
-		return c.Network, true
-	case 3:
-		return c.Volume, true
-	default:
-		return 0, false
-	}
+	return c.byTab(tab)
 }
 
 // SetCursorForTab sets the cursor value for a tab and reports whether tab exists.
 func SetCursorForTab(c *Cursors, tab, value int) bool {
-	switch tab {
-	case 0:
-		c.Container = value
-		return true
-	case 1:
-		c.Image = value
-		return true
-	case 2:
-		c.Network = value
-		return true
-	case 3:
-		c.Volume = value
-		return true
-	default:
-		return false
-	}
+	return c.setByTab(tab, value)
 }
 
 // MoveCursorForTab moves a tab cursor by delta and clamps to [0, max(0,itemCount-1)].

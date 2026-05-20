@@ -23,10 +23,6 @@ func viewerKeyMap() viewer.KeyMap {
 	return defaultViewerKeyMap
 }
 
-func canOpenShell(state string) bool {
-	return shared.CanOpenShell(state)
-}
-
 func (m model) footerKeyMap() help.KeyMap {
 	if m.screen == screenModeLogs || m.screen == screenModeInspect {
 		viewerKeys := viewerKeyMap()
@@ -47,7 +43,7 @@ func (m model) footerKeyMap() help.KeyMap {
 				containerState = c.State
 			}
 		}
-		return footerKeyMap{bindings: viewerKeys.ShortHelp(viewer.ResourceType(m.activeTab), contentType, containerState)}
+		return footerKeyMap{bindings: viewerKeys.ShortHelp(resourceTypeFromTab(m.activeTab), contentType, containerState)}
 	}
 
 	browseKeys := browseKeyMap()
@@ -75,7 +71,7 @@ func (m model) footerKeyMap() help.KeyMap {
 			bindings = append(bindings, shared.EnterBinding(action))
 		} else {
 			bindings = append(bindings, browseKeys.OpenLogs, browseKeys.OpenInspect)
-			if container, ok := m.selectedContainer(); ok && canOpenShell(container.State) {
+			if container, ok := m.selectedContainer(); ok && shared.CanOpenShell(container.State) {
 				bindings = append(bindings, browseKeys.OpenShell)
 			}
 		}

@@ -51,13 +51,9 @@ func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType, co
 		bindings = append(bindings, k.ToggleFollow)
 	}
 
-	if resourceType == ResourceTypeContainer && canOpenShell(containerState) {
+	if resourceType == ResourceTypeContainer && shared.CanOpenShell(containerState) {
 		bindings = append(bindings, k.OpenShell)
 	}
 
 	return bindings
-}
-
-func canOpenShell(state string) bool {
-	return shared.CanOpenShell(state)
 }

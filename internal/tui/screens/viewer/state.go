@@ -1,5 +1,7 @@
 package viewer
 
+import "strings"
+
 func (s *State) SetFollow(enabled bool) {
 	s.Follow = enabled
 	if enabled {
@@ -35,19 +37,34 @@ func (s *State) CloseFilter(clear bool) {
 	}
 }
 
-func (s *State) ResetForContainer(sessionID int, containerID string) {
+func (s *State) ResetForContainer(sessionID int, containerID string, tail int) {
 	s.SessionID = sessionID
 	s.ContainerID = containerID
+	s.TailLines = tail
+	s.InitialLoad = true
+	s.Follow = true
 	s.Data = nil
+	s.HistoryLoad = false
+	s.HistoryDone = false
+	s.HistoryBaseLen = 0
+	s.HistoryAppendedDuringLoad = 0
+	s.HistoryNoProgressCount = 0
+	s.HorizontalOffset = 0
+	s.WrapXOffset = 0
+	s.Viewport.SetXOffset(0)
 	s.Filter.Active = false
 	s.Filter.Query = ""
 	s.Filter.Input.SetValue("")
 }
 
+func (s *State) ResetForExit(sessionID int) {
+	s.SessionID = sessionID
+}
+
 func (s *State) SyncViewport(lines []string, visibleWidth, visibleRows int) {
 	s.Viewport.SetWidth(visibleWidth)
 	s.Viewport.SetHeight(visibleRows)
-	s.Viewport.SetContent(joinLines(lines))
+	s.Viewport.SetContent(strings.Join(lines, "\n"))
 	if s.Follow {
 		s.Viewport.GotoBottom()
 	}
@@ -73,17 +90,6 @@ func (s *State) SyncFromData(visibleWidth, visibleRows int) {
 	}
 
 	s.SyncViewport(sanitized, visibleWidth, visibleRows)
-}
-
-func joinLines(lines []string) string {
-	if len(lines) == 0 {
-		return ""
-	}
-	result := lines[0]
-	for i := 1; i < len(lines); i++ {
-		result += "\n" + lines[i]
-	}
-	return result
 }
 
 func (s *State) ApplyContentForPoll(data []string) {
