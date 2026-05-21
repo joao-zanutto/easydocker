@@ -71,14 +71,14 @@ const (
 )
 
 type State struct {
-	ContainerID string
-	Data        []string
-	Filter      components.FilterState
-	WrapLines   bool
-	InitialLoad bool
-	Follow      bool
-	Viewport    viewport.Model
-	ContentType ContentType
+	ContainerID  string
+	Data         []string
+	Filter       components.FilterState
+	WrapLines    bool
+	InitialLoad  bool
+	Follow       bool
+	Viewport     viewport.Model
+	ContentType  ContentType
 	ResourceName string
 }
 

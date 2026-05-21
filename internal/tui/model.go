@@ -87,9 +87,9 @@ type model struct {
 	logs           LogsState
 
 	// Loading state
-	loading       bool
-	loadingStage  int
-	metricsLoaded bool
+	loading          bool
+	loadingStage     int
+	metricsLoaded    bool
 	metricsSpinner   spinner.Model
 	containerSpinner spinner.Model
 	logsSpinner      spinner.Model
