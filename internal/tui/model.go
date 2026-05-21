@@ -27,14 +27,6 @@ const (
 	loadStageMetrics    = int(shared.StageMetrics)
 )
 
-type screenMode int
-
-const (
-	screenModeBrowse screenMode = iota
-	screenModeLogs
-	screenModeInspect
-)
-
 type tickMsg time.Time
 
 type containersResultMsg struct {
@@ -70,31 +62,42 @@ type inspectResultMsg struct {
 }
 
 type model struct {
-	service          *core.Service
-	width            int
-	height           int
-	activeTab        int
-	showAll          bool
-	loading          bool
-	err              error
-	snapshot         core.Snapshot
-	containerCursor  int
-	imageCursor      int
-	networkCursor    int
-	volumeCursor     int
-	screen           screenMode
-	previousScreen   screenMode
-	logs             LogsState
-	loadingStage     int
-	styles           theme.Set
-	metricsLoaded    bool
+	// Core
+	service *core.Service
+	err     error
+
+	// Dimensions
+	width  int
+	height int
+
+	// Browse state
+	activeTab       shared.Tab
+	showAll         bool
+	snapshot        core.Snapshot
+	containerCursor int
+	imageCursor     int
+	networkCursor   int
+	volumeCursor    int
+	browseFilter    browse.FilterState
+	composeExpanded map[string]bool
+
+	// Screen state
+	screen         shared.Screen
+	previousScreen shared.Screen
+	logs           LogsState
+
+	// Loading state
+	loading       bool
+	loadingStage  int
+	metricsLoaded bool
 	metricsSpinner   spinner.Model
 	containerSpinner spinner.Model
 	logsSpinner      spinner.Model
-	browseFilter     browse.FilterState
-	composeExpanded  map[string]bool
-	menu             menu.MenuState
-	help             menu.HelpState
+
+	// UI state
+	styles theme.Set
+	menu   menu.MenuState
+	help   menu.HelpState
 }
 
 func New(service *core.Service) tea.Model {
@@ -107,7 +110,7 @@ func New(service *core.Service) tea.Model {
 		activeTab:        tabContainers,
 		showAll:          true,
 		loading:          true,
-		screen:           screenModeBrowse,
+		screen:           shared.Browse,
 		loadingStage:     loadStageContainers,
 		logs:             NewLogsState(),
 		styles:           defaultStyles(),
@@ -122,7 +125,7 @@ func New(service *core.Service) tea.Model {
 }
 
 func (m model) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.loadContainersCmd(), tickCmd()}
+	cmds := []tea.Cmd{loadContainersCmd(m.service), tickCmd()}
 	if m.shouldAnimateMetricsLoadingIndicator() {
 		spinnerTickInterval := time.Second / 7
 		cmds = append(cmds,

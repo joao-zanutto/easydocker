@@ -7,6 +7,7 @@ import (
 	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
+	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/chrome"
 	"easydocker/internal/tui/ui/tables"
 	"easydocker/internal/tui/util"
@@ -51,17 +52,17 @@ func (m model) View() tea.View {
 func (m model) renderMain(height int) string {
 	totalWidth := max(1, m.width)
 	totalHeight := max(1, height)
-	if m.screen == screenModeLogs && m.activeTab == tabContainers {
+	if m.screen == shared.Logs && m.activeTab == tabContainers {
 		container, ok := m.selectedLogsContainer()
 		if !ok {
 			return m.styles.ErrorText.Render("Selected container is no longer available.")
 		}
 
 		logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
-		start, end := viewer.VisibleContentRange(&m.logs, logList)
+		start, end := viewer.VisibleContentRange(&m.logs.State, logList)
 
 		return viewer.RenderContent(viewer.ViewModel{
-			State:            &m.logs,
+			State:            &m.logs.State,
 			ContainerName:    container.Name,
 			Breadcrumb:       "Containers / " + container.Name + " / Logs",
 			LineCount:        &viewer.LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)},
@@ -72,6 +73,7 @@ func (m model) renderMain(height int) string {
 			Height:           totalHeight,
 			ContentType:      viewer.ContentTypeLogs,
 			ResourceType:     viewer.ResourceTypeContainer,
+			HistoryLoad:      m.logs.HistoryLoad,
 			Styles: viewer.ViewStyles{
 				Breadcrumb:   m.styles.Breadcrumb,
 				FollowOn:     m.styles.FollowOn,
@@ -83,7 +85,7 @@ func (m model) renderMain(height int) string {
 		})
 	}
 
-	if m.screen == screenModeInspect {
+	if m.screen == shared.Inspect {
 		return m.renderInspectContent(totalWidth, totalHeight)
 	}
 
@@ -92,7 +94,7 @@ func (m model) renderMain(height int) string {
 	return util.RenderFramedContent(m.styles.MainFrame, layout, content)
 }
 
-func resourceTypeFromTab(tab int) viewer.ResourceType {
+func resourceTypeFromTab(tab shared.Tab) viewer.ResourceType {
 	switch tab {
 	case tabContainers:
 		return viewer.ResourceTypeContainer
@@ -113,10 +115,10 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	breadcrumb := resourceLabel + " / " + containerName + " / Inspect"
 
 	logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
-	start, end := viewer.VisibleContentRange(&m.logs, logList)
+	start, end := viewer.VisibleContentRange(&m.logs.State, logList)
 
 	return viewer.RenderContent(viewer.ViewModel{
-		State:            &m.logs,
+		State:            &m.logs.State,
 		ContainerName:    containerName,
 		Breadcrumb:       breadcrumb,
 		LineCount:        &viewer.LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)},
@@ -151,7 +153,7 @@ func (m model) logVisibleRows() int {
 
 func (m model) logVisibleWidth() int {
 	totalWidth := max(1, m.width)
-	if m.screen == screenModeLogs {
+	if m.screen == shared.Logs {
 		return m.logsPageContentWidth(totalWidth)
 	}
 	innerWidth := util.FrameContentWidth(totalWidth, m.styles.MainFrame)
@@ -160,7 +162,7 @@ func (m model) logVisibleWidth() int {
 
 func (m model) logSectionHeight() int {
 	mainHeight := util.MainAreaHeight(m.height, m.renderHeader(), m.renderFooter())
-	if m.screen == screenModeLogs {
+	if m.screen == shared.Logs {
 		return viewer.VisibleRowsForContent(m.logsPageContentHeight(mainHeight), m.logs.Filter.Active)
 	}
 	innerHeight := util.FrameContentHeight(mainHeight, m.styles.MainFrame)
@@ -181,14 +183,14 @@ func (m model) renderHeader() string {
 		Title:            "EasyDocker",
 		TotalsText:       chrome.RenderTotalsLabel(m.snapshot, m.loadingStage, loadStageIdle, loadStageMetrics, m.metricsLoaded, m.metricsLoadingIndicator()),
 		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, loadStageContainers, loadStageResources, loadStageMetrics, m.metricsLoaded),
-		ActiveTab:        m.activeTab,
+		ActiveTab:        int(m.activeTab),
 		ShowAll:          m.showAll,
 		Err:              m.err,
 		Tabs: []chrome.TabSpec{
-			{Tab: tabContainers, Icon: "🐳", Name: "Containers", Count: len(m.filteredContainers())},
-			{Tab: tabImages, Icon: "💿", Name: "Images", Count: len(m.snapshot.Images)},
-			{Tab: tabNetworks, Icon: "🔌", Name: "Networks", Count: len(m.snapshot.Networks)},
-			{Tab: tabVolumes, Icon: "📂", Name: "Volumes", Count: len(m.snapshot.Volumes)},
+			{Tab: int(tabContainers), Icon: "🐳", Name: "Containers", Count: len(m.filteredContainers())},
+			{Tab: int(tabImages), Icon: "💿", Name: "Images", Count: len(m.snapshot.Images)},
+			{Tab: int(tabNetworks), Icon: "🔌", Name: "Networks", Count: len(m.snapshot.Networks)},
+			{Tab: int(tabVolumes), Icon: "📂", Name: "Volumes", Count: len(m.snapshot.Volumes)},
 		},
 		Styles: chrome.HeaderStyles{
 			Header:    m.styles.Header,
@@ -214,7 +216,7 @@ func (m model) renderFooter() string {
 }
 
 func (m model) renderChromeTab(tab int, label string) string {
-	if m.activeTab == tab {
+	if int(m.activeTab) == tab {
 		return m.styles.ActiveTab.Render(label)
 	}
 	return m.styles.Tab.Render(label)

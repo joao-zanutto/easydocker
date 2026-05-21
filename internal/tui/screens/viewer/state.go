@@ -34,28 +34,6 @@ func (s *State) CloseFilter(clear bool) {
 	}
 }
 
-func (s *State) ResetForContainer(sessionID int, containerID string, tail int) {
-	s.SessionID = sessionID
-	s.ContainerID = containerID
-	s.TailLines = tail
-	s.InitialLoad = true
-	s.Follow = true
-	s.Data = nil
-	s.HistoryLoad = false
-	s.HistoryDone = false
-	s.HistoryBaseLen = 0
-	s.HistoryAppendedDuringLoad = 0
-	s.HistoryNoProgressCount = 0
-	s.Viewport.SetXOffset(0)
-	s.Filter.Active = false
-	s.Filter.Query = ""
-	s.Filter.Input.SetValue("")
-}
-
-func (s *State) ResetForExit(sessionID int) {
-	s.SessionID = sessionID
-}
-
 func (s *State) SyncViewport(lines []string, visibleWidth, visibleRows int) {
 	s.Viewport.SetWidth(visibleWidth)
 	s.Viewport.SetHeight(visibleRows)
@@ -95,6 +73,4 @@ func (s *State) ApplyContentForPoll(data []string) {
 func (s *State) ApplyContentInitial(data []string) {
 	s.Data = data
 	s.InitialLoad = false
-	s.HistoryLoad = false
-	s.HistoryDone = false
 }

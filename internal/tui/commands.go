@@ -15,38 +15,34 @@ func tickCmd() tea.Cmd {
 	})
 }
 
-func (m model) loadContainersCmd() tea.Cmd {
-	svc := m.service
+func loadContainersCmd(svc *core.Service) tea.Cmd {
 	return func() tea.Msg {
 		containers, err := svc.LoadContainerRows()
 		return containersResultMsg{containers: containers, err: err}
 	}
 }
 
-func (m model) loadResourcesCmd() tea.Cmd {
-	svc := m.service
+func loadResourcesCmd(svc *core.Service) tea.Cmd {
 	return func() tea.Msg {
 		snapshot, err := svc.LoadSupportingResources()
 		return resourcesResultMsg{snapshot: snapshot, err: err}
 	}
 }
 
-func (m model) loadMetricsCmd(rows []core.ContainerRow) tea.Cmd {
-	svc := m.service
+func loadMetricsCmd(svc *core.Service, rows []core.ContainerRow) tea.Cmd {
 	return func() tea.Msg {
 		metricsByID, totalCPU, totalMem, err := svc.LoadContainerMetrics(rows)
 		return metricsResultMsg{metricsByID: metricsByID, totalCPU: totalCPU, totalMem: totalMem, err: err}
 	}
 }
 
-func (m model) loadDockerCmd() tea.Cmd {
-	svc := m.service
+func loadDockerCmd(svc *core.Service) tea.Cmd {
 	return func() tea.Msg {
 		snapshot, err := svc.LoadSnapshot()
 		return loadResultMsg{snapshot: snapshot, err: err}
 	}
 }
 
-func (m model) shellCmd(containerID string) tea.Cmd {
-	return shared.ShellCmd(m.service, containerID, shellDoneMsg{})
+func shellCmd(svc *core.Service, containerID string) tea.Cmd {
+	return shared.ShellCmd(svc, containerID, shellDoneMsg{})
 }

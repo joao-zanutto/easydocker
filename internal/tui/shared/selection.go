@@ -10,7 +10,7 @@ type Cursors struct {
 	Volume    int
 }
 
-func (c Cursors) byTab(tab int) (int, bool) {
+func (c Cursors) byTab(tab Tab) (int, bool) {
 	switch tab {
 	case TabContainers:
 		return c.Container, true
@@ -25,7 +25,7 @@ func (c Cursors) byTab(tab int) (int, bool) {
 	}
 }
 
-func (c *Cursors) setByTab(tab, value int) bool {
+func (c *Cursors) setByTab(tab Tab, value int) bool {
 	switch tab {
 	case TabContainers:
 		c.Container = value
@@ -46,37 +46,37 @@ func (c *Cursors) setByTab(tab, value int) bool {
 
 // SelectionState groups browse tab/scope/cursor state.
 type SelectionState struct {
-	ActiveTab int
+	ActiveTab Tab
 	ShowAll   bool
 	Cursors   Cursors
 }
 
 // MoveActiveTab shifts active tab and clamps to [minTab, maxTab].
-func MoveActiveTab(current, delta, minTab, maxTab int) int {
-	return util.Clamp(current+delta, minTab, maxTab)
+func MoveActiveTab(current Tab, delta int, minTab, maxTab Tab) Tab {
+	return Tab(util.Clamp(int(current)+delta, int(minTab), int(maxTab)))
 }
 
 // ToggleContainerScope flips showAll only when the containers tab is active.
 // Returns the possibly-updated showAll value and whether a toggle occurred.
-func ToggleContainerScope(activeTab, containersTab int, showAll bool) (bool, bool) {
-	if activeTab != containersTab {
+func ToggleContainerScope(activeTab Tab, showAll bool) (bool, bool) {
+	if activeTab != TabContainers {
 		return showAll, false
 	}
 	return !showAll, true
 }
 
 // CursorForTab returns the cursor value for a tab.
-func CursorForTab(c Cursors, tab int) (int, bool) {
+func CursorForTab(c Cursors, tab Tab) (int, bool) {
 	return c.byTab(tab)
 }
 
 // SetCursorForTab sets the cursor value for a tab and reports whether tab exists.
-func SetCursorForTab(c *Cursors, tab, value int) bool {
+func SetCursorForTab(c *Cursors, tab Tab, value int) bool {
 	return c.setByTab(tab, value)
 }
 
 // MoveCursorForTab moves a tab cursor by delta and clamps to [0, max(0,itemCount-1)].
-func MoveCursorForTab(c *Cursors, tab, delta, itemCount int) bool {
+func MoveCursorForTab(c *Cursors, tab Tab, delta, itemCount int) bool {
 	cursor, ok := CursorForTab(*c, tab)
 	if !ok {
 		return false
@@ -86,7 +86,7 @@ func MoveCursorForTab(c *Cursors, tab, delta, itemCount int) bool {
 }
 
 // ClampCursorForTab clamps one tab cursor to [0, max(0,itemCount-1)].
-func ClampCursorForTab(c *Cursors, tab, itemCount int) bool {
+func ClampCursorForTab(c *Cursors, tab Tab, itemCount int) bool {
 	cursor, ok := CursorForTab(*c, tab)
 	if !ok {
 		return false
@@ -96,14 +96,14 @@ func ClampCursorForTab(c *Cursors, tab, itemCount int) bool {
 }
 
 // ClampAllCursors clamps cursors for all tabs using a caller-provided item counter.
-func ClampAllCursors(c *Cursors, tabs []int, itemCountForTab func(tab int) int) {
+func ClampAllCursors(c *Cursors, tabs []Tab, itemCountForTab func(tab Tab) int) {
 	for _, tab := range tabs {
 		_ = ClampCursorForTab(c, tab, itemCountForTab(tab))
 	}
 }
 
 // ReconcileCursorForTab updates a tab cursor to index when found is true.
-func ReconcileCursorForTab(c *Cursors, tab, index int, found bool) bool {
+func ReconcileCursorForTab(c *Cursors, tab Tab, index int, found bool) bool {
 	if !found {
 		return false
 	}

@@ -44,6 +44,6 @@ func EnterLogsTransition() Screen {
 }
 
 // ExitLogsTransition returns the target screen and tab when leaving logs mode.
-func ExitLogsTransition(containersTab int) (Screen, int) {
+func ExitLogsTransition(containersTab Tab) (Screen, Tab) {
 	return Browse, containersTab
 }

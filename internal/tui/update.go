@@ -1,22 +1,13 @@
 package tui
 
 import (
-	"strings"
-	"time"
-
-	"easydocker/internal/core"
-	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
-	"easydocker/internal/tui/util"
 
-	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 )
-
-var browseController = browse.Controller{}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -49,98 +40,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 const browseCursorPageStep = 5
 
-func (m model) handleBrowseKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	keys := browseKeyMap()
-
-	// If filter mode is active, handle filter input first
-	if m.browseFilter.Active {
-		switch {
-		case key.Matches(msg, keys.OpenMenu):
-			// Esc exits filter mode and clears query
-			m.browseFilter.Active = false
-			m.browseFilter.Input.Blur()
-			m.browseFilter.Query = ""
-			m.browseFilter.Input.SetValue("")
-			m.clampCursors()
-			return m, nil
-		case msg.String() == "enter":
-			// Enter exits filter mode but keeps query
-			m.browseFilter.Active = false
-			m.browseFilter.Input.Blur()
-			return m, nil
-		case key.Matches(msg, keys.MoveUp):
-			m.moveCursor(-1)
-			return m, nil
-		case key.Matches(msg, keys.MoveDown):
-			m.moveCursor(1)
-			return m, nil
-		case key.Matches(msg, keys.PageUp):
-			m.moveCursor(-browseCursorPageStep)
-			return m, nil
-		case key.Matches(msg, keys.PageDown):
-			m.moveCursor(browseCursorPageStep)
-			return m, nil
-		default:
-			// All other keys go to filter input
-			var cmd tea.Cmd
-			m.browseFilter.Input, cmd = m.browseFilter.Input.Update(msg)
-			m.browseFilter.Query = m.browseFilter.Input.Value()
-			// Recompute visible lists and clamp cursors to keep selection valid
-			m.clampCursors()
-			return m, cmd
-		}
-	}
-
-	// Use controller for normal browse mode key handling
-	browseState := browse.State{Filter: m.browseFilter}
-	transition := browseController.HandleKey(&browseState, msg, keys)
-	m.browseFilter = browseState.Filter
-
-	if transition.ChangeTab != 0 {
-		m.moveActiveTab(transition.ChangeTab)
-	}
-	if transition.ActivateFilter {
-		m.browseFilter.Active = true
-		m.browseFilter.Input.Focus()
-		m.browseFilter.Input.SetValue(m.browseFilter.Query)
-	}
-	if transition.ToggleScope {
-		m.toggleContainerScope()
-	}
-	if transition.OpenResource {
-		if m.toggleSelectedComposeProject() {
-			return m, nil
-		}
-		if cmd := m.enterLogsModeIfContainerSelected(); cmd != nil {
-			return m, cmd
-		}
-	}
-	if transition.OpenShell {
-		if cmd := m.openShellIfContainerSelected(); cmd != nil {
-			return m, cmd
-		}
-	}
-	if transition.OpenInspect {
-		return m.handleInspectTransition()
-	}
-	if transition.OpenMenu {
-		m.menu.Active = true
-		m.menu.Cursor = 0
-	}
-	if transition.CursorMove != 0 {
-		m.moveCursor(transition.CursorMove)
-	}
-
-	return m, nil
-}
-
-func (m model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
-	if m.screen == screenModeLogs {
+	if m.screen == shared.Logs {
 		m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 	}
-	if m.screen == screenModeInspect {
+	if m.screen == shared.Inspect {
 		m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
 	}
 	return m, nil
@@ -159,15 +65,15 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleMenuKey(msg)
 	}
 
-	if m.screen == screenModeBrowse && m.browseFilter.Active {
+	if m.screen == shared.Browse && m.browseFilter.Active {
 		return m.handleBrowseKey(msg)
 	}
 
-	if m.screen == screenModeLogs && m.logs.Filter.Active {
+	if m.screen == shared.Logs && m.logs.Filter.Active {
 		return m, m.handleLogsKey(msg)
 	}
 
-	route := shared.RouteRootKey(msg.String(), toModeScreen(m.screen))
+	route := shared.RouteRootKey(msg.String(), m.screen)
 	switch route {
 	case shared.RouteQuit:
 		return m, tea.Quit
@@ -184,297 +90,40 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func toModeScreen(screen screenMode) shared.Screen {
-	switch screen {
-	case screenModeLogs:
-		return shared.Logs
-	case screenModeInspect:
-		return shared.Inspect
+func (m model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	keys := menu.NewKeyMap()
+	transition := menu.Controller{}.HandleKey(&m.menu, &m.help, msg, keys)
+	if transition.Quit {
+		return m, tea.Quit
 	}
-	return shared.Browse
-}
-
-func fromModeScreen(screen shared.Screen) screenMode {
-	switch screen {
-	case shared.Logs:
-		return screenModeLogs
-	case shared.Inspect:
-		return screenModeInspect
-	}
-	return screenModeBrowse
-}
-
-func (m *model) handleToggleWrap(visibleWidth, visibleRows int) {
-	logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
-	startLine, _ := viewer.VisibleContentRange(&m.logs, logList)
-	m.logs.SetWrapLines(!m.logs.WrapLines)
-	m.logs.SyncFromData(visibleWidth, visibleRows)
-	if !m.logs.Follow {
-		targetYOffset := startLine
-		if m.logs.WrapLines {
-			targetYOffset = viewer.RawLineToViewportRowOffset(logList, visibleWidth, startLine)
-		}
-		m.logs.Viewport.SetYOffset(targetYOffset)
-	}
-}
-
-func (m *model) handleLogsKey(msg tea.KeyPressMsg) tea.Cmd {
-	keys := viewer.NewKeyMap()
-
-	if m.logs.Filter.Active {
-		switch {
-		case key.Matches(msg, keys.Back):
-			m.closeLogsFilter(true)
-			return nil
-		case msg.String() == "enter":
-			m.closeLogsFilter(false)
-			return nil
-		case key.Matches(msg, keys.Up),
-			key.Matches(msg, keys.Down),
-			key.Matches(msg, keys.PageUp),
-			key.Matches(msg, keys.PageDown),
-			key.Matches(msg, keys.Home),
-			key.Matches(msg, keys.End):
-			transition := viewer.Controller{}.HandleKey(&m.logs, msg, keys)
-			if historyReq := HistoryLoadRequest(&m.logs); historyReq != nil {
-				transition.Load = historyReq
-			}
-			return m.applyLogsTransition(viewer.Transition{Load: transition.Load})
-		default:
-			return m.updateViewerFilterInput(m.logVisibleWidth(), m.logVisibleRows(), msg)
-		}
-	}
-
-	if key.Matches(msg, keys.OpenFilter) {
-		m.openLogsFilter()
-		return nil
-	}
-
-	if key.Matches(msg, keys.Back) {
-		m.exitLogsMode()
-		return nil
-	}
-
-	if key.Matches(msg, keys.ToggleWrap) {
-		m.handleToggleWrap(m.logVisibleWidth(), m.logVisibleRows())
-		return nil
-	}
-
-	transition := viewer.Controller{}.HandleKey(&m.logs, msg, viewer.NewKeyMap())
-	if historyReq := HistoryLoadRequest(&m.logs); historyReq != nil {
-		transition.Load = historyReq
-	}
-	return m.applyLogsTransition(transition)
-}
-
-func (m *model) updateViewerFilterInput(visibleWidth, visibleRows int, msg tea.KeyPressMsg) tea.Cmd {
-	var cmd tea.Cmd
-	m.logs.Filter.Input, cmd = m.logs.Filter.Input.Update(msg)
-	m.logs.Filter.Query = m.logs.Filter.Input.Value()
-	m.logs.SyncFromData(visibleWidth, visibleRows)
-	return cmd
-}
-
-func (m *model) openViewerFilter(visibleWidth func() int, visibleRows func() int) {
-	previousRows := visibleRows()
-	previousYOffset := m.logs.Viewport.YOffset()
-	m.logs.OpenFilter()
-	newRows := visibleRows()
-	m.logs.SyncFromData(visibleWidth(), newRows)
-	if !m.logs.Follow {
-		targetYOffset := previousYOffset + (previousRows - newRows)
-		m.logs.Viewport.SetYOffset(targetYOffset)
-	}
-}
-
-func (m *model) closeViewerFilter(clear bool, visibleWidth func() int, visibleRows func() int) {
-	previousRows := visibleRows()
-	previousYOffset := m.logs.Viewport.YOffset()
-	m.logs.CloseFilter(clear)
-	newRows := visibleRows()
-	m.logs.SyncFromData(visibleWidth(), newRows)
-	if !m.logs.Follow && newRows > previousRows {
-		m.logs.Viewport.SetYOffset(max(0, previousYOffset-(newRows-previousRows)))
-	}
-}
-
-func (m *model) openLogsFilter() {
-	m.openViewerFilter(func() int { return m.logVisibleWidth() }, func() int { return m.logVisibleRows() })
-}
-
-func (m *model) closeLogsFilter(clear bool) {
-	m.closeViewerFilter(clear, func() int { return m.logVisibleWidth() }, func() int { return m.logVisibleRows() })
-}
-
-func (m *model) openInspectFilter() {
-	m.openViewerFilter(func() int { return m.inspectVisibleWidth() }, func() int { return m.inspectVisibleRows() })
-}
-
-func (m *model) closeInspectFilter(clear bool) {
-	m.closeViewerFilter(clear, func() int { return m.inspectVisibleWidth() }, func() int { return m.inspectVisibleRows() })
-}
-
-func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
-	transition := EnterLogsState(&m.logs, container.FullID)
-	m.err = nil
-	m.screen = fromModeScreen(shared.EnterLogsTransition())
-	return m.applyLogsTransition(transition)
-}
-
-func (m *model) exitLogsMode() {
-	transition := ExitLogsState(&m.logs, tabContainers)
-	_ = m.applyLogsTransition(transition)
-}
-
-func (m *model) handleLogsResult(msg viewer.ContentMsg) tea.Cmd {
-	transition := HandleLogsResult(&m.logs, msg, m.logVisibleWidth(), m.logVisibleRows())
-	return m.applyLogsTransition(transition)
-}
-
-func (m *model) applyLogsTransition(transition viewer.Transition) tea.Cmd {
-	if transition.LaunchShell {
-		if container, ok := m.selectedLogsContainer(); ok {
-			return m.shellCmd(container.FullID)
-		}
-		return nil
-	}
-	if transition.ExitToBrowse {
-		targetScreen, _ := shared.ExitLogsTransition(transition.ForceTab)
-		m.screen = fromModeScreen(targetScreen)
-		m.activeTab = transition.ForceTab
-	}
-	if transition.Err != nil {
-		m.err = transition.Err
-	}
-	if transition.Load == nil {
-		return nil
-	}
-	request := transition.Load
-	loadCmd := LoadLogsCmd(
-		m.service,
-		request.ContainerID,
-		request.SessionID,
-		request.Tail,
-		request.Src,
-	)
-	if m.shouldAnimateLogsLoadingIndicator() {
-		return tea.Batch(loadCmd, m.logsSpinner.Tick)
-	}
-	return loadCmd
-}
-
-func (m *model) applyLoadingTransition(transition shared.Transition) {
-	m.loading = transition.Loading
-	m.loadingStage = int(transition.Stage)
-	m.err = transition.Err
-}
-
-func (m *model) setLoadError(err error) {
-	m.applyLoadingTransition(shared.Fail(err))
-}
-
-func (m *model) beginLoadingStage(stage int) {
-	m.applyLoadingTransition(shared.Begin(shared.Stage(stage)))
-	m.snapshot.Timestamp = time.Now()
-	m.clampCursors()
-}
-
-func (m *model) finishLoadingStage(err error) bool {
-	transition, ok := shared.Finish(err)
-	m.applyLoadingTransition(transition)
-	return ok
-}
-
-func (m model) shouldReloadSnapshotOnTick() bool {
-	return m.loadingStage == loadStageIdle
-}
-
-func (m model) shouldLoadHistoryOnTick() bool {
-	return m.screen == screenModeLogs &&
-		m.logs.ContainerID != "" &&
-		m.logs.Viewport.AtTop() &&
-		!m.logs.InitialLoad &&
-		!m.logs.HistoryLoad &&
-		!m.logs.HistoryDone
-}
-
-func (m model) shouldPollLogsOnTick() bool {
-	return m.screen == screenModeLogs &&
-		m.logs.ContainerID != "" &&
-		!m.logs.Viewport.AtTop() &&
-		!m.logs.InitialLoad &&
-		!m.logs.HistoryLoad
-}
-
-func (m model) logsPollTail() int {
-	if m.logs.TailLines <= 0 {
-		return InitialTail
-	}
-	return m.logs.TailLines
-}
-
-func (m model) handleContainersResultMsg(msg containersResultMsg) (tea.Model, tea.Cmd) {
-	if msg.err != nil {
-		m.setLoadError(msg.err)
-		return m, nil
-	}
-
-	m.snapshot.Containers = preserveRunningContainerMetrics(msg.containers, m.snapshot.Containers)
-	m.beginLoadingStage(loadStageResources)
-	return m, m.loadResourcesCmd()
-}
-
-func (m model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea.Cmd) {
-	if msg.err != nil {
-		m.setLoadError(msg.err)
-		return m, nil
-	}
-
-	m.snapshot.Images = msg.snapshot.Images
-	m.snapshot.Networks = msg.snapshot.Networks
-	m.snapshot.Volumes = msg.snapshot.Volumes
-	m.snapshot.TotalLimit = msg.snapshot.TotalLimit
-	m.beginLoadingStage(loadStageMetrics)
-	return m, m.loadMetricsCmd(m.snapshot.Containers)
-}
-
-func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd) {
-	if !m.finishLoadingStage(msg.err) {
-		return m, nil
-	}
-
-	m.snapshot.Containers = core.ApplyMetricsToContainers(m.snapshot.Containers, msg.metricsByID)
-	m.snapshot.TotalCPU = msg.totalCPU
-	m.snapshot.TotalMem = msg.totalMem
-	m.snapshot.Timestamp = time.Now()
-	m.metricsLoaded = true
-	m.clampCursors()
 	return m, nil
 }
 
-func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
-	if !m.finishLoadingStage(msg.err) {
-		return m, nil
+func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	keys := menu.NewKeyMap()
+	helpHeight := m.height * 9 / 10
+	bodyHeight := menu.HelpBodyHeight(helpHeight, m.styles.HelpFrame)
+	contentHeight := menu.HelpBodyLineCount(m.help.Commands)
+	transition := menu.Controller{}.HandleHelpKey(&m.help, &m.menu, msg, keys, contentHeight, bodyHeight)
+	if transition.Back {
+		m.help.Active = false
+		m.menu.Active = true
 	}
-
-	previousContainers := m.snapshot.Containers
-	m.snapshot = msg.snapshot
-	m.snapshot.Containers = preserveRunningContainerMetrics(m.snapshot.Containers, previousContainers)
-	if err := m.reconcileLogsSelection(); err != nil {
-		m.err = err
-	}
-	m.clampCursors()
 	return m, nil
 }
 
-func (m model) handleLogsResultMsg(msg viewer.ContentMsg) (tea.Model, tea.Cmd) {
-	return m, m.handleLogsResult(msg)
+func (m model) shouldAnimateLogsLoadingIndicator() bool {
+	return m.screen == shared.Logs && (m.logs.InitialLoad || m.logs.HistoryLoad)
+}
+
+func (m model) shouldAnimateMetricsLoadingIndicator() bool {
+	return !m.metricsLoaded && m.loadingStage != loadStageIdle
 }
 
 func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{tickCmd()}
 	if m.shouldReloadSnapshotOnTick() {
-		cmds = append(cmds, m.loadDockerCmd())
+		cmds = append(cmds, loadDockerCmd(m.service))
 	}
 	if m.shouldLoadHistoryOnTick() {
 		tail := len(m.logs.Data) + TailStep
@@ -515,202 +164,4 @@ func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
-}
-
-func (m model) shouldAnimateLogsLoadingIndicator() bool {
-	return m.screen == screenModeLogs && (m.logs.InitialLoad || m.logs.HistoryLoad)
-}
-
-func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
-	resourceType, resourceID, resourceName, ok := m.selectedInspectResource()
-	if !ok {
-		return m, nil
-	}
-	m.previousScreen = m.screen
-	m.screen = screenModeInspect
-	m.logs.Viewport.SetXOffset(0)
-	m.logs.InitialLoad = true
-	m.logs.Data = nil
-	m.logs.ContainerID = resourceID
-	m.logs.ResourceName = resourceName
-	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
-}
-
-func (m *model) loadInspectCmd(resourceType int, resourceID, resourceName string) tea.Cmd {
-	svc := m.service
-	return func() tea.Msg {
-		var data []string
-		var err error
-		switch resourceType {
-		case tabContainers:
-			data, err = svc.InspectContainer(resourceID)
-		case tabImages:
-			data, err = svc.InspectImage(resourceID)
-		case tabNetworks:
-			data, err = svc.InspectNetwork(resourceID)
-		case tabVolumes:
-			data, err = svc.InspectVolume(resourceID)
-		}
-		return inspectResultMsg{
-			resourceType: resourceType,
-			resourceID:   resourceID,
-			resourceName: resourceName,
-			data:         data,
-			err:          err,
-		}
-	}
-}
-
-func (m model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd) {
-	if msg.err != nil {
-		m.err = msg.err
-		m.logs.InitialLoad = false
-		return m, nil
-	}
-	m.logs.ApplyContentInitial(msg.data)
-	m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
-	return m, nil
-}
-
-func (m *model) handleInspectKey(msg tea.KeyPressMsg) tea.Cmd {
-	keys := viewer.NewKeyMap()
-
-	if m.logs.Filter.Active {
-		switch {
-		case key.Matches(msg, keys.Back):
-			m.closeInspectFilter(true)
-			return nil
-		case msg.String() == "enter":
-			m.closeInspectFilter(false)
-			return nil
-		default:
-			return m.updateViewerFilterInput(m.inspectVisibleWidth(), m.inspectVisibleRows(), msg)
-		}
-	}
-
-	if key.Matches(msg, keys.OpenFilter) {
-		m.openInspectFilter()
-		return nil
-	}
-
-	if key.Matches(msg, keys.Back) {
-		m.exitInspectMode()
-		return nil
-	}
-
-	if key.Matches(msg, keys.ToggleWrap) {
-		m.handleToggleWrap(m.inspectVisibleWidth(), m.inspectVisibleRows())
-		return nil
-	}
-
-	transition := viewer.Controller{}.HandleKey(&m.logs, msg, viewer.NewKeyMap())
-	m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
-	return m.applyLogsTransition(transition)
-}
-
-func (m *model) exitInspectMode() {
-	m.screen = m.previousScreen
-}
-
-func (m model) selectedInspectResource() (int, string, string, bool) {
-	switch m.activeTab {
-	case tabContainers:
-		c, ok := m.selectedContainer()
-		if !ok {
-			return 0, "", "", false
-		}
-		return tabContainers, c.FullID, c.Name, true
-	case tabImages:
-		img, ok := m.selectedImage()
-		if !ok {
-			return 0, "", "", false
-		}
-		return tabImages, img.ID, img.Tags, true
-	case tabNetworks:
-		net, ok := m.selectedNetwork()
-		if !ok {
-			return 0, "", "", false
-		}
-		return tabNetworks, net.ID, net.Name, true
-	case tabVolumes:
-		vol, ok := m.selectedVolume()
-		if !ok {
-			return 0, "", "", false
-		}
-		return tabVolumes, vol.Name, vol.Name, true
-	default:
-		return 0, "", "", false
-	}
-}
-
-func (m model) inspectVisibleWidth() int {
-	totalWidth := max(1, m.width)
-	return m.logsPageContentWidth(totalWidth)
-}
-
-func (m model) inspectVisibleRows() int {
-	mainHeight := util.MainAreaHeight(m.height, m.renderHeader(), m.renderFooter())
-	contentHeight := m.logsPageContentHeight(mainHeight)
-	return viewer.VisibleRowsForContent(contentHeight, m.logs.Filter.Active)
-}
-
-func (m model) shouldAnimateMetricsLoadingIndicator() bool {
-	return !m.metricsLoaded && m.loadingStage != loadStageIdle
-}
-
-func preserveRunningContainerMetrics(currentRows, previousRows []core.ContainerRow) []core.ContainerRow {
-	if len(currentRows) == 0 || len(previousRows) == 0 {
-		return currentRows
-	}
-
-	previousByID := make(map[string]core.ContainerRow, len(previousRows))
-	for _, row := range previousRows {
-		previousByID[row.FullID] = row
-	}
-
-	merged := make([]core.ContainerRow, len(currentRows))
-	copy(merged, currentRows)
-	for index, row := range merged {
-		if !strings.EqualFold(row.State, "running") {
-			continue
-		}
-		// Only preserve old metrics if current metrics are stale/missing
-		if row.CPUPercent >= 0 && row.MemoryUsage != "-" && row.MemoryUsage != "loading" {
-			continue // Current has real metrics, don't overwrite
-		}
-		previous, ok := previousByID[row.FullID]
-		if !ok || previous.MemoryUsage == "-" || previous.MemoryUsage == "loading" {
-			continue // Previous doesn't have good metrics either
-		}
-		merged[index].CPUPercent = previous.CPUPercent
-		merged[index].MemoryPercent = previous.MemoryPercent
-		merged[index].MemoryUsage = previous.MemoryUsage
-		merged[index].MemoryLimit = previous.MemoryLimit
-		merged[index].MemoryUsageBytes = previous.MemoryUsageBytes
-		merged[index].MemoryLimitBytes = previous.MemoryLimitBytes
-	}
-
-	return merged
-}
-
-func (m model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	keys := menu.NewKeyMap()
-	transition := menu.Controller{}.HandleKey(&m.menu, &m.help, msg, keys)
-	if transition.Quit {
-		return m, tea.Quit
-	}
-	return m, nil
-}
-
-func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	keys := menu.NewKeyMap()
-	helpHeight := m.height * 9 / 10
-	bodyHeight := menu.HelpBodyHeight(helpHeight, m.styles.HelpFrame)
-	contentHeight := menu.HelpBodyLineCount(m.help.Commands)
-	transition := menu.Controller{}.HandleHelpKey(&m.help, &m.menu, msg, keys, contentHeight, bodyHeight)
-	if transition.Back {
-		m.help.Active = false
-		m.menu.Active = true
-	}
-	return m, nil
 }

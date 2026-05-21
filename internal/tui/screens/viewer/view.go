@@ -32,6 +32,7 @@ type ViewModel struct {
 	Styles           ViewStyles
 	ContentType      ContentType
 	ResourceType     ResourceType
+	HistoryLoad      bool
 }
 
 const filterHeaderHeight = 2
@@ -135,7 +136,7 @@ func renderPanel(vm ViewModel, width, height int) string {
 
 	lines := strings.Split(vm.State.Viewport.View(), "\n")
 	lines = renderHorizontalScrollIndicators(vm.State, lines, filtered, max(1, vm.State.Viewport.Width()), vm.Styles.Muted.Reverse(true))
-	if vm.State.HistoryLoad {
+	if vm.ContentType == ContentTypeLogs && vm.HistoryLoad {
 		lines = append([]string{renderHistoryLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator, vm.LoadingMessage)}, lines...)
 	}
 	lines = util.ClipAndPadLines(lines, height, "")

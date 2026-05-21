@@ -1,6 +1,7 @@
 package viewer
 
 import (
+	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/components"
 
 	"charm.land/bubbles/v2/viewport"
@@ -8,7 +9,7 @@ import (
 
 type Transition struct {
 	ExitToBrowse bool
-	ForceTab     int
+	ForceTab     shared.Tab
 	Load         *LoadRequest
 	Err          error
 	LaunchShell  bool
@@ -70,22 +71,15 @@ const (
 )
 
 type State struct {
-	ContainerID               string
-	SessionID                 int
-	Data                      []string
-	TailLines                 int
-	HistoryBaseLen            int
-	HistoryAppendedDuringLoad int
-	HistoryNoProgressCount    int
-	Filter                    components.FilterState
-	WrapLines                 bool
-	InitialLoad               bool
-	HistoryDone               bool
-	HistoryLoad               bool
-	Follow                    bool
-	Viewport                  viewport.Model
-	ContentType               ContentType
-	ResourceName              string
+	ContainerID string
+	Data        []string
+	Filter      components.FilterState
+	WrapLines   bool
+	InitialLoad bool
+	Follow      bool
+	Viewport    viewport.Model
+	ContentType ContentType
+	ResourceName string
 }
 
 func NewState() State {
