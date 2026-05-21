@@ -5,6 +5,15 @@ import (
 	"time"
 )
 
+type ResourceType int
+
+const (
+	ResourceContainer ResourceType = iota
+	ResourceImage
+	ResourceNetwork
+	ResourceVolume
+)
+
 type Snapshot struct {
 	Containers      []ContainerRow
 	ComposeProjects []ComposeProject

@@ -295,18 +295,28 @@ func (m model) browseSelections() browse.SelectionSet {
 	}
 }
 
-type browseDetailRenderer struct{ model }
+type browseDetailRenderer struct {
+	detailLine       func(label, value string, width int) string
+	containerStateFn func(container core.ContainerRow) string
+}
 
 func (r browseDetailRenderer) DetailLine(label, value string, width int) string {
-	return r.model.detailLineWithWidth(label, value, width)
+	return r.detailLine(label, value, width)
 }
 
 func (r browseDetailRenderer) RenderContainerState(container core.ContainerRow) string {
-	return r.model.stateStyle(container.State).Render(browse.ContainerStateText(container))
+	return r.containerStateFn(container)
 }
 
 func (m model) browseDetailRenderer() browse.DetailProvider {
-	return browseDetailRenderer{model: m}
+	return browseDetailRenderer{
+		detailLine:       m.detailLineWithWidth,
+		containerStateFn: m.renderContainerState,
+	}
+}
+
+func (m model) renderContainerState(container core.ContainerRow) string {
+	return m.stateStyle(container.State).Render(browse.ContainerStateText(container))
 }
 
 func (m model) stateStyle(state string) lipgloss.Style {

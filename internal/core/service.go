@@ -164,3 +164,21 @@ func (s *Service) InspectVolume(volumeName string) ([]string, error) {
 	defer cancel()
 	return s.repo.InspectVolume(ctx, volumeName)
 }
+
+func (s *Service) InspectResource(rt ResourceType, id string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
+	defer cancel()
+
+	switch rt {
+	case ResourceContainer:
+		return s.repo.InspectContainer(ctx, id)
+	case ResourceImage:
+		return s.repo.InspectImage(ctx, id)
+	case ResourceNetwork:
+		return s.repo.InspectNetwork(ctx, id)
+	case ResourceVolume:
+		return s.repo.InspectVolume(ctx, id)
+	default:
+		return nil, nil
+	}
+}

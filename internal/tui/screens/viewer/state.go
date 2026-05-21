@@ -43,6 +43,21 @@ func (s *State) SyncViewport(lines []string, visibleWidth, visibleRows int) {
 	}
 }
 
+func PrepareContentLines(data []string, query string, wrapWidth int, wrapEnabled bool) []string {
+	lines := FilterLines(data, query)
+
+	sanitized := make([]string, 0, len(lines))
+	for _, line := range lines {
+		sanitized = append(sanitized, SanitizeLine(line))
+	}
+
+	if wrapEnabled && wrapWidth > 0 {
+		sanitized = WrapLines(sanitized, wrapWidth)
+	}
+
+	return sanitized
+}
+
 func (s *State) SyncFromData(visibleWidth, visibleRows int) {
 	s.InitialLoad = false
 
@@ -51,18 +66,8 @@ func (s *State) SyncFromData(visibleWidth, visibleRows int) {
 		return
 	}
 
-	lines := FilterLines(s.Data, s.Filter.Query)
-
-	sanitized := make([]string, 0, len(lines))
-	for _, line := range lines {
-		sanitized = append(sanitized, SanitizeLine(line))
-	}
-
-	if s.WrapLines {
-		sanitized = WrapLines(sanitized, visibleWidth)
-	}
-
-	s.SyncViewport(sanitized, visibleWidth, visibleRows)
+	lines := PrepareContentLines(s.Data, s.Filter.Query, visibleWidth, s.WrapLines)
+	s.SyncViewport(lines, visibleWidth, visibleRows)
 }
 
 func (s *State) ApplyContentForPoll(data []string) {

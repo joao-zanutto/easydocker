@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
@@ -39,18 +40,7 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 func (m *model) loadInspectCmd(resourceType shared.Tab, resourceID, resourceName string) tea.Cmd {
 	svc := m.service
 	return func() tea.Msg {
-		var data []string
-		var err error
-		switch resourceType {
-		case tabContainers:
-			data, err = svc.InspectContainer(resourceID)
-		case tabImages:
-			data, err = svc.InspectImage(resourceID)
-		case tabNetworks:
-			data, err = svc.InspectNetwork(resourceID)
-		case tabVolumes:
-			data, err = svc.InspectVolume(resourceID)
-		}
+		data, err := svc.InspectResource(tabToResourceType(resourceType), resourceID)
 		return inspectResultMsg{
 			resourceType: int(resourceType),
 			resourceID:   resourceID,
@@ -58,6 +48,21 @@ func (m *model) loadInspectCmd(resourceType shared.Tab, resourceID, resourceName
 			data:         data,
 			err:          err,
 		}
+	}
+}
+
+func tabToResourceType(tab shared.Tab) core.ResourceType {
+	switch tab {
+	case tabContainers:
+		return core.ResourceContainer
+	case tabImages:
+		return core.ResourceImage
+	case tabNetworks:
+		return core.ResourceNetwork
+	case tabVolumes:
+		return core.ResourceVolume
+	default:
+		return core.ResourceContainer
 	}
 }
 
