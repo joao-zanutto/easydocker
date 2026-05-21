@@ -24,7 +24,7 @@ func (m *model) clearBrowseFilter() {
 }
 
 func (m *model) toggleContainerScope() {
-	showAll, toggled := tuistate.ToggleContainerScope(m.activeTab, tabContainers, m.showAll)
+	showAll, toggled := tuistate.ToggleContainerScope(m.activeTab, m.showAll)
 	if !toggled {
 		return
 	}
@@ -55,7 +55,7 @@ func (m *model) openShellIfContainerSelected() tea.Cmd {
 	if !tuistate.CanOpenShell(container.State) {
 		return nil
 	}
-	return m.shellCmd(container.FullID)
+	return shellCmd(m.service, container.FullID)
 }
 
 func (m *model) toggleSelectedComposeProject() bool {
@@ -79,15 +79,12 @@ func (m *model) moveCursor(delta int) {
 
 func (m *model) clampCursors() {
 	sel := m.selectionState()
-	tabs := make([]int, tuistate.TabCount)
-	for i := range tabs {
-		tabs[i] = i
-	}
+	tabs := []tuistate.Tab{tabContainers, tabImages, tabNetworks, tabVolumes}
 	tuistate.ClampAllCursors(&sel.Cursors, tabs, m.itemCountForTab)
 	m.applySelectionState(sel)
 }
 
-func (m model) itemCountForTab(tab int) int {
+func (m model) itemCountForTab(tab tuistate.Tab) int {
 	switch tab {
 	case tabContainers:
 		return len(m.containerListRows())
@@ -180,7 +177,7 @@ func selectedAt[T any](items []T, cursor int) (T, bool) {
 }
 
 func (m *model) reconcileLogsSelection() error {
-	if m.screen != screenModeLogs {
+	if m.screen != tuistate.Logs {
 		return nil
 	}
 	if index, ok := m.findContainerIndexByID(m.logs.ContainerID); ok {

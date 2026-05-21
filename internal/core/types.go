@@ -1,6 +1,18 @@
 package core
 
-import "time"
+import (
+	"strings"
+	"time"
+)
+
+type ResourceType int
+
+const (
+	ResourceContainer ResourceType = iota
+	ResourceImage
+	ResourceNetwork
+	ResourceVolume
+)
 
 type Snapshot struct {
 	Containers      []ContainerRow
@@ -131,4 +143,38 @@ func ApplyMetricsToContainers(rows []ContainerRow, metricsByID map[string]Contai
 		updated[index].MemoryLimitBytes = metrics.MemoryLimitBytes
 	}
 	return updated
+}
+
+func PreserveRunningContainerMetrics(currentRows, previousRows []ContainerRow) []ContainerRow {
+	if len(currentRows) == 0 || len(previousRows) == 0 {
+		return currentRows
+	}
+
+	previousByID := make(map[string]ContainerRow, len(previousRows))
+	for _, row := range previousRows {
+		previousByID[row.FullID] = row
+	}
+
+	merged := make([]ContainerRow, len(currentRows))
+	copy(merged, currentRows)
+	for index, row := range merged {
+		if !strings.EqualFold(row.State, "running") {
+			continue
+		}
+		if row.CPUPercent >= 0 && row.MemoryUsage != "-" && row.MemoryUsage != "loading" {
+			continue
+		}
+		previous, ok := previousByID[row.FullID]
+		if !ok || previous.MemoryUsage == "-" || previous.MemoryUsage == "loading" {
+			continue
+		}
+		merged[index].CPUPercent = previous.CPUPercent
+		merged[index].MemoryPercent = previous.MemoryPercent
+		merged[index].MemoryUsage = previous.MemoryUsage
+		merged[index].MemoryLimit = previous.MemoryLimit
+		merged[index].MemoryUsageBytes = previous.MemoryUsageBytes
+		merged[index].MemoryLimitBytes = previous.MemoryLimitBytes
+	}
+
+	return merged
 }

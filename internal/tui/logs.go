@@ -5,6 +5,7 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/viewer"
+	"easydocker/internal/tui/shared"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -14,21 +15,44 @@ const (
 	TailStep    = 200
 )
 
-type LogsState = viewer.State
+type LogsState struct {
+	viewer.State
+	SessionID                 int
+	TailLines                 int
+	HistoryBaseLen            int
+	HistoryAppendedDuringLoad int
+	HistoryNoProgressCount    int
+	HistoryDone               bool
+	HistoryLoad               bool
+}
 
 func NewLogsState() LogsState {
-	st := viewer.NewState()
+	st := LogsState{State: viewer.NewState()}
 	st.Follow = true
 	st.InitialLoad = true
 	return st
 }
 
-func ResetLogsForContainer(s *LogsState, sessionID int, containerID string, tail int) {
-	s.ResetForContainer(sessionID, containerID, tail)
+func (s *LogsState) ResetForContainer(sessionID int, containerID string, tail int) {
+	s.SessionID = sessionID
+	s.ContainerID = containerID
+	s.TailLines = tail
+	s.InitialLoad = true
+	s.Follow = true
+	s.Data = nil
+	s.HistoryLoad = false
+	s.HistoryDone = false
+	s.HistoryBaseLen = 0
+	s.HistoryAppendedDuringLoad = 0
+	s.HistoryNoProgressCount = 0
+	s.Viewport.SetXOffset(0)
+	s.Filter.Active = false
+	s.Filter.Query = ""
+	s.Filter.Input.SetValue("")
 }
 
-func ResetLogsForExit(s *LogsState, sessionID int) {
-	s.ResetForExit(sessionID)
+func (s *LogsState) ResetForExit(sessionID int) {
+	s.SessionID = sessionID
 }
 
 func CanLoadHistory(s LogsState) bool {
@@ -96,7 +120,7 @@ func ApplyInitial(s *LogsState, data []string) {
 
 func EnterLogsState(s *LogsState, containerID string) viewer.Transition {
 	nextSession := s.SessionID + 1
-	ResetLogsForContainer(s, nextSession, containerID, InitialTail)
+	s.ResetForContainer(nextSession, containerID, InitialTail)
 	return viewer.Transition{
 		Load: &viewer.LoadRequest{
 			ContainerID: containerID,
@@ -107,9 +131,9 @@ func EnterLogsState(s *LogsState, containerID string) viewer.Transition {
 	}
 }
 
-func ExitLogsState(s *LogsState, containersTab int) viewer.Transition {
+func ExitLogsState(s *LogsState, containersTab shared.Tab) viewer.Transition {
 	nextSession := s.SessionID + 1
-	ResetLogsForExit(s, nextSession)
+	s.ResetForExit(nextSession)
 	return viewer.Transition{ExitToBrowse: true, ForceTab: containersTab}
 }
 

@@ -10,24 +10,19 @@ import (
 	"charm.land/bubbles/v2/key"
 )
 
-var (
-	defaultBrowseKeyMap = browse.NewKeyMap()
-	defaultViewerKeyMap = viewer.NewKeyMap()
-)
-
 func browseKeyMap() browse.KeyMap {
-	return defaultBrowseKeyMap
+	return browse.NewKeyMap()
 }
 
 func viewerKeyMap() viewer.KeyMap {
-	return defaultViewerKeyMap
+	return viewer.NewKeyMap()
 }
 
 func (m model) footerKeyMap() help.KeyMap {
-	if m.screen == screenModeLogs || m.screen == screenModeInspect {
+	if m.screen == shared.Logs || m.screen == shared.Inspect {
 		viewerKeys := viewerKeyMap()
 		contentType := viewer.ContentTypeLogs
-		if m.screen == screenModeInspect {
+		if m.screen == shared.Inspect {
 			contentType = viewer.ContentTypeInspect
 		}
 		if m.logs.Filter.Active {
@@ -48,7 +43,6 @@ func (m model) footerKeyMap() help.KeyMap {
 
 	browseKeys := browseKeyMap()
 
-	// If filter mode is active, show filter-specific controls
 	if m.browseFilter.Active {
 		bindings := []key.Binding{
 			shared.EscBinding("clear/exit filter"),

@@ -158,7 +158,7 @@ func TestHistoryKeyHandling(t *testing.T) {
 		state.Viewport.SetYOffset(0)
 		state.Follow = false
 		state.HistoryDone = false
-		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyHome}, viewer.NewKeyMap())
+		viewer.Controller{}.HandleKey(&state.State, tea.KeyPressMsg{Code: tea.KeyHome}, viewer.NewKeyMap())
 		trans := HistoryLoadRequest(&state)
 		if trans == nil {
 			t.Fatal("expected Load request")
@@ -173,7 +173,7 @@ func TestHistoryKeyHandling(t *testing.T) {
 		state.Data = []string{"line1", "line2", "line3"}
 		state.Viewport.SetYOffset(1)
 		state.Follow = false
-		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyPgUp}, viewer.NewKeyMap())
+		viewer.Controller{}.HandleKey(&state.State, tea.KeyPressMsg{Code: tea.KeyPgUp}, viewer.NewKeyMap())
 		trans := HistoryLoadRequest(&state)
 		if trans == nil {
 			t.Fatal("expected Load request")
@@ -189,7 +189,7 @@ func TestHistoryKeyHandling(t *testing.T) {
 		state.Viewport.SetYOffset(0)
 		state.Follow = false
 		state.HistoryDone = false
-		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyEnd}, viewer.NewKeyMap())
+		viewer.Controller{}.HandleKey(&state.State, tea.KeyPressMsg{Code: tea.KeyEnd}, viewer.NewKeyMap())
 		trans := HistoryLoadRequest(&state)
 		if trans == nil {
 			t.Fatal("expected Load request for End key")

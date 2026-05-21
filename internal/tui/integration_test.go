@@ -8,11 +8,23 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/viewer"
+	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 )
+
+func unwrapModel(m tea.Model) *model {
+	switch v := m.(type) {
+	case *model:
+		return v
+	case model:
+		return &v
+	default:
+		panic("unexpected model type")
+	}
+}
 
 func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 	m := model{
@@ -31,17 +43,17 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 	}
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
-	current := updated.(model)
+	current := unwrapModel(updated)
 	if current.width != 100 || current.height != 40 {
 		t.Fatalf("window size not applied: got (%d,%d)", current.width, current.height)
 	}
 
 	updated, cmd := current.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	current = updated.(model)
+	current = unwrapModel(updated)
 	if cmd == nil {
 		t.Fatalf("enter should return logs load command when container is selected")
 	}
-	if current.screen != screenModeLogs {
+	if current.screen != shared.Logs {
 		t.Fatalf("screen = %v, want logs", current.screen)
 	}
 	if current.logs.ContainerID != "ctr-1" {
@@ -49,11 +61,11 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 	}
 
 	updated, cmd = current.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
-	current = updated.(model)
+	current = unwrapModel(updated)
 	if cmd != nil {
 		t.Fatalf("esc in logs should not schedule command")
 	}
-	if current.screen != screenModeBrowse {
+	if current.screen != shared.Browse {
 		t.Fatalf("screen = %v, want browse", current.screen)
 	}
 	if current.activeTab != tabContainers {
@@ -67,7 +79,7 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 		height:           28,
 		activeTab:        tabContainers,
 		showAll:          true,
-		screen:           screenModeBrowse,
+		screen:           shared.Browse,
 		styles:           defaultStyles(),
 		logs:             NewLogsState(),
 		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
@@ -83,7 +95,7 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 		t.Fatalf("browse view missing header")
 	}
 
-	m.screen = screenModeLogs
+	m.screen = shared.Logs
 	m.logs.ContainerID = "ctr-1"
 	m.logs.Data = []string{"line-1", "line-2"}
 	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
@@ -107,19 +119,19 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 	}
 
 	updated, cmd := m.Update(containersResultMsg{containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}})
-	current := updated.(model)
+	current := unwrapModel(updated)
 	if cmd == nil || current.loadingStage != loadStageResources {
 		t.Fatalf("expected transition to resources stage")
 	}
 
 	updated, cmd = current.Update(resourcesResultMsg{snapshot: core.Snapshot{Images: []core.ImageRow{{ID: "img-1"}}, Networks: []core.NetworkRow{{ID: "net-1"}}, Volumes: []core.VolumeRow{{Name: "vol-1"}}, TotalLimit: 1000}})
-	current = updated.(model)
+	current = unwrapModel(updated)
 	if cmd == nil || current.loadingStage != loadStageMetrics {
 		t.Fatalf("expected transition to metrics stage")
 	}
 
 	updated, cmd = current.Update(metricsResultMsg{metricsByID: map[string]core.ContainerMetrics{"ctr-1": {CPUPercent: 12.5, MemoryUsage: "10 MiB", MemoryLimit: "100 MiB", MemoryUsageBytes: 10, MemoryLimitBytes: 100, MemoryPercent: 10}}, totalCPU: 12.5, totalMem: 10})
-	current = updated.(model)
+	current = unwrapModel(updated)
 	if cmd != nil {
 		t.Fatalf("metrics stage should not schedule command")
 	}
@@ -170,7 +182,7 @@ func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 		MemoryUsage: "loading",
 		MemoryLimit: "-",
 	}}})
-	current := updated.(model)
+	current := unwrapModel(updated)
 
 	container := current.snapshot.Containers[0]
 	if container.CPUPercent != 12.5 || container.MemoryUsage != "10 MiB" {
@@ -209,13 +221,13 @@ func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 }
 
 func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 100
 	m.height = 30
-	m.screen = screenModeBrowse
+	m.screen = shared.Browse
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
-	current := updated.(model)
+	current := unwrapModel(updated)
 	if cmd != nil {
 		t.Fatalf("backspace in browse mode should not trigger a command")
 	}
@@ -229,7 +241,7 @@ func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
 	current.browseFilter.Query = "abc"
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
-	after := updated.(model)
+	after := unwrapModel(updated)
 	if !after.browseFilter.Active {
 		t.Fatalf("backspace in filter mode should not exit filter mode")
 	}
@@ -239,10 +251,10 @@ func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
 }
 
 func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 80
 	m.height = 24
-	m.screen = screenModeLogs
+	m.screen = shared.Logs
 	m.activeTab = tabContainers
 	m.snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -252,7 +264,7 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
-	current := updated.(model)
+	current := unwrapModel(updated)
 	if !current.logs.WrapLines {
 		t.Fatalf("wrap should be enabled after pressing w")
 	}
@@ -267,17 +279,17 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 	}
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyRight})
-	after := updated.(model)
+	after := unwrapModel(updated)
 	if after.logs.Viewport.XOffset() != current.logs.Viewport.XOffset() {
 		t.Fatalf("horizontal scroll should be ignored while wrapped, got %d want %d", after.logs.Viewport.XOffset(), current.logs.Viewport.XOffset())
 	}
 }
 
 func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 80
 	m.height = 24
-	m.screen = screenModeLogs
+	m.screen = shared.Logs
 	m.activeTab = tabContainers
 	m.snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -295,30 +307,30 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 	m.logs.Viewport.SetYOffset(nearBottom)
 
 	beforeList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
-	beforeStart, _ := viewer.VisibleContentRange(&m.logs, beforeList)
+	beforeStart, _ := viewer.VisibleContentRange(&m.logs.State, beforeList)
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
-	after := updated.(model)
+	after := unwrapModel(updated)
 	if !after.logs.WrapLines {
 		t.Fatalf("wrap should be enabled after pressing w")
 	}
 
 	afterList := viewer.FilterLines(after.logs.Data, after.logs.Filter.Query)
-	afterStart, _ := viewer.VisibleContentRange(&after.logs, afterList)
+	afterStart, _ := viewer.VisibleContentRange(&after.logs.State, afterList)
 	if afterStart != beforeStart {
 		t.Fatalf("visible raw log anchor changed across wrap toggle, before=%d after=%d", beforeStart, afterStart)
 	}
 }
 
 func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.logs.Viewport.SetXOffset(24)
-	m.screen = screenModeBrowse
+	m.screen = shared.Browse
 	m.activeTab = tabContainers
 	m.snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	current := updated.(model)
+	current := unwrapModel(updated)
 	if cmd == nil {
 		t.Fatalf("entering logs mode should return a command")
 	}
@@ -328,11 +340,11 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 
 	current.logs.Viewport.SetXOffset(32)
 	current.activeTab = tabContainers
-	current.screen = screenModeBrowse
+	current.screen = shared.Browse
 	current.snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
 
 	updated, cmd = current.handleInspectTransition()
-	current = *updated.(*model)
+	current = unwrapModel(updated)
 	if cmd == nil {
 		t.Fatalf("entering inspect mode should return a command")
 	}
@@ -342,15 +354,15 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 }
 
 func TestIntegration_FilterPromptIcon(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	if m.browseFilter.Input.Prompt != "🔎︎ " {
 		t.Fatalf("filter prompt = %q, want %q", m.browseFilter.Input.Prompt, "🔎︎ ")
 	}
 }
 
 func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
-	m := New(nil).(model)
-	m.screen = screenModeBrowse
+	m := unwrapModel(New(nil))
+	m.screen = shared.Browse
 	m.activeTab = tabContainers
 	m.showAll = true
 	m.containerCursor = 0
@@ -366,7 +378,7 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 	}
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
-	after := updated.(model)
+	after := unwrapModel(updated)
 	if after.containerCursor != 1 {
 		t.Fatalf("filter mode down should move cursor to 1, got %d", after.containerCursor)
 	}
@@ -379,8 +391,8 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 }
 
 func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
-	m := New(nil).(model)
-	m.screen = screenModeBrowse
+	m := unwrapModel(New(nil))
+	m.screen = shared.Browse
 	m.activeTab = tabContainers
 	m.showAll = true
 	m.snapshot = core.Snapshot{
@@ -395,21 +407,21 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 	}
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	afterExpand := updated.(model)
+	afterExpand := unwrapModel(updated)
 	if got := afterExpand.itemCountForTab(tabContainers); got != 3 {
 		t.Fatalf("expanded compose list should show project + 2 containers, got %d", got)
 	}
 
 	updated, _ = afterExpand.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	afterCollapse := updated.(model)
+	afterCollapse := unwrapModel(updated)
 	if got := afterCollapse.itemCountForTab(tabContainers); got != 1 {
 		t.Fatalf("collapsed compose list should return to one row, got %d", got)
 	}
 }
 
 func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
-	m := New(nil).(model)
-	m.screen = screenModeBrowse
+	m := unwrapModel(New(nil))
+	m.screen = shared.Browse
 	m.activeTab = tabContainers
 	m.showAll = true
 	m.snapshot = core.Snapshot{
@@ -417,11 +429,11 @@ func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 	}
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	after := updated.(model)
+	after := unwrapModel(updated)
 	if cmd != nil {
 		t.Fatalf("enter on compose project row should not open logs command")
 	}
-	if after.screen != screenModeBrowse {
+	if after.screen != shared.Browse {
 		t.Fatalf("screen = %v, want browse", after.screen)
 	}
 	if got := after.itemCountForTab(tabContainers); got != 2 {
@@ -430,10 +442,10 @@ func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 }
 
 func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 120
 	m.height = 34
-	m.screen = screenModeBrowse
+	m.screen = shared.Browse
 	m.activeTab = tabContainers
 	m.snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
@@ -445,7 +457,7 @@ func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.
 	}
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	after := updated.(model)
+	after := unwrapModel(updated)
 	expandedView := after.View().Content
 	if !strings.Contains(expandedView, "collapse") {
 		t.Fatalf("expanded compose row should advertise collapse action, got %q", expandedView)
@@ -453,10 +465,10 @@ func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.
 }
 
 func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 120
 	m.height = 34
-	m.screen = screenModeBrowse
+	m.screen = shared.Browse
 	m.activeTab = tabContainers
 	m.showAll = true
 	m.snapshot = core.Snapshot{
@@ -476,15 +488,15 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 }
 
 func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
-	m := New(nil).(model)
-	m.screen = screenModeBrowse
+	m := unwrapModel(New(nil))
+	m.screen = shared.Browse
 	m.activeTab = tabContainers
 	m.showAll = true
 	m.browseFilter.Query = "redis"
 	m.browseFilter.Input.SetValue("redis")
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
-	after := updated.(model)
+	after := unwrapModel(updated)
 
 	if after.activeTab != tabImages {
 		t.Fatalf("active tab = %d, want %d", after.activeTab, tabImages)
@@ -498,10 +510,10 @@ func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
 }
 
 func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 120
 	m.height = 34
-	m.screen = screenModeLogs
+	m.screen = shared.Logs
 	m.activeTab = tabContainers
 	m.snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -511,13 +523,13 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 	m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
-	current := updated.(model)
+	current := unwrapModel(updated)
 	if !current.logs.Filter.Active {
 		t.Fatalf("slash should activate logs filter mode")
 	}
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
-	current = updated.(model)
+	current = unwrapModel(updated)
 	if current.logs.Filter.Query != "q" {
 		t.Fatalf("logs filter query = %q, want q", current.logs.Filter.Query)
 	}
@@ -530,7 +542,7 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 	}
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
-	after := updated.(model)
+	after := unwrapModel(updated)
 	if after.logs.Filter.Active {
 		t.Fatalf("esc should exit logs filter mode")
 	}
@@ -544,10 +556,10 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 }
 
 func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 120
 	m.height = 34
-	m.screen = screenModeLogs
+	m.screen = shared.Logs
 	m.activeTab = tabContainers
 	m.snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -568,7 +580,7 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 
 	before := m.logs.Viewport.YOffset()
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
-	after := updated.(model)
+	after := unwrapModel(updated)
 
 	if after.logs.Viewport.YOffset() <= before {
 		t.Fatalf("expected vertical navigation in logs filter mode to move viewport, before=%d after=%d", before, after.logs.Viewport.YOffset())
@@ -581,10 +593,10 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 	}
 }
 func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 120
 	m.height = 34
-	m.screen = screenModeLogs
+	m.screen = shared.Logs
 	m.activeTab = tabContainers
 	m.snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -605,7 +617,7 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 	beforeBottom := beforeYOffset + beforeRows - 1
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
-	after := updated.(model)
+	after := unwrapModel(updated)
 
 	if !after.logs.Filter.Active {
 		t.Fatalf("slash should activate logs filter mode")
@@ -621,10 +633,10 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 }
 
 func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
-	m := New(nil).(model)
+	m := unwrapModel(New(nil))
 	m.width = 120
 	m.height = 34
-	m.screen = screenModeLogs
+	m.screen = shared.Logs
 	m.activeTab = tabContainers
 	m.snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -643,16 +655,16 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 	baseRows := m.logVisibleRows()
 	baseBottom := m.logs.Viewport.YOffset() + baseRows - 1
 
-	current := m
+	current := *m
 	for i := 0; i < 3; i++ {
 		updated, _ := current.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
-		current = updated.(model)
+		current = *unwrapModel(updated)
 		if !current.logs.Filter.Active {
 			t.Fatalf("cycle %d: slash should activate logs filter mode", i)
 		}
 
 		updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-		current = updated.(model)
+		current = *unwrapModel(updated)
 		if current.logs.Filter.Active {
 			t.Fatalf("cycle %d: enter should close logs filter mode", i)
 		}
@@ -665,8 +677,8 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 }
 
 func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
-	m := New(nil).(model)
-	m.screen = screenModeLogs
+	m := unwrapModel(New(nil))
+	m.screen = shared.Logs
 	m.logs.ContainerID = "ctr-1"
 	m.logs.Data = make([]string, 220)
 	for i := range m.logs.Data {
@@ -709,15 +721,15 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 		t.Fatalf("should poll when not at top and no load is active")
 	}
 
-	m.screen = screenModeBrowse
+	m.screen = shared.Browse
 	if m.shouldPollLogsOnTick() {
 		t.Fatalf("should not poll outside logs screen")
 	}
 }
 
 func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
-	m := New(nil).(model)
-	m.screen = screenModeLogs
+	m := unwrapModel(New(nil))
+	m.screen = shared.Logs
 	m.logs.ContainerID = "ctr-1"
 	m.logs.Data = make([]string, 220)
 	for i := range m.logs.Data {
@@ -737,7 +749,7 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 	}
 
 	updated, cmd := m.Update(tickMsg(time.Now()))
-	current := updated.(model)
+	current := unwrapModel(updated)
 	if cmd == nil {
 		t.Fatalf("tick at top should schedule a history load command")
 	}

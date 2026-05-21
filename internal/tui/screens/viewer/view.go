@@ -32,6 +32,7 @@ type ViewModel struct {
 	Styles           ViewStyles
 	ContentType      ContentType
 	ResourceType     ResourceType
+	HistoryLoad      bool
 }
 
 const filterHeaderHeight = 2
@@ -135,7 +136,7 @@ func renderPanel(vm ViewModel, width, height int) string {
 
 	lines := strings.Split(vm.State.Viewport.View(), "\n")
 	lines = renderHorizontalScrollIndicators(vm.State, lines, filtered, max(1, vm.State.Viewport.Width()), vm.Styles.Muted.Reverse(true))
-	if vm.State.HistoryLoad {
+	if vm.ContentType == ContentTypeLogs && vm.HistoryLoad {
 		lines = append([]string{renderHistoryLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator, vm.LoadingMessage)}, lines...)
 	}
 	lines = util.ClipAndPadLines(lines, height, "")
@@ -169,7 +170,7 @@ func renderHorizontalScrollIndicators(state *State, lines, renderLines []string,
 		return lines
 	}
 
-	start, end := viewportRange(state, len(renderLines))
+	start, end := ViewportRange(state, len(renderLines))
 	visible := renderLines[start:end]
 	if len(visible) == 0 {
 		return lines
@@ -224,16 +225,6 @@ func renderRightPriorityLine(left, right string, width int) string {
 	leftRenderedWidth := util.DisplayWidth(left)
 	spacing := max(0, width-leftRenderedWidth-rightWidth)
 	return left + strings.Repeat(" ", spacing) + right
-}
-
-func viewportRange(state *State, total int) (int, int) {
-	if total <= 0 {
-		return 0, 0
-	}
-	start := util.Clamp(state.Viewport.YOffset(), 0, max(0, total-1))
-	visible := max(1, state.Viewport.VisibleLineCount())
-	end := min(total, start+visible)
-	return start, end
 }
 
 func getResourceLabel(rt ResourceType) string {

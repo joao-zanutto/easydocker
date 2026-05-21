@@ -34,28 +34,6 @@ func (s *State) CloseFilter(clear bool) {
 	}
 }
 
-func (s *State) ResetForContainer(sessionID int, containerID string, tail int) {
-	s.SessionID = sessionID
-	s.ContainerID = containerID
-	s.TailLines = tail
-	s.InitialLoad = true
-	s.Follow = true
-	s.Data = nil
-	s.HistoryLoad = false
-	s.HistoryDone = false
-	s.HistoryBaseLen = 0
-	s.HistoryAppendedDuringLoad = 0
-	s.HistoryNoProgressCount = 0
-	s.Viewport.SetXOffset(0)
-	s.Filter.Active = false
-	s.Filter.Query = ""
-	s.Filter.Input.SetValue("")
-}
-
-func (s *State) ResetForExit(sessionID int) {
-	s.SessionID = sessionID
-}
-
 func (s *State) SyncViewport(lines []string, visibleWidth, visibleRows int) {
 	s.Viewport.SetWidth(visibleWidth)
 	s.Viewport.SetHeight(visibleRows)
@@ -63,6 +41,21 @@ func (s *State) SyncViewport(lines []string, visibleWidth, visibleRows int) {
 	if s.Follow {
 		s.Viewport.GotoBottom()
 	}
+}
+
+func PrepareContentLines(data []string, query string, wrapWidth int, wrapEnabled bool) []string {
+	lines := FilterLines(data, query)
+
+	sanitized := make([]string, 0, len(lines))
+	for _, line := range lines {
+		sanitized = append(sanitized, SanitizeLine(line))
+	}
+
+	if wrapEnabled && wrapWidth > 0 {
+		sanitized = WrapLines(sanitized, wrapWidth)
+	}
+
+	return sanitized
 }
 
 func (s *State) SyncFromData(visibleWidth, visibleRows int) {
@@ -73,18 +66,8 @@ func (s *State) SyncFromData(visibleWidth, visibleRows int) {
 		return
 	}
 
-	lines := FilterLines(s.Data, s.Filter.Query)
-
-	sanitized := make([]string, 0, len(lines))
-	for _, line := range lines {
-		sanitized = append(sanitized, SanitizeLine(line))
-	}
-
-	if s.WrapLines {
-		sanitized = WrapLines(sanitized, visibleWidth)
-	}
-
-	s.SyncViewport(sanitized, visibleWidth, visibleRows)
+	lines := PrepareContentLines(s.Data, s.Filter.Query, visibleWidth, s.WrapLines)
+	s.SyncViewport(lines, visibleWidth, visibleRows)
 }
 
 func (s *State) ApplyContentForPoll(data []string) {
@@ -95,6 +78,4 @@ func (s *State) ApplyContentForPoll(data []string) {
 func (s *State) ApplyContentInitial(data []string) {
 	s.Data = data
 	s.InitialLoad = false
-	s.HistoryLoad = false
-	s.HistoryDone = false
 }

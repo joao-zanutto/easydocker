@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/components"
 	"easydocker/internal/tui/util"
 
@@ -15,7 +16,7 @@ import (
 type ViewModel struct {
 	Loading                 bool
 	Snapshot                core.Snapshot
-	ActiveTab               int
+	ActiveTab               shared.Tab
 	MetricsLoadingIndicator string
 	Width                   int
 	Height                  int
@@ -134,14 +135,14 @@ func contentHeights(height int, filterActive bool) (int, int, int) {
 	return ContentHeightsFromFilter(height, filterActive)
 }
 
-func RenderDetail(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
+func RenderDetail(activeTab shared.Tab, selections SelectionSet, loadingIndicator string, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
 	lines := append([]string{sectionStyle.Render("Details")}, activeDetailLines(activeTab, selections, loadingIndicator, provider, mutedStyle, width)...)
 	return strings.Join(util.ClipAndPadLines(util.ConstrainLines(lines, width), height, ""), "\n")
 }
 
-func activeDetailLines(activeTab int, selections SelectionSet, loadingIndicator string, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
+func activeDetailLines(activeTab shared.Tab, selections SelectionSet, loadingIndicator string, provider DetailProvider, mutedStyle lipgloss.Style, width int) []string {
 	switch activeTab {
-	case 0:
+	case shared.TabContainers:
 		if selections.HasComposeProject {
 			return detailLinesForSelection(selections.ComposeProject, selections.HasComposeProject, "No compose project selected.", composeProjectDetailLines, provider, mutedStyle, width)
 		}
@@ -149,9 +150,9 @@ func activeDetailLines(activeTab int, selections SelectionSet, loadingIndicator 
 			return containerDetailLines(container, loadingIndicator, p, w)
 		}
 		return detailLinesForSelection(selections.Container, selections.HasContainer, "No container selected.", builder, provider, mutedStyle, width)
-	case 1:
+	case shared.TabImages:
 		return detailLinesForSelection(selections.Image, selections.HasImage, "No image selected.", imageDetailLines, provider, mutedStyle, width)
-	case 2:
+	case shared.TabNetworks:
 		return detailLinesForSelection(selections.Network, selections.HasNetwork, "No network selected.", networkDetailLines, provider, mutedStyle, width)
 	default:
 		return detailLinesForSelection(selections.Volume, selections.HasVolume, "No volume selected.", volumeDetailLines, provider, mutedStyle, width)
