@@ -52,37 +52,13 @@ func (m model) View() tea.View {
 func (m model) renderMain(height int) string {
 	totalWidth := max(1, m.width)
 	totalHeight := max(1, height)
-	if m.screen == shared.Logs && m.activeTab == tabContainers {
+
+	if m.screen == shared.Logs && m.browse.ActiveTab == tabContainers {
 		container, ok := m.selectedLogsContainer()
 		if !ok {
 			return m.styles.ErrorText.Render("Selected container is no longer available.")
 		}
-
-		logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
-		start, end := viewer.VisibleContentRange(&m.logs.State, logList)
-
-		return viewer.RenderContent(viewer.ViewModel{
-			State:            &m.logs.State,
-			ContainerName:    container.Name,
-			Breadcrumb:       "Containers / " + container.Name + " / Logs",
-			LineCount:        &viewer.LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)},
-			LoadingMessage:   "Loading logs...",
-			EmptyMessage:     "No logs found for this container.",
-			LoadingIndicator: m.logsLoadingIndicator(),
-			Width:            totalWidth,
-			Height:           totalHeight,
-			ContentType:      viewer.ContentTypeLogs,
-			ResourceType:     viewer.ResourceTypeContainer,
-			HistoryLoad:      m.logs.HistoryLoad,
-			Styles: viewer.ViewStyles{
-				Breadcrumb:   m.styles.Breadcrumb,
-				FollowOn:     m.styles.FollowOn,
-				FollowOff:    m.styles.FollowOff,
-				Muted:        m.styles.Muted,
-				Divider:      m.styles.Divider,
-				SubpageFrame: m.styles.SubpageFrame,
-			},
-		})
+		return m.renderLogsContent(container, totalWidth, totalHeight)
 	}
 
 	if m.screen == shared.Inspect {
@@ -90,107 +66,106 @@ func (m model) renderMain(height int) string {
 	}
 
 	layout := util.ComputeFrameLayout(totalWidth, totalHeight, m.styles.MainFrame)
-	content := m.renderBrowseContent(layout.ContentWidth, layout.ContentHeight)
+	m.browse.Width = layout.ContentWidth
+	m.browse.Height = layout.ContentHeight
+	m.browse.DetailProvider = m.browseDetailRenderer()
+	m.browse.ListRenderer = func(width, h int) string {
+		return m.renderResourceList(width, h)
+	}
+	m.browse.ContainerMetricsLoadingIndicator = m.containerMetricsLoadingIndicator
+	m.browse.ContainerListRows = func() []browse.ContainerListRow {
+		rows := m.containerListRows()
+		out := make([]browse.ContainerListRow, len(rows))
+		for i, r := range rows {
+			out[i] = browse.ContainerListRow{
+				Kind:            int(r.Kind),
+				Container:       r.Container,
+				ComposeProject:  r.ComposeProject,
+				ComposeExpanded: r.ComposeExpanded,
+			}
+		}
+		return out
+	}
+	m.browse.FilteredImages = m.filteredImages
+	m.browse.FilteredNetworks = m.filteredNetworks
+	m.browse.FilteredVolumes = m.filteredVolumes
+
+	content := m.browse.View()
 	return util.RenderFramedContent(m.styles.MainFrame, layout, content)
 }
 
-func resourceTypeFromTab(tab shared.Tab) viewer.ResourceType {
-	switch tab {
-	case tabContainers:
-		return viewer.ResourceTypeContainer
-	case tabImages:
-		return viewer.ResourceTypeImage
-	case tabNetworks:
-		return viewer.ResourceTypeNetwork
-	case tabVolumes:
-		return viewer.ResourceTypeVolume
-	default:
-		return viewer.ResourceTypeContainer
+func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalHeight int) string {
+	m.viewer.Width = totalWidth
+	m.viewer.Height = totalHeight
+	m.viewer.ContainerName = container.Name
+	m.viewer.Breadcrumb = "Containers / " + container.Name + " / Logs"
+	m.viewer.ContentType = viewer.ContentTypeLogs
+	m.viewer.ResourceType = viewer.ResourceTypeContainer
+	m.viewer.LoadingMsg = "Loading logs..."
+	m.viewer.EmptyMsg = "No logs found for this container."
+	m.viewer.Styles = viewer.ViewStyles{
+		Breadcrumb:   m.styles.Breadcrumb,
+		FollowOn:     m.styles.FollowOn,
+		FollowOff:    m.styles.FollowOff,
+		Muted:        m.styles.Muted,
+		Divider:      m.styles.Divider,
+		SubpageFrame: m.styles.SubpageFrame,
 	}
+	return m.viewer.View()
 }
 
 func (m model) renderInspectContent(totalWidth, totalHeight int) string {
-	resourceLabel := viewer.GetResourceLabel(resourceTypeFromTab(m.activeTab))
-	containerName := m.logs.ResourceName
+	resourceLabel := viewer.GetResourceLabel(resourceTypeFromTab(m.browse.ActiveTab))
+	containerName := m.viewer.ResourceName
 	breadcrumb := resourceLabel + " / " + containerName + " / Inspect"
 
-	logList := viewer.FilterLines(m.logs.Data, m.logs.Filter.Query)
-	start, end := viewer.VisibleContentRange(&m.logs.State, logList)
-
-	return viewer.RenderContent(viewer.ViewModel{
-		State:            &m.logs.State,
-		ContainerName:    containerName,
-		Breadcrumb:       breadcrumb,
-		LineCount:        &viewer.LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)},
-		LoadingMessage:   "Loading inspect...",
-		EmptyMessage:     "No inspect data available.",
-		LoadingIndicator: m.logsLoadingIndicator(),
-		Width:            totalWidth,
-		Height:           totalHeight,
-		ContentType:      viewer.ContentTypeInspect,
-		ResourceType:     resourceTypeFromTab(m.activeTab),
-		Styles: viewer.ViewStyles{
-			Breadcrumb:   m.styles.Breadcrumb,
-			FollowOn:     m.styles.FollowOn,
-			FollowOff:    m.styles.FollowOff,
-			Muted:        m.styles.Muted,
-			Divider:      m.styles.Divider,
-			SubpageFrame: m.styles.SubpageFrame,
-		},
-	})
+	m.viewer.Width = totalWidth
+	m.viewer.Height = totalHeight
+	m.viewer.ContainerName = containerName
+	m.viewer.Breadcrumb = breadcrumb
+	m.viewer.ContentType = viewer.ContentTypeInspect
+	m.viewer.ResourceType = resourceTypeFromTab(m.browse.ActiveTab)
+	m.viewer.LoadingMsg = "Loading inspect..."
+	m.viewer.EmptyMsg = "No inspect data available."
+	m.viewer.Styles = viewer.ViewStyles{
+		Breadcrumb:   m.styles.Breadcrumb,
+		FollowOn:     m.styles.FollowOn,
+		FollowOff:    m.styles.FollowOff,
+		Muted:        m.styles.Muted,
+		Divider:      m.styles.Divider,
+		SubpageFrame: m.styles.SubpageFrame,
+	}
+	return m.viewer.View()
 }
 
-func (m model) logsLoadingIndicator() string {
-	if !m.shouldAnimateLogsLoadingIndicator() {
+func (m model) metricsLoadingIndicator() string {
+	if !m.shouldAnimateMetricsLoadingIndicator() {
 		return ""
 	}
-	return strings.TrimSpace(m.logsSpinner.View())
+	return strings.TrimSpace(m.metricsSpinner.View())
 }
 
-func (m model) logVisibleRows() int {
-	return max(1, m.logSectionHeight())
-}
-
-func (m model) logVisibleWidth() int {
-	totalWidth := max(1, m.width)
-	if m.screen == shared.Logs {
-		return m.logsPageContentWidth(totalWidth)
+func (m model) containerMetricsLoadingIndicator() string {
+	if !m.shouldAnimateMetricsLoadingIndicator() {
+		return ""
 	}
-	innerWidth := util.FrameContentWidth(totalWidth, m.styles.MainFrame)
-	return max(1, innerWidth)
-}
-
-func (m model) logSectionHeight() int {
-	mainHeight := util.MainAreaHeight(m.height, m.renderHeader(), m.renderFooter())
-	if m.screen == shared.Logs {
-		return viewer.VisibleRowsForContent(m.logsPageContentHeight(mainHeight), m.logs.Filter.Active)
-	}
-	innerHeight := util.FrameContentHeight(mainHeight, m.styles.MainFrame)
-	return max(1, innerHeight)
-}
-
-func (m model) logsPageContentWidth(width int) int {
-	return util.FrameContentWidth(width, m.styles.SubpageFrame)
-}
-
-func (m model) logsPageContentHeight(height int) int {
-	return util.FrameContentHeight(height, m.styles.SubpageFrame)
+	return strings.TrimSpace(m.containerSpinner.View())
 }
 
 func (m model) renderHeader() string {
 	return chrome.RenderHeader(chrome.HeaderInput{
 		Width:            m.width,
 		Title:            "EasyDocker",
-		TotalsText:       chrome.RenderTotalsLabel(m.snapshot, m.loadingStage, loadStageIdle, loadStageMetrics, m.metricsLoaded, m.metricsLoadingIndicator()),
+		TotalsText:       chrome.RenderTotalsLabel(m.browse.Snapshot, m.loadingStage, loadStageIdle, loadStageMetrics, m.metricsLoaded, m.metricsLoadingIndicator()),
 		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, loadStageContainers, loadStageResources, loadStageMetrics, m.metricsLoaded),
-		ActiveTab:        int(m.activeTab),
-		ShowAll:          m.showAll,
+		ActiveTab:        int(m.browse.ActiveTab),
+		ShowAll:          m.browse.ShowAll,
 		Err:              m.err,
 		Tabs: []chrome.TabSpec{
 			{Tab: int(tabContainers), Icon: "🐳", Name: "Containers", Count: len(m.filteredContainers())},
-			{Tab: int(tabImages), Icon: "💿", Name: "Images", Count: len(m.snapshot.Images)},
-			{Tab: int(tabNetworks), Icon: "🔌", Name: "Networks", Count: len(m.snapshot.Networks)},
-			{Tab: int(tabVolumes), Icon: "📂", Name: "Volumes", Count: len(m.snapshot.Volumes)},
+			{Tab: int(tabImages), Icon: "💿", Name: "Images", Count: len(m.browse.Snapshot.Images)},
+			{Tab: int(tabNetworks), Icon: "🔌", Name: "Networks", Count: len(m.browse.Snapshot.Networks)},
+			{Tab: int(tabVolumes), Icon: "📂", Name: "Volumes", Count: len(m.browse.Snapshot.Volumes)},
 		},
 		Styles: chrome.HeaderStyles{
 			Header:    m.styles.Header,
@@ -216,7 +191,7 @@ func (m model) renderFooter() string {
 }
 
 func (m model) renderChromeTab(tab int, label string) string {
-	if int(m.activeTab) == tab {
+	if int(m.browse.ActiveTab) == tab {
 		return m.styles.ActiveTab.Render(label)
 	}
 	return m.styles.Tab.Render(label)
@@ -236,76 +211,6 @@ func (m model) detailLineWithWidth(label, value string, width int) string {
 
 	valueWidth := max(1, width-labelWidth)
 	return labelRendered + m.styles.Value.Render(util.ConstrainLine(value, valueWidth))
-}
-
-func (m model) renderBrowseContent(width, height int) string {
-	filterCopy := m.browseFilter
-	if filterCopy.Active {
-		filterCopy.Input.SetWidth(max(1, width-util.DisplayWidth(filterCopy.Input.Prompt)))
-	}
-
-	return browse.RenderContent(browse.ViewModel{
-		Loading:                 m.loading,
-		Snapshot:                m.snapshot,
-		ActiveTab:               m.activeTab,
-		MetricsLoadingIndicator: m.containerMetricsLoadingIndicator(),
-		Width:                   width,
-		Height:                  height,
-		Styles: browse.ViewStyles{
-			Divider: m.styles.Divider,
-			Muted:   m.styles.Muted,
-			Section: m.styles.Section,
-		},
-		Selections: m.browseSelections(),
-		Filter:     filterCopy,
-	}, m.renderResourceList(width, browse.ListHeightForContent(height, m.browseFilter.Active)), m.browseDetailRenderer())
-}
-
-func (m model) metricsLoadingIndicator() string {
-	if !m.shouldAnimateMetricsLoadingIndicator() {
-		return ""
-	}
-	return strings.TrimSpace(m.metricsSpinner.View())
-}
-
-func (m model) containerMetricsLoadingIndicator() string {
-	if !m.shouldAnimateMetricsLoadingIndicator() {
-		return ""
-	}
-	return strings.TrimSpace(m.containerSpinner.View())
-}
-
-func (m model) browseSelections() browse.SelectionSet {
-	container, hasContainer := m.selectedContainer()
-	composeProject, hasComposeProject := m.selectedComposeProject()
-	image, hasImage := m.selectedImage()
-	network, hasNetwork := m.selectedNetwork()
-	volume, hasVolume := m.selectedVolume()
-	return browse.SelectionSet{
-		Container:         container,
-		HasContainer:      hasContainer,
-		ComposeProject:    composeProject,
-		HasComposeProject: hasComposeProject,
-		Image:             image,
-		HasImage:          hasImage,
-		Network:           network,
-		HasNetwork:        hasNetwork,
-		Volume:            volume,
-		HasVolume:         hasVolume,
-	}
-}
-
-type browseDetailRenderer struct {
-	detailLine       func(label, value string, width int) string
-	containerStateFn func(container core.ContainerRow) string
-}
-
-func (r browseDetailRenderer) DetailLine(label, value string, width int) string {
-	return r.detailLine(label, value, width)
-}
-
-func (r browseDetailRenderer) RenderContainerState(container core.ContainerRow) string {
-	return r.containerStateFn(container)
 }
 
 func (m model) browseDetailRenderer() browse.DetailProvider {
@@ -335,18 +240,18 @@ func (m model) stateStyle(state string) lipgloss.Style {
 }
 
 func (m model) renderResourceList(width, height int) string {
-	switch m.activeTab {
+	switch m.browse.ActiveTab {
 	case tabContainers:
-		spec := tables.BuildContainerSpec(width, m.containerCursor, m.containerListRows(), m.activeTab == tabContainers, m.containerMetricsLoadingIndicator())
+		spec := tables.BuildContainerSpec(width, m.browse.ContainerCursor, m.containerListRows(), m.browse.ActiveTab == tabContainers, m.containerMetricsLoadingIndicator())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
-		spec := tables.BuildImageSpec(width, m.imageCursor, m.filteredImages())
+		spec := tables.BuildImageSpec(width, m.browse.ImageCursor, m.filteredImages())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabNetworks:
-		spec := tables.BuildNetworkSpec(width, m.networkCursor, m.filteredNetworks())
+		spec := tables.BuildNetworkSpec(width, m.browse.NetworkCursor, m.filteredNetworks())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	default:
-		spec := tables.BuildVolumeSpec(width, m.volumeCursor, m.filteredVolumes())
+		spec := tables.BuildVolumeSpec(width, m.browse.VolumeCursor, m.filteredVolumes())
 		return renderResourceTableFromSpec(m, width, height, spec)
 	}
 }
@@ -357,4 +262,17 @@ func renderResourceTableFromSpec[T any](m model, width, height int, spec tables.
 	tableStyles.Cell = m.styles.Row.Inline(true)
 	tableStyles.Selected = m.styles.ActiveRow.Bold(true).Inline(true)
 	return tables.RenderFromSpec(width, height, spec, tableStyles)
+}
+
+type browseDetailRenderer struct {
+	detailLine       func(label, value string, width int) string
+	containerStateFn func(container core.ContainerRow) string
+}
+
+func (r browseDetailRenderer) DetailLine(label, value string, width int) string {
+	return r.detailLine(label, value, width)
+}
+
+func (r browseDetailRenderer) RenderContainerState(container core.ContainerRow) string {
+	return r.containerStateFn(container)
 }

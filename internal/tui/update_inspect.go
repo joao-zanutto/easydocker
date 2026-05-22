@@ -4,23 +4,9 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
-	"easydocker/internal/tui/util"
 
 	tea "charm.land/bubbletea/v2"
 )
-
-func (m *model) handleInspectKey(msg tea.KeyPressMsg) tea.Cmd {
-	return m.handleViewerKey(msg, viewerKeyHandlers{
-		visibleWidth: m.inspectVisibleWidth,
-		visibleRows:  m.inspectVisibleRows,
-		openFilter:   m.openInspectFilter,
-		closeFilter:  m.closeInspectFilter,
-		exitMode:     m.exitInspectMode,
-		postTransition: func() {
-			m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
-		},
-	})
-}
 
 func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	resourceType, resourceID, resourceName, ok := m.selectedInspectResource()
@@ -29,11 +15,29 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	}
 	m.previousScreen = m.screen
 	m.screen = shared.Inspect
-	m.logs.Viewport.SetXOffset(0)
-	m.logs.InitialLoad = true
-	m.logs.Data = nil
-	m.logs.ContainerID = resourceID
-	m.logs.ResourceName = resourceName
+	m.viewer.Width = m.width
+	m.viewer.Height = max(1, m.height-4)
+	m.viewer.Follow = false
+	m.viewer.Viewport.SetXOffset(0)
+	m.viewer.Viewport.GotoTop()
+	m.viewer.InitialLoad = true
+	m.viewer.Data = nil
+	m.viewer.ContainerID = resourceID
+	m.viewer.ResourceName = resourceName
+	m.viewer.ResourceType = resourceTypeFromTab(m.browse.ActiveTab)
+	m.viewer.ContentType = viewer.ContentTypeInspect
+	m.viewer.LoadingMsg = "Loading inspect..."
+	m.viewer.EmptyMsg = "No inspect data available."
+	m.viewer.Breadcrumb = ""
+	m.viewer.ContainerName = resourceName
+	m.viewer.Styles = viewer.ViewStyles{
+		Breadcrumb:   m.styles.Breadcrumb,
+		FollowOn:     m.styles.FollowOn,
+		FollowOff:    m.styles.FollowOff,
+		Muted:        m.styles.Muted,
+		Divider:      m.styles.Divider,
+		SubpageFrame: m.styles.SubpageFrame,
+	}
 	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
 }
 
@@ -66,23 +70,8 @@ func tabToResourceType(tab shared.Tab) core.ResourceType {
 	}
 }
 
-func (m model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd) {
-	if msg.err != nil {
-		m.err = msg.err
-		m.logs.InitialLoad = false
-		return m, nil
-	}
-	m.logs.ApplyContentInitial(msg.data)
-	m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
-	return m, nil
-}
-
-func (m *model) exitInspectMode() {
-	m.screen = m.previousScreen
-}
-
 func (m model) selectedInspectResource() (shared.Tab, string, string, bool) {
-	switch m.activeTab {
+	switch m.browse.ActiveTab {
 	case tabContainers:
 		c, ok := m.selectedContainer()
 		if !ok {
@@ -110,15 +99,4 @@ func (m model) selectedInspectResource() (shared.Tab, string, string, bool) {
 	default:
 		return 0, "", "", false
 	}
-}
-
-func (m model) inspectVisibleWidth() int {
-	totalWidth := max(1, m.width)
-	return m.logsPageContentWidth(totalWidth)
-}
-
-func (m model) inspectVisibleRows() int {
-	mainHeight := util.MainAreaHeight(m.height, m.renderHeader(), m.renderFooter())
-	contentHeight := m.logsPageContentHeight(mainHeight)
-	return viewer.VisibleRowsForContent(contentHeight, m.logs.Filter.Active)
 }

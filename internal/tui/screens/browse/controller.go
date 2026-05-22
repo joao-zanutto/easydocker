@@ -17,6 +17,7 @@ type Transition struct {
 	OpenInspect      bool
 	OpenMenu         bool
 	ToggleScope      bool
+	ToggleCompose    bool
 }
 
 func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Transition {

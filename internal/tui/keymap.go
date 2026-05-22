@@ -10,22 +10,14 @@ import (
 	"charm.land/bubbles/v2/key"
 )
 
-func browseKeyMap() browse.KeyMap {
-	return browse.NewKeyMap()
-}
-
-func viewerKeyMap() viewer.KeyMap {
-	return viewer.NewKeyMap()
-}
-
 func (m model) footerKeyMap() help.KeyMap {
 	if m.screen == shared.Logs || m.screen == shared.Inspect {
-		viewerKeys := viewerKeyMap()
+		viewerKeys := viewer.NewKeyMap()
 		contentType := viewer.ContentTypeLogs
 		if m.screen == shared.Inspect {
 			contentType = viewer.ContentTypeInspect
 		}
-		if m.logs.Filter.Active {
+		if m.viewer.Filter.Active {
 			bindings := []key.Binding{
 				shared.EscBinding("clear/exit filter"),
 				shared.EnterBinding("apply/close filter"),
@@ -33,17 +25,17 @@ func (m model) footerKeyMap() help.KeyMap {
 			return footerKeyMap{bindings: bindings}
 		}
 		containerState := ""
-		if m.activeTab == tabContainers {
+		if m.browse.ActiveTab == tabContainers {
 			if c, ok := m.selectedContainer(); ok {
 				containerState = c.State
 			}
 		}
-		return footerKeyMap{bindings: viewerKeys.ShortHelp(resourceTypeFromTab(m.activeTab), contentType, containerState)}
+		return footerKeyMap{bindings: viewerKeys.ShortHelp(resourceTypeFromTab(m.browse.ActiveTab), contentType, containerState)}
 	}
 
-	browseKeys := browseKeyMap()
+	browseKeys := browse.NewKeyMap()
 
-	if m.browseFilter.Active {
+	if m.browse.Filter.Active {
 		bindings := []key.Binding{
 			shared.EscBinding("clear/exit filter"),
 			shared.EnterBinding("apply/close filter"),
@@ -55,7 +47,7 @@ func (m model) footerKeyMap() help.KeyMap {
 		browseKeys.OpenFilter,
 		browseKeys.OpenMenu,
 	}
-	if m.activeTab == tabContainers {
+	if m.browse.ActiveTab == tabContainers {
 		bindings = append(bindings, browseKeys.ToggleScope)
 		if row, ok := m.selectedContainerListRow(); ok && row.Kind == tables.ContainerListRowComposeProject {
 			action := "expand"
@@ -70,10 +62,19 @@ func (m model) footerKeyMap() help.KeyMap {
 			}
 		}
 	}
-	if m.activeTab == tabImages || m.activeTab == tabNetworks || m.activeTab == tabVolumes {
+	if m.browse.ActiveTab == tabImages || m.browse.ActiveTab == tabNetworks || m.browse.ActiveTab == tabVolumes {
 		bindings = append(bindings, browseKeys.OpenInspect)
 	}
 	return footerKeyMap{bindings: bindings}
+}
+
+func (m model) selectedContainerListRow() (tables.ContainerListRow, bool) {
+	rows := m.containerListRows()
+	var zero tables.ContainerListRow
+	if len(rows) == 0 || m.browse.ContainerCursor < 0 || m.browse.ContainerCursor >= len(rows) {
+		return zero, false
+	}
+	return rows[m.browse.ContainerCursor], true
 }
 
 type footerKeyMap struct {
@@ -86,4 +87,19 @@ func (m footerKeyMap) ShortHelp() []key.Binding {
 
 func (m footerKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{m.bindings}
+}
+
+func resourceTypeFromTab(tab shared.Tab) viewer.ResourceType {
+	switch tab {
+	case tabContainers:
+		return viewer.ResourceTypeContainer
+	case tabImages:
+		return viewer.ResourceTypeImage
+	case tabNetworks:
+		return viewer.ResourceTypeNetwork
+	case tabVolumes:
+		return viewer.ResourceTypeVolume
+	default:
+		return viewer.ResourceTypeContainer
+	}
 }

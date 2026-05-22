@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 
 	tea "charm.land/bubbletea/v2"
@@ -15,7 +16,7 @@ func (m model) handleContainersResultMsg(msg containersResultMsg) (tea.Model, te
 		return m, nil
 	}
 
-	m.snapshot.Containers = core.PreserveRunningContainerMetrics(msg.containers, m.snapshot.Containers)
+	m.browse.Snapshot.Containers = core.PreserveRunningContainerMetrics(msg.containers, m.browse.Snapshot.Containers)
 	m.beginLoadingStage(loadStageResources)
 	return m, loadResourcesCmd(m.service)
 }
@@ -26,12 +27,12 @@ func (m model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea.
 		return m, nil
 	}
 
-	m.snapshot.Images = msg.snapshot.Images
-	m.snapshot.Networks = msg.snapshot.Networks
-	m.snapshot.Volumes = msg.snapshot.Volumes
-	m.snapshot.TotalLimit = msg.snapshot.TotalLimit
+	m.browse.Snapshot.Images = msg.snapshot.Images
+	m.browse.Snapshot.Networks = msg.snapshot.Networks
+	m.browse.Snapshot.Volumes = msg.snapshot.Volumes
+	m.browse.Snapshot.TotalLimit = msg.snapshot.TotalLimit
 	m.beginLoadingStage(loadStageMetrics)
-	return m, loadMetricsCmd(m.service, m.snapshot.Containers)
+	return m, loadMetricsCmd(m.service, m.browse.Snapshot.Containers)
 }
 
 func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd) {
@@ -39,12 +40,11 @@ func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd)
 		return m, nil
 	}
 
-	m.snapshot.Containers = core.ApplyMetricsToContainers(m.snapshot.Containers, msg.metricsByID)
-	m.snapshot.TotalCPU = msg.totalCPU
-	m.snapshot.TotalMem = msg.totalMem
-	m.snapshot.Timestamp = time.Now()
+	m.browse.Snapshot.Containers = core.ApplyMetricsToContainers(m.browse.Snapshot.Containers, msg.metricsByID)
+	m.browse.Snapshot.TotalCPU = msg.totalCPU
+	m.browse.Snapshot.TotalMem = msg.totalMem
+	m.browse.Snapshot.Timestamp = time.Now()
 	m.metricsLoaded = true
-	m.clampCursors()
 	return m, nil
 }
 
@@ -53,13 +53,29 @@ func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	previousContainers := m.snapshot.Containers
-	m.snapshot = msg.snapshot
-	m.snapshot.Containers = core.PreserveRunningContainerMetrics(m.snapshot.Containers, previousContainers)
+	previousContainers := m.browse.Snapshot.Containers
+	m.browse.Snapshot = msg.snapshot
+	m.browse.Snapshot.Containers = core.PreserveRunningContainerMetrics(m.browse.Snapshot.Containers, previousContainers)
 	if err := m.reconcileLogsSelection(); err != nil {
 		m.err = err
 	}
-	m.clampCursors()
+	return m, nil
+}
+
+func (m model) handleViewerContentMsg(msg viewer.ContentMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.viewer, cmd = m.viewer.Update(msg)
+	return m, cmd
+}
+
+func (m model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		m.err = msg.err
+		m.viewer.InitialLoad = false
+		return m, nil
+	}
+	m.viewer.ApplyInitial(msg.data)
+	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 	return m, nil
 }
 
@@ -75,8 +91,7 @@ func (m *model) setLoadError(err error) {
 
 func (m *model) beginLoadingStage(stage int) {
 	m.applyLoadingTransition(shared.Begin(shared.Stage(stage)))
-	m.snapshot.Timestamp = time.Now()
-	m.clampCursors()
+	m.browse.Snapshot.Timestamp = time.Now()
 }
 
 func (m *model) finishLoadingStage(err error) bool {
@@ -87,4 +102,28 @@ func (m *model) finishLoadingStage(err error) bool {
 
 func (m model) shouldReloadSnapshotOnTick() bool {
 	return m.loadingStage == loadStageIdle
+}
+
+func (m model) shouldLoadHistoryOnTick() bool {
+	return m.screen == shared.Logs &&
+		m.viewer.ContainerID != "" &&
+		m.viewer.Viewport.AtTop() &&
+		!m.viewer.InitialLoad &&
+		!m.viewer.HistoryLoad &&
+		!m.viewer.HistoryDone
+}
+
+func (m model) shouldPollLogsOnTick() bool {
+	return m.screen == shared.Logs &&
+		m.viewer.ContainerID != "" &&
+		!m.viewer.Viewport.AtTop() &&
+		!m.viewer.InitialLoad &&
+		!m.viewer.HistoryLoad
+}
+
+func (m model) logsPollTail() int {
+	if m.viewer.TailLines <= 0 {
+		return InitialTail
+	}
+	return m.viewer.TailLines
 }

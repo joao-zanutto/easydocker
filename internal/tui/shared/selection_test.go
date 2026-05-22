@@ -14,18 +14,6 @@ func TestMoveActiveTab(t *testing.T) {
 	}
 }
 
-func TestToggleContainerScope(t *testing.T) {
-	showAll, toggled := ToggleContainerScope(TabContainers, true)
-	if !toggled || showAll {
-		t.Fatalf("expected toggle on containers tab")
-	}
-
-	showAll, toggled = ToggleContainerScope(TabImages, true)
-	if toggled || !showAll {
-		t.Fatalf("expected no toggle outside containers tab")
-	}
-}
-
 func TestCursorAPIs(t *testing.T) {
 	c := Cursors{Container: 1, Image: 2, Network: 3, Volume: 4}
 
@@ -46,12 +34,6 @@ func TestCursorAPIs(t *testing.T) {
 		t.Fatalf("ClampCursorForTab empty list = %d, want 0", c.Image)
 	}
 
-	if ok := ReconcileCursorForTab(&c, TabVolumes, 7, false); ok {
-		t.Fatalf("ReconcileCursorForTab should fail when not found")
-	}
-	if ok := ReconcileCursorForTab(&c, TabVolumes, 7, true); !ok || c.Volume != 7 {
-		t.Fatalf("ReconcileCursorForTab should set cursor when found")
-	}
 }
 
 func TestClampAllCursors(t *testing.T) {
