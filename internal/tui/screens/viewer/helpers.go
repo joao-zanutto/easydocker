@@ -44,20 +44,6 @@ func VisibleContentRange(state *State, lines []string) (int, int) {
 	return startLine, min(total, endLine)
 }
 
-func RawLineToViewportRowOffset(lines []string, wrapWidth, lineIndex int) int {
-	if len(lines) == 0 || lineIndex <= 0 {
-		return 0
-	}
-	if lineIndex > len(lines) {
-		lineIndex = len(lines)
-	}
-	rows := 0
-	for index := 0; index < lineIndex; index++ {
-		rows += WrappedRowCount(lines[index], wrapWidth)
-	}
-	return rows
-}
-
 func rowToLineIndex(lines []string, wrapWidth, row int) int {
 	if len(lines) == 0 {
 		return 0
@@ -166,4 +152,59 @@ func normalizeLine(line string) string {
 	line = strings.ReplaceAll(line, "\r", "")
 	line = strings.ReplaceAll(line, "\t", " ")
 	return line
+}
+
+func MergePolledLogs(prev, polled []string, maxLines int) ([]string, bool) {
+	if len(prev) == 0 {
+		return trimLogLines(polled, maxLines), true
+	}
+	if len(polled) == 0 {
+		return prev, true
+	}
+
+	normPrev := make([]string, len(prev))
+	for i, l := range prev {
+		normPrev[i] = strings.TrimRight(l, "\r")
+	}
+	normPolled := make([]string, len(polled))
+	for i, l := range polled {
+		normPolled[i] = strings.TrimRight(l, "\r")
+	}
+
+	maxOverlap := min(len(normPrev), len(normPolled))
+	for o := maxOverlap; o > 0; o-- {
+		if equalLogSlices(normPrev[len(normPrev)-o:], normPolled[:o]) {
+			merged := append([]string{}, normPrev...)
+			merged = append(merged, normPolled[o:]...)
+			return trimLogLines(merged, maxLines), true
+		}
+	}
+
+	if equalLogSlices(normPrev, normPolled) {
+		return trimLogLines(normPrev, maxLines), true
+	}
+	if len(normPolled) < len(normPrev) && equalLogSlices(normPrev[len(normPrev)-len(normPolled):], normPolled) {
+		return trimLogLines(normPrev, maxLines), true
+	}
+
+	return trimLogLines(normPolled, maxLines), false
+}
+
+func trimLogLines(lines []string, maxLines int) []string {
+	if maxLines <= 0 || len(lines) <= maxLines {
+		return lines
+	}
+	return lines[len(lines)-maxLines:]
+}
+
+func equalLogSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

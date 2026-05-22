@@ -56,15 +56,6 @@ func MoveActiveTab(current Tab, delta int, minTab, maxTab Tab) Tab {
 	return Tab(util.Clamp(int(current)+delta, int(minTab), int(maxTab)))
 }
 
-// ToggleContainerScope flips showAll only when the containers tab is active.
-// Returns the possibly-updated showAll value and whether a toggle occurred.
-func ToggleContainerScope(activeTab Tab, showAll bool) (bool, bool) {
-	if activeTab != TabContainers {
-		return showAll, false
-	}
-	return !showAll, true
-}
-
 // CursorForTab returns the cursor value for a tab.
 func CursorForTab(c Cursors, tab Tab) (int, bool) {
 	return c.byTab(tab)
@@ -102,10 +93,4 @@ func ClampAllCursors(c *Cursors, tabs []Tab, itemCountForTab func(tab Tab) int) 
 	}
 }
 
-// ReconcileCursorForTab updates a tab cursor to index when found is true.
-func ReconcileCursorForTab(c *Cursors, tab Tab, index int, found bool) bool {
-	if !found {
-		return false
-	}
-	return SetCursorForTab(c, tab, index)
-}
+

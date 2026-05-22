@@ -6,6 +6,7 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/menu"
+	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/theme"
 
@@ -43,7 +44,7 @@ type metricsResultMsg struct {
 	metricsByID map[string]core.ContainerMetrics
 	totalCPU    float64
 	totalMem    uint64
-	err         error
+	err        error
 }
 
 type loadResultMsg struct {
@@ -62,39 +63,24 @@ type inspectResultMsg struct {
 }
 
 type model struct {
-	// Core
 	service *core.Service
 	err     error
 
-	// Dimensions
 	width  int
 	height int
 
-	// Browse state
-	activeTab       shared.Tab
-	showAll         bool
-	snapshot        core.Snapshot
-	containerCursor int
-	imageCursor     int
-	networkCursor   int
-	volumeCursor    int
-	browseFilter    browse.FilterState
-	composeExpanded map[string]bool
+	browse browse.Model
+	viewer viewer.Model
 
-	// Screen state
 	screen         shared.Screen
 	previousScreen shared.Screen
-	logs           LogsState
 
-	// Loading state
-	loading          bool
-	loadingStage     int
-	metricsLoaded    bool
+	loading       bool
+	loadingStage  int
+	metricsLoaded bool
 	metricsSpinner   spinner.Model
 	containerSpinner spinner.Model
-	logsSpinner      spinner.Model
 
-	// UI state
 	styles theme.Set
 	menu   menu.MenuState
 	help   menu.HelpState
@@ -103,22 +89,21 @@ type model struct {
 func New(service *core.Service) tea.Model {
 	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
 	containerSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
-	logsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
+
+	bm := browse.NewModel()
+	vm := viewer.NewModel()
+	vm.Spinner = spinner.New(spinner.WithSpinner(spinner.Dot))
 
 	return model{
 		service:          service,
-		activeTab:        tabContainers,
-		showAll:          true,
 		loading:          true,
 		screen:           shared.Browse,
 		loadingStage:     loadStageContainers,
-		logs:             NewLogsState(),
 		styles:           defaultStyles(),
 		metricsSpinner:   metricsSpinner,
 		containerSpinner: containerSpinner,
-		logsSpinner:      logsSpinner,
-		browseFilter:     browse.NewFilterState(),
-		composeExpanded:  map[string]bool{},
+		browse:           bm,
+		viewer:           vm,
 		menu:             menu.NewMenuState(),
 		help:             menu.NewHelpState(0, 0),
 	}
@@ -126,16 +111,20 @@ func New(service *core.Service) tea.Model {
 
 func (m model) Init() tea.Cmd {
 	cmds := []tea.Cmd{loadContainersCmd(m.service), tickCmd()}
-	if m.shouldAnimateMetricsLoadingIndicator() {
-		spinnerTickInterval := time.Second / 7
-		cmds = append(cmds,
-			tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
-				return spinner.TickMsg{Time: t, ID: m.metricsSpinner.ID()}
-			}),
-			tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
-				return spinner.TickMsg{Time: t, ID: m.containerSpinner.ID()}
-			}))
-	}
+
+	spinnerTickInterval := time.Second / 7
+	cmds = append(cmds,
+		tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
+			return spinner.TickMsg{Time: t, ID: m.metricsSpinner.ID()}
+		}),
+		tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
+			return spinner.TickMsg{Time: t, ID: m.containerSpinner.ID()}
+		}),
+		tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
+			return spinner.TickMsg{Time: t, ID: m.viewer.Spinner.ID()}
+		}),
+	)
+
 	return tea.Batch(cmds...)
 }
 

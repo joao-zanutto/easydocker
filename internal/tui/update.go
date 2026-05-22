@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
@@ -10,6 +11,8 @@ import (
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	m = m.setupBrowseCallbacks()
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSizeMsg(msg)
@@ -24,7 +27,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case loadResultMsg:
 		return m.handleLoadResultMsg(msg)
 	case viewer.ContentMsg:
-		return m.handleLogsResultMsg(msg)
+		return m.handleViewerContentMsg(msg)
 	case inspectResultMsg:
 		return m.handleInspectResultMsg(msg)
 	case shellDoneMsg:
@@ -33,23 +36,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleTickMsg(msg)
 	case spinner.TickMsg:
 		return m.handleSpinnerTickMsg(msg)
+	case browse.TransitionMsg:
+		return m.handleBrowseTransition(msg)
+	case viewer.TransitionMsg:
+		return m.handleViewerTransition(msg)
 	}
 
 	return m, nil
 }
 
-const browseCursorPageStep = 5
-
 func (m *model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
-	if m.screen == shared.Logs {
-		m.logs.SyncFromData(m.logVisibleWidth(), m.logVisibleRows())
+	var cmd tea.Cmd
+	m.browse, cmd = m.browse.Update(msg)
+	if m.screen == shared.Logs || m.screen == shared.Inspect {
+		var vcmd tea.Cmd
+		m.viewer, vcmd = m.viewer.Update(msg)
+		if vcmd != nil {
+			cmd = tea.Batch(cmd, vcmd)
+		}
 	}
-	if m.screen == shared.Inspect {
-		m.logs.SyncFromData(m.inspectVisibleWidth(), m.inspectVisibleRows())
-	}
-	return m, nil
+	return m, cmd
 }
 
 func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -65,28 +73,53 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleMenuKey(msg)
 	}
 
-	if m.screen == shared.Browse && m.browseFilter.Active {
-		return m.handleBrowseKey(msg)
+	if m.screen == shared.Browse {
+		var cmd tea.Cmd
+		m.browse, cmd = m.browse.Update(msg)
+		return m, cmd
 	}
 
-	if m.screen == shared.Logs && m.logs.Filter.Active {
-		return m, m.handleLogsKey(msg)
+	if m.screen == shared.Logs || m.screen == shared.Inspect {
+		var cmd tea.Cmd
+		m.viewer, cmd = m.viewer.Update(msg)
+		return m, cmd
 	}
 
-	route := shared.RouteRootKey(msg.String(), m.screen)
-	switch route {
-	case shared.RouteQuit:
-		return m, tea.Quit
-	case shared.RouteNoop:
+	return m, nil
+}
+
+func (m model) handleBrowseTransition(msg browse.TransitionMsg) (tea.Model, tea.Cmd) {
+	if msg.OpenMenu {
+		m.menu.Active = true
+		m.menu.Cursor = 0
 		return m, nil
-	case shared.RouteLogs:
-		return m, m.handleLogsKey(msg)
-	case shared.RouteInspect:
-		return m, m.handleInspectKey(msg)
-	case shared.RouteBrowse:
-		return m.handleBrowseKey(msg)
 	}
+	if msg.OpenResource {
+		if cmd := m.enterLogsModeIfContainerSelected(); cmd != nil {
+			return m, cmd
+		}
+	}
+	if msg.OpenShell {
+		if cmd := m.openShellIfContainerSelected(); cmd != nil {
+			return m, cmd
+		}
+	}
+	if msg.OpenInspect {
+		return m.handleInspectTransition()
+	}
+	return m, nil
+}
 
+func (m model) handleViewerTransition(msg viewer.TransitionMsg) (tea.Model, tea.Cmd) {
+	if msg.BackToBrowse {
+		m.screen = m.previousScreen
+		return m, nil
+	}
+	if msg.LaunchShell {
+		if container, ok := m.selectedLogsContainer(); ok {
+			return m, shellCmd(m.service, container.FullID)
+		}
+	}
 	return m, nil
 }
 
@@ -112,8 +145,33 @@ func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) setupBrowseCallbacks() model {
+	m.browse.DetailProvider = m.browseDetailRenderer()
+	m.browse.ListRenderer = func(width, h int) string {
+		return m.renderResourceList(width, h)
+	}
+	m.browse.ContainerMetricsLoadingIndicator = m.containerMetricsLoadingIndicator
+	m.browse.ContainerListRows = func() []browse.ContainerListRow {
+		rows := m.containerListRows()
+		out := make([]browse.ContainerListRow, len(rows))
+		for i, r := range rows {
+			out[i] = browse.ContainerListRow{
+				Kind:            int(r.Kind),
+				Container:       r.Container,
+				ComposeProject:  r.ComposeProject,
+				ComposeExpanded: r.ComposeExpanded,
+			}
+		}
+		return out
+	}
+	m.browse.FilteredImages = m.filteredImages
+	m.browse.FilteredNetworks = m.filteredNetworks
+	m.browse.FilteredVolumes = m.filteredVolumes
+	return m
+}
+
 func (m model) shouldAnimateLogsLoadingIndicator() bool {
-	return m.screen == shared.Logs && (m.logs.InitialLoad || m.logs.HistoryLoad)
+	return (m.screen == shared.Logs || m.screen == shared.Inspect) && (m.viewer.InitialLoad || m.viewer.HistoryLoad)
 }
 
 func (m model) shouldAnimateMetricsLoadingIndicator() bool {
@@ -126,11 +184,11 @@ func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, loadDockerCmd(m.service))
 	}
 	if m.shouldLoadHistoryOnTick() {
-		tail := len(m.logs.Data) + TailStep
-		cmds = append(cmds, LoadLogsCmd(m.service, m.logs.ContainerID, m.logs.SessionID, tail, viewer.SourceHistory))
+		tail := len(m.viewer.Data) + TailStep
+		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.SessionID, tail, viewer.SourceHistory))
 	} else if m.shouldPollLogsOnTick() {
 		tail := m.logsPollTail()
-		cmds = append(cmds, LoadLogsCmd(m.service, m.logs.ContainerID, m.logs.SessionID, tail, viewer.SourcePoll))
+		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.SessionID, tail, viewer.SourcePoll))
 	}
 	return m, tea.Batch(cmds...)
 }
@@ -153,7 +211,7 @@ func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
 
 	if m.shouldAnimateLogsLoadingIndicator() {
 		var cmd tea.Cmd
-		m.logsSpinner, cmd = m.logsSpinner.Update(msg)
+		m.viewer.Spinner, cmd = m.viewer.Spinner.Update(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
