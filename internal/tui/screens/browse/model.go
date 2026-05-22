@@ -12,11 +12,11 @@ import (
 const cursorPageStep = 5
 
 type Model struct {
-	Loading       bool
-	Snapshot      core.Snapshot
-	ActiveTab     shared.Tab
-	ShowAll       bool
-	Filter        FilterState
+	Loading         bool
+	Snapshot        core.Snapshot
+	ActiveTab       shared.Tab
+	ShowAll         bool
+	Filter          FilterState
 	ComposeExpanded map[string]bool
 
 	ContainerCursor int
@@ -27,12 +27,12 @@ type Model struct {
 	Width  int
 	Height int
 
-	DetailProvider       DetailProvider
-	ListRenderer         func(width, height int) string
-	ContainerListRows    func() []ContainerListRow
-	FilteredImages       func() []core.ImageRow
-	FilteredNetworks     func() []core.NetworkRow
-	FilteredVolumes      func() []core.VolumeRow
+	DetailProvider                   DetailProvider
+	ListRenderer                     func(width, height int) string
+	ContainerListRows                func() []ContainerListRow
+	FilteredImages                   func() []core.ImageRow
+	FilteredNetworks                 func() []core.NetworkRow
+	FilteredVolumes                  func() []core.VolumeRow
 	ContainerMetricsLoadingIndicator func() string
 }
 

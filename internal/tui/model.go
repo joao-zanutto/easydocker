@@ -44,7 +44,7 @@ type metricsResultMsg struct {
 	metricsByID map[string]core.ContainerMetrics
 	totalCPU    float64
 	totalMem    uint64
-	err        error
+	err         error
 }
 
 type loadResultMsg struct {
@@ -75,9 +75,9 @@ type model struct {
 	screen         shared.Screen
 	previousScreen shared.Screen
 
-	loading       bool
-	loadingStage  int
-	metricsLoaded bool
+	loading          bool
+	loadingStage     int
+	metricsLoaded    bool
 	metricsSpinner   spinner.Model
 	containerSpinner spinner.Model
 

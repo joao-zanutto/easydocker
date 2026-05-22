@@ -92,5 +92,3 @@ func ClampAllCursors(c *Cursors, tabs []Tab, itemCountForTab func(tab Tab) int) 
 		_ = ClampCursorForTab(c, tab, itemCountForTab(tab))
 	}
 }
-
-
