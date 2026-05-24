@@ -99,31 +99,3 @@ func (m *model) finishLoadingStage(err error) bool {
 	m.applyLoadingTransition(transition)
 	return ok
 }
-
-func (m model) shouldReloadSnapshotOnTick() bool {
-	return m.loadingStage == loadStageIdle
-}
-
-func (m model) shouldLoadHistoryOnTick() bool {
-	return m.screen == shared.Logs &&
-		m.viewer.ContainerID != "" &&
-		m.viewer.Viewport.AtTop() &&
-		!m.viewer.InitialLoad &&
-		!m.viewer.HistoryLoad &&
-		!m.viewer.HistoryDone
-}
-
-func (m model) shouldPollLogsOnTick() bool {
-	return m.screen == shared.Logs &&
-		m.viewer.ContainerID != "" &&
-		!m.viewer.Viewport.AtTop() &&
-		!m.viewer.InitialLoad &&
-		!m.viewer.HistoryLoad
-}
-
-func (m model) logsPollTail() int {
-	if m.viewer.TailLines <= 0 {
-		return InitialTail
-	}
-	return m.viewer.TailLines
-}

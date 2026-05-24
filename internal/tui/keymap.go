@@ -1,7 +1,10 @@
 package tui
 
 import (
+	"strings"
+
 	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/tables"
@@ -30,7 +33,7 @@ func (m model) footerKeyMap() help.KeyMap {
 				containerState = c.State
 			}
 		}
-		return footerKeyMap{bindings: viewerKeys.ShortHelp(resourceTypeFromTab(m.browse.ActiveTab), contentType, containerState)}
+		return footerKeyMap{bindings: viewerKeys.ShortHelp(shared.TabToResourceType(m.browse.ActiveTab), contentType, containerState)}
 	}
 
 	browseKeys := browse.NewKeyMap()
@@ -69,7 +72,7 @@ func (m model) footerKeyMap() help.KeyMap {
 }
 
 func (m model) selectedContainerListRow() (tables.ContainerListRow, bool) {
-	rows := m.containerListRows()
+	rows := m.browse.Data.ContainerListRows
 	var zero tables.ContainerListRow
 	if len(rows) == 0 || m.browse.ContainerCursor < 0 || m.browse.ContainerCursor >= len(rows) {
 		return zero, false
@@ -89,17 +92,40 @@ func (m footerKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{m.bindings}
 }
 
-func resourceTypeFromTab(tab shared.Tab) viewer.ResourceType {
-	switch tab {
-	case tabContainers:
-		return viewer.ResourceTypeContainer
-	case tabImages:
-		return viewer.ResourceTypeImage
-	case tabNetworks:
-		return viewer.ResourceTypeNetwork
-	case tabVolumes:
-		return viewer.ResourceTypeVolume
-	default:
-		return viewer.ResourceTypeContainer
+func keyLabel(binding key.Binding) string {
+	return strings.TrimSpace(binding.Help().Key)
+}
+
+func joinKeyLabels(sep string, bindings ...key.Binding) string {
+	labels := make([]string, 0, len(bindings))
+	for _, binding := range bindings {
+		label := keyLabel(binding)
+		if label == "" {
+			continue
+		}
+		labels = append(labels, label)
 	}
+	return strings.Join(labels, sep)
+}
+
+func (m model) buildHelpCommands() []menu.HelpCommand {
+	browseKeys := browse.NewKeyMap()
+	viewerKeys := viewer.NewKeyMap()
+	menuKeys := menu.NewKeyMap()
+
+	return menu.BuildHelpCommands(menu.HelpKeyLabels{
+		MoveUpDown:   joinKeyLabels("/", browseKeys.MoveUp, browseKeys.MoveDown),
+		PageUpDown:   joinKeyLabels("/", viewerKeys.PageUp, viewerKeys.PageDown),
+		HomeEnd:      joinKeyLabels("/", viewerKeys.Home, viewerKeys.End),
+		TabLeftRight: joinKeyLabels("/", browseKeys.TabLeft, browseKeys.TabRight),
+		LeftRight:    joinKeyLabels("/", viewerKeys.Left, viewerKeys.Right),
+		OpenLogs:     keyLabel(browseKeys.OpenLogs),
+		OpenFilter:   keyLabel(browseKeys.OpenFilter),
+		ToggleScope:  keyLabel(browseKeys.ToggleScope),
+		OpenInspect:  keyLabel(browseKeys.OpenInspect),
+		OpenShell:    keyLabel(browseKeys.OpenShell),
+		ToggleWrap:   keyLabel(viewerKeys.ToggleWrap),
+		ToggleFollow: keyLabel(viewerKeys.ToggleFollow),
+		BackClose:    keyLabel(menuKeys.Back),
+	})
 }

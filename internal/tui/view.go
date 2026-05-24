@@ -17,6 +17,7 @@ import (
 )
 
 func (m model) View() tea.View {
+	m = m.syncBrowseData()
 	content := "Loading EasyDocker..."
 	if m.width > 0 && m.height > 0 {
 		header := m.renderHeader()
@@ -68,27 +69,6 @@ func (m model) renderMain(height int) string {
 	layout := util.ComputeFrameLayout(totalWidth, totalHeight, m.styles.MainFrame)
 	m.browse.Width = layout.ContentWidth
 	m.browse.Height = layout.ContentHeight
-	m.browse.DetailProvider = m.browseDetailRenderer()
-	m.browse.ListRenderer = func(width, h int) string {
-		return m.renderResourceList(width, h)
-	}
-	m.browse.ContainerMetricsLoadingIndicator = m.containerMetricsLoadingIndicator
-	m.browse.ContainerListRows = func() []browse.ContainerListRow {
-		rows := m.containerListRows()
-		out := make([]browse.ContainerListRow, len(rows))
-		for i, r := range rows {
-			out[i] = browse.ContainerListRow{
-				Kind:            int(r.Kind),
-				Container:       r.Container,
-				ComposeProject:  r.ComposeProject,
-				ComposeExpanded: r.ComposeExpanded,
-			}
-		}
-		return out
-	}
-	m.browse.FilteredImages = m.filteredImages
-	m.browse.FilteredNetworks = m.filteredNetworks
-	m.browse.FilteredVolumes = m.filteredVolumes
 
 	content := m.browse.View()
 	return util.RenderFramedContent(m.styles.MainFrame, layout, content)
@@ -100,7 +80,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 	m.viewer.ContainerName = container.Name
 	m.viewer.Breadcrumb = "Containers / " + container.Name + " / Logs"
 	m.viewer.ContentType = viewer.ContentTypeLogs
-	m.viewer.ResourceType = viewer.ResourceTypeContainer
+	m.viewer.ResourceType = core.ResourceContainer
 	m.viewer.LoadingMsg = "Loading logs..."
 	m.viewer.EmptyMsg = "No logs found for this container."
 	m.viewer.Styles = viewer.ViewStyles{
@@ -115,7 +95,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 }
 
 func (m model) renderInspectContent(totalWidth, totalHeight int) string {
-	resourceLabel := viewer.GetResourceLabel(resourceTypeFromTab(m.browse.ActiveTab))
+	resourceLabel := core.ResourceLabel(shared.TabToResourceType(m.browse.ActiveTab))
 	containerName := m.viewer.ResourceName
 	breadcrumb := resourceLabel + " / " + containerName + " / Inspect"
 
@@ -124,7 +104,7 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	m.viewer.ContainerName = containerName
 	m.viewer.Breadcrumb = breadcrumb
 	m.viewer.ContentType = viewer.ContentTypeInspect
-	m.viewer.ResourceType = resourceTypeFromTab(m.browse.ActiveTab)
+	m.viewer.ResourceType = shared.TabToResourceType(m.browse.ActiveTab)
 	m.viewer.LoadingMsg = "Loading inspect..."
 	m.viewer.EmptyMsg = "No inspect data available."
 	m.viewer.Styles = viewer.ViewStyles{
@@ -221,7 +201,7 @@ func (m model) browseDetailRenderer() browse.DetailProvider {
 }
 
 func (m model) renderContainerState(container core.ContainerRow) string {
-	return m.stateStyle(container.State).Render(browse.ContainerStateText(container))
+	return m.stateStyle(container.State).Render(core.ContainerStateText(container))
 }
 
 func (m model) stateStyle(state string) lipgloss.Style {
@@ -242,16 +222,16 @@ func (m model) stateStyle(state string) lipgloss.Style {
 func (m model) renderResourceList(width, height int) string {
 	switch m.browse.ActiveTab {
 	case tabContainers:
-		spec := tables.BuildContainerSpec(width, m.browse.ContainerCursor, m.containerListRows(), m.browse.ActiveTab == tabContainers, m.containerMetricsLoadingIndicator())
+		spec := tables.BuildContainerSpec(width, m.browse.ContainerCursor, m.browse.Data.ContainerListRows, m.browse.ActiveTab == tabContainers, m.browse.Data.MetricsLoadingIndicator)
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
-		spec := tables.BuildImageSpec(width, m.browse.ImageCursor, m.filteredImages())
+		spec := tables.BuildImageSpec(width, m.browse.ImageCursor, m.browse.Data.FilteredImages)
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabNetworks:
-		spec := tables.BuildNetworkSpec(width, m.browse.NetworkCursor, m.filteredNetworks())
+		spec := tables.BuildNetworkSpec(width, m.browse.NetworkCursor, m.browse.Data.FilteredNetworks)
 		return renderResourceTableFromSpec(m, width, height, spec)
 	default:
-		spec := tables.BuildVolumeSpec(width, m.browse.VolumeCursor, m.filteredVolumes())
+		spec := tables.BuildVolumeSpec(width, m.browse.VolumeCursor, m.browse.Data.FilteredVolumes)
 		return renderResourceTableFromSpec(m, width, height, spec)
 	}
 }

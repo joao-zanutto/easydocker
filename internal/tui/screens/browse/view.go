@@ -172,8 +172,8 @@ func containerDetailLines(container core.ContainerRow, loadingIndicator string, 
 		provider.DetailLine("Image", container.Image, width),
 		provider.DetailLine("State", provider.RenderContainerState(container), width),
 		provider.DetailLine("Status", container.Status, width),
-		provider.DetailLine("CPU", ContainerCPUValue(container, loadingIndicator), width),
-		provider.DetailLine("Memory", ContainerMemoryTableValue(container, loadingIndicator), width),
+		provider.DetailLine("CPU", core.ContainerCPUValue(container, loadingIndicator), width),
+		provider.DetailLine("Memory", core.ContainerMemoryTableValue(container, loadingIndicator), width),
 		provider.DetailLine("Ports", container.Ports, width),
 		provider.DetailLine("Command", container.Command, width),
 		provider.DetailLine("ID", container.ID, width),
@@ -268,49 +268,8 @@ func composeProjectNetworks(networkField string) []string {
 	return networks
 }
 
-func ContainerCPUValue(container core.ContainerRow, loadingIndicator string) string {
-	if container.CPUPercent < 0 {
-		if strings.EqualFold(container.State, "running") {
-			return metricsLoadingValue(loadingIndicator)
-		}
-		return "-"
-	}
-	if container.CPUPercent < 0.05 {
-		if strings.EqualFold(container.State, "running") {
-			return "0.0%"
-		}
-		return "-"
-	}
-	return fmt.Sprintf("%.1f%%", container.CPUPercent)
-}
-
-func ContainerMemoryTableValue(container core.ContainerRow, loadingIndicator string) string {
-	if container.MemoryUsage == "-" || strings.EqualFold(container.MemoryUsage, "loading") {
-		if strings.EqualFold(container.State, "running") {
-			return metricsLoadingValue(loadingIndicator)
-		}
-		return "-"
-	}
-	return fmt.Sprintf("%s", container.MemoryUsage)
-}
-
-func metricsLoadingValue(loadingIndicator string) string {
-	if strings.TrimSpace(loadingIndicator) == "" {
-		return "-"
-	}
-	return loadingIndicator
-}
-
-// RenderFilterHeader renders a plain filter input line followed by a divider.
 func RenderFilterHeader(input string, width int, dividerStyle lipgloss.Style) string {
 	return components.RenderFilterInputOnly(input, width, dividerStyle)
-}
-
-func ContainerStateText(container core.ContainerRow) string {
-	if container.Healthy && container.State == "running" {
-		return "● healthy"
-	}
-	return "● " + container.State
 }
 
 func dynamicInputWidth(prompt string, lineWidth int) int {

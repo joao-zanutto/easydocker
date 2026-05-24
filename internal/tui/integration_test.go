@@ -444,7 +444,8 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 			{FullID: "ctr-2", Name: "worker", ComposeProject: "shop", State: "running"},
 		},
 	}
-	*m = m.setupBrowseCallbacks()
+	*m = m.syncBrowseData()
+
 	if got := m.browse.ItemCountForTab(tabContainers); got != 1 {
 		t.Fatalf("collapsed compose list should show one row, got %d", got)
 	}
@@ -520,7 +521,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 			{FullID: "ctr-2", Name: "worker", ComposeProject: "shop", State: "running"},
 		},
 	}
-	*m = m.setupBrowseCallbacks()
+	*m = m.syncBrowseData()
 
 	view := m.View().Content
 	if !strings.Contains(util.StripANSI(view), "Containers") {

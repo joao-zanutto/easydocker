@@ -2,6 +2,7 @@ package chrome
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"easydocker/internal/core"
@@ -10,6 +11,23 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/lipgloss/v2"
 )
+
+func formatMemoryUsage(usage string, percent float64, limit string) string {
+	if usage == "-" {
+		return "-"
+	}
+	if limit != "" && limit != "-" {
+		return fmt.Sprintf("%s / %s (%s)", usage, limit, renderPercent(percent))
+	}
+	return fmt.Sprintf("%s (%s)", usage, renderPercent(percent))
+}
+
+func renderPercent(value float64) string {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return "-"
+	}
+	return fmt.Sprintf("%.1f%%", value)
+}
 
 type TabSpec struct {
 	Tab   int
@@ -143,9 +161,9 @@ func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, load
 	}
 	mem := core.HumanBytes(int64(snapshot.TotalMem))
 	if snapshot.TotalLimit > 0 {
-		return fmt.Sprintf("CPU %s  MEM %s", util.RenderPercent(snapshot.TotalCPU), util.FormatMemoryUsage(mem, (float64(snapshot.TotalMem)/float64(snapshot.TotalLimit))*100, core.HumanBytes(int64(snapshot.TotalLimit))))
+		return fmt.Sprintf("CPU %s  MEM %s", renderPercent(snapshot.TotalCPU), formatMemoryUsage(mem, (float64(snapshot.TotalMem)/float64(snapshot.TotalLimit))*100, core.HumanBytes(int64(snapshot.TotalLimit))))
 	}
-	return fmt.Sprintf("CPU %s  MEM %s", util.RenderPercent(snapshot.TotalCPU), mem)
+	return fmt.Sprintf("CPU %s  MEM %s", renderPercent(snapshot.TotalCPU), mem)
 }
 
 func RenderLoadingStageLabel(loadingStage, loadStageContainers, loadStageResources, loadStageMetrics int, metricsLoaded bool) string {

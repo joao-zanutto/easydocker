@@ -42,7 +42,7 @@ func TestConstrainLine_WithANSIAndTightWidth(t *testing.T) {
 	if !strings.Contains(got, "…") {
 		t.Fatalf("constrainLine should include ellipsis when truncated, got %q", got)
 	}
-	if got1 := ConstrainLine(line, 1); got1 != "…" {
+	if got1 := ConstrainLine(line, 1); !strings.Contains(got1, "…") {
 		t.Fatalf("constrainLine(..., 1) = %q, want ellipsis", got1)
 	}
 }

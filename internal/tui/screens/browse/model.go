@@ -6,10 +6,19 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/shared"
+	"easydocker/internal/tui/ui/tables"
 	"easydocker/internal/tui/util"
 )
 
 const cursorPageStep = 5
+
+type BrowseData struct {
+	ContainerListRows       []tables.ContainerListRow
+	FilteredImages          []core.ImageRow
+	FilteredNetworks        []core.NetworkRow
+	FilteredVolumes         []core.VolumeRow
+	MetricsLoadingIndicator string
+}
 
 type Model struct {
 	Loading         bool
@@ -27,26 +36,11 @@ type Model struct {
 	Width  int
 	Height int
 
-	DetailProvider                   DetailProvider
-	ListRenderer                     func(width, height int) string
-	ContainerListRows                func() []ContainerListRow
-	FilteredImages                   func() []core.ImageRow
-	FilteredNetworks                 func() []core.NetworkRow
-	FilteredVolumes                  func() []core.VolumeRow
-	ContainerMetricsLoadingIndicator func() string
-}
+	Data BrowseData
 
-type ContainerListRow struct {
-	Kind            int
-	Container       core.ContainerRow
-	ComposeProject  core.ComposeProject
-	ComposeExpanded bool
+	DetailProvider DetailProvider
+	ListRenderer   func(width, height int) string
 }
-
-const (
-	ContainerListRowContainer = iota
-	ContainerListRowComposeProject
-)
 
 func NewModel() Model {
 	return Model{
@@ -87,7 +81,7 @@ func (m Model) View() string {
 		Loading:                 m.Loading,
 		Snapshot:                m.Snapshot,
 		ActiveTab:               m.ActiveTab,
-		MetricsLoadingIndicator: m.containerMetricsLoadingIndicator(),
+		MetricsLoadingIndicator: m.Data.MetricsLoadingIndicator,
 		Width:                   m.Width,
 		Height:                  m.Height,
 		Selections:              m.selections(),
@@ -96,13 +90,6 @@ func (m Model) View() string {
 
 	list := m.ListRenderer(m.Width, ListHeightForContent(m.Height, m.Filter.Active))
 	return RenderContent(vm, list, m.DetailProvider)
-}
-
-func (m Model) containerMetricsLoadingIndicator() string {
-	if m.ContainerMetricsLoadingIndicator != nil {
-		return m.ContainerMetricsLoadingIndicator()
-	}
-	return ""
 }
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
@@ -235,23 +222,23 @@ func (m Model) cursors() shared.Cursors {
 func (m Model) ItemCountForTab(tab shared.Tab) int {
 	switch tab {
 	case shared.TabContainers:
-		if m.ContainerListRows != nil {
-			return len(m.ContainerListRows())
+		if len(m.Data.ContainerListRows) > 0 {
+			return len(m.Data.ContainerListRows)
 		}
 		return len(m.Snapshot.Containers)
 	case shared.TabImages:
-		if m.FilteredImages != nil {
-			return len(m.FilteredImages())
+		if len(m.Data.FilteredImages) > 0 {
+			return len(m.Data.FilteredImages)
 		}
 		return len(m.Snapshot.Images)
 	case shared.TabNetworks:
-		if m.FilteredNetworks != nil {
-			return len(m.FilteredNetworks())
+		if len(m.Data.FilteredNetworks) > 0 {
+			return len(m.Data.FilteredNetworks)
 		}
 		return len(m.Snapshot.Networks)
 	case shared.TabVolumes:
-		if m.FilteredVolumes != nil {
-			return len(m.FilteredVolumes())
+		if len(m.Data.FilteredVolumes) > 0 {
+			return len(m.Data.FilteredVolumes)
 		}
 		return len(m.Snapshot.Volumes)
 	default:
@@ -280,46 +267,44 @@ func (m Model) selections() SelectionSet {
 }
 
 func (m Model) SelectedContainer() (core.ContainerRow, bool) {
-	if m.ContainerListRows == nil {
-		return selectedAt(m.Snapshot.Containers, m.ContainerCursor)
+	if len(m.Data.ContainerListRows) > 0 {
+		row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
+		if !ok || row.Kind != tables.ContainerListRowContainer {
+			return core.ContainerRow{}, false
+		}
+		return row.Container, true
 	}
-	rows := m.ContainerListRows()
-	row, ok := selectedAt(rows, m.ContainerCursor)
-	if !ok || row.Kind != ContainerListRowContainer {
-		return core.ContainerRow{}, false
-	}
-	return row.Container, true
+	return selectedAt(m.Snapshot.Containers, m.ContainerCursor)
 }
 
 func (m Model) SelectedComposeProject() (core.ComposeProject, bool) {
-	if m.ContainerListRows == nil {
+	if len(m.Data.ContainerListRows) == 0 {
 		return core.ComposeProject{}, false
 	}
-	rows := m.ContainerListRows()
-	row, ok := selectedAt(rows, m.ContainerCursor)
-	if !ok || row.Kind != ContainerListRowComposeProject {
+	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
+	if !ok || row.Kind != tables.ContainerListRowComposeProject {
 		return core.ComposeProject{}, false
 	}
 	return row.ComposeProject, true
 }
 
 func (m Model) SelectedImage() (core.ImageRow, bool) {
-	if m.FilteredImages != nil {
-		return selectedAt(m.FilteredImages(), m.ImageCursor)
+	if len(m.Data.FilteredImages) > 0 {
+		return selectedAt(m.Data.FilteredImages, m.ImageCursor)
 	}
 	return selectedAt(m.Snapshot.Images, m.ImageCursor)
 }
 
 func (m Model) SelectedNetwork() (core.NetworkRow, bool) {
-	if m.FilteredNetworks != nil {
-		return selectedAt(m.FilteredNetworks(), m.NetworkCursor)
+	if len(m.Data.FilteredNetworks) > 0 {
+		return selectedAt(m.Data.FilteredNetworks, m.NetworkCursor)
 	}
 	return selectedAt(m.Snapshot.Networks, m.NetworkCursor)
 }
 
 func (m Model) SelectedVolume() (core.VolumeRow, bool) {
-	if m.FilteredVolumes != nil {
-		return selectedAt(m.FilteredVolumes(), m.VolumeCursor)
+	if len(m.Data.FilteredVolumes) > 0 {
+		return selectedAt(m.Data.FilteredVolumes, m.VolumeCursor)
 	}
 	return selectedAt(m.Snapshot.Volumes, m.VolumeCursor)
 }
@@ -328,21 +313,19 @@ func (m Model) cursorOnComposeRow() bool {
 	if m.ActiveTab != shared.TabContainers {
 		return false
 	}
-	if m.ContainerListRows == nil {
+	if len(m.Data.ContainerListRows) == 0 {
 		return false
 	}
-	rows := m.ContainerListRows()
-	row, ok := selectedAt(rows, m.ContainerCursor)
-	return ok && row.Kind == ContainerListRowComposeProject
+	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
+	return ok && row.Kind == tables.ContainerListRowComposeProject
 }
 
 func (m Model) toggleCompose() Model {
-	if m.ContainerListRows == nil {
+	if len(m.Data.ContainerListRows) == 0 {
 		return m
 	}
-	rows := m.ContainerListRows()
-	row, ok := selectedAt(rows, m.ContainerCursor)
-	if !ok || row.Kind != ContainerListRowComposeProject {
+	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
+	if !ok || row.Kind != tables.ContainerListRowComposeProject {
 		return m
 	}
 	projectName := row.ComposeProject.Name

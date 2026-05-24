@@ -1,10 +1,12 @@
 package shared
 
 import (
-	"easydocker/internal/tui/util"
-
 	"charm.land/bubbles/v2/key"
 )
+
+func helpKeyLabel(label string) string {
+	return " " + label + " "
+}
 
 func UpBinding(help string) key.Binding {
 	return key.NewBinding(
@@ -65,7 +67,7 @@ func EndBinding(help string) key.Binding {
 func ActionBinding(keyName, help string) key.Binding {
 	return key.NewBinding(
 		key.WithKeys(keyName),
-		key.WithHelp(util.HelpKeyLabel(keyName), help),
+		key.WithHelp(helpKeyLabel(keyName), help),
 	)
 }
 
