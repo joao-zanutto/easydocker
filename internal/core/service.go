@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"io"
+	"sync"
 	"time"
 )
 
@@ -117,25 +118,43 @@ func (s *Service) ExecShell(containerID string, stdin io.Reader, stdout, stderr 
 }
 
 func (s *Service) LoadSnapshot() (Snapshot, error) {
-	containers, err := s.LoadContainerRows()
-	if err != nil {
-		return Snapshot{}, err
+	var (
+		containers    []ContainerRow
+		resources     Snapshot
+		containersErr error
+		resourcesErr  error
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		containers, containersErr = s.LoadContainerRows()
+	}()
+	go func() {
+		defer wg.Done()
+		resources, resourcesErr = s.LoadSupportingResources()
+	}()
+	wg.Wait()
+
+	if containersErr != nil {
+		return Snapshot{}, containersErr
 	}
 
-	resources, err := s.LoadSupportingResources()
-	if err != nil {
-		return Snapshot{}, err
-	}
+	resources.Containers = containers
 
-	metricsByID, totalCPU, totalMem, err := s.LoadContainerMetrics(containers)
-	if err != nil {
-		return Snapshot{}, err
+	if resourcesErr == nil {
+		metricsByID, totalCPU, totalMem, metricsErr := s.LoadContainerMetrics(containers)
+		if metricsErr == nil {
+			resources.Containers = ApplyMetricsToContainers(containers, metricsByID)
+			resources.TotalCPU = totalCPU
+			resources.TotalMem = totalMem
+		}
+		resources.ComposeProjects = AggregateComposeProjects(resources.Containers)
+	} else {
+		resources.ComposeProjects = AggregateComposeProjects(containers)
 	}
-
-	resources.Containers = ApplyMetricsToContainers(containers, metricsByID)
-	resources.ComposeProjects = AggregateComposeProjects(resources.Containers)
-	resources.TotalCPU = totalCPU
-	resources.TotalMem = totalMem
 	resources.Timestamp = time.Now()
 
 	return resources, nil

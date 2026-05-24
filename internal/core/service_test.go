@@ -5,11 +5,13 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 )
 
 type mockRepository struct {
+	mu                        sync.Mutex
 	loadContainerRowsFn       func(ctx context.Context) ([]ContainerRow, error)
 	loadSupportingResourcesFn func(ctx context.Context) (Snapshot, error)
 	loadContainerMetricsFn    func(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error)
@@ -19,8 +21,14 @@ type mockRepository struct {
 	calls []string
 }
 
+func (m *mockRepository) logCall(name string) {
+	m.mu.Lock()
+	m.calls = append(m.calls, name)
+	m.mu.Unlock()
+}
+
 func (m *mockRepository) LoadContainerRows(ctx context.Context) ([]ContainerRow, error) {
-	m.calls = append(m.calls, "rows")
+	m.logCall("rows")
 	if m.loadContainerRowsFn != nil {
 		return m.loadContainerRowsFn(ctx)
 	}
@@ -28,7 +36,7 @@ func (m *mockRepository) LoadContainerRows(ctx context.Context) ([]ContainerRow,
 }
 
 func (m *mockRepository) LoadSupportingResources(ctx context.Context) (Snapshot, error) {
-	m.calls = append(m.calls, "resources")
+	m.logCall("resources")
 	if m.loadSupportingResourcesFn != nil {
 		return m.loadSupportingResourcesFn(ctx)
 	}
@@ -36,7 +44,7 @@ func (m *mockRepository) LoadSupportingResources(ctx context.Context) (Snapshot,
 }
 
 func (m *mockRepository) LoadContainerMetrics(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-	m.calls = append(m.calls, "metrics")
+	m.logCall("metrics")
 	if m.loadContainerMetricsFn != nil {
 		return m.loadContainerMetricsFn(ctx, rows)
 	}
@@ -44,7 +52,7 @@ func (m *mockRepository) LoadContainerMetrics(ctx context.Context, rows []Contai
 }
 
 func (m *mockRepository) LoadContainerLiveData(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error) {
-	m.calls = append(m.calls, "live")
+	m.logCall("live")
 	if m.loadContainerLiveDataFn != nil {
 		return m.loadContainerLiveDataFn(ctx, containerID, previousCPU, previousMem, tail)
 	}
@@ -52,7 +60,7 @@ func (m *mockRepository) LoadContainerLiveData(ctx context.Context, containerID 
 }
 
 func (m *mockRepository) ExecShell(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error {
-	m.calls = append(m.calls, "exec")
+	m.logCall("exec")
 	if m.execShellFn != nil {
 		return m.execShellFn(ctx, containerID, stdin, stdout, stderr)
 	}
@@ -60,27 +68,27 @@ func (m *mockRepository) ExecShell(ctx context.Context, containerID string, stdi
 }
 
 func (m *mockRepository) LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error) {
-	m.calls = append(m.calls, "logs")
+	m.logCall("logs")
 	return nil, nil
 }
 
 func (m *mockRepository) InspectContainer(ctx context.Context, containerID string) ([]string, error) {
-	m.calls = append(m.calls, "inspect-container")
+	m.logCall("inspect-container")
 	return nil, nil
 }
 
 func (m *mockRepository) InspectImage(ctx context.Context, imageRef string) ([]string, error) {
-	m.calls = append(m.calls, "inspect-image")
+	m.logCall("inspect-image")
 	return nil, nil
 }
 
 func (m *mockRepository) InspectNetwork(ctx context.Context, networkID string) ([]string, error) {
-	m.calls = append(m.calls, "inspect-network")
+	m.logCall("inspect-network")
 	return nil, nil
 }
 
 func (m *mockRepository) InspectVolume(ctx context.Context, volumeName string) ([]string, error) {
-	m.calls = append(m.calls, "inspect-volume")
+	m.logCall("inspect-volume")
 	return nil, nil
 }
 
@@ -125,8 +133,14 @@ func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 		t.Fatalf("LoadSnapshot() error = %v, want nil", err)
 	}
 
-	if !reflect.DeepEqual(repo.calls, []string{"rows", "resources", "metrics"}) {
-		t.Fatalf("repository call order = %#v, want [rows resources metrics]", repo.calls)
+	// rows and resources run in parallel, metrics runs after both
+	calls := repo.calls
+	if len(calls) != 3 {
+		t.Fatalf("expected 3 calls, got %#v", calls)
+	}
+	// metrics must be last
+	if calls[2] != "metrics" {
+		t.Fatalf("metrics should be the last call, got %#v", calls)
 	}
 
 	if len(snapshot.Containers) != 2 {
@@ -152,23 +166,84 @@ func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 	}
 }
 
-func TestServiceLoadSnapshot_StopsOnResourceError(t *testing.T) {
+func TestServiceLoadSnapshot_FailsOnContainerError(t *testing.T) {
 	repo := &mockRepository{}
 	repo.loadContainerRowsFn = func(ctx context.Context) ([]ContainerRow, error) {
-		return []ContainerRow{{FullID: "id-1"}}, nil
+		return nil, errors.New("docker not available")
 	}
-	repo.loadSupportingResourcesFn = func(ctx context.Context) (Snapshot, error) {
-		return Snapshot{}, errors.New("boom")
-	}
-	repo.loadContainerMetricsFn = func(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-		t.Fatalf("LoadContainerMetrics should not be called after resource failure")
-		return nil, 0, 0, nil
-	}
+	// LoadSupportingResources may or may not run in parallel; both are
+	// independent goroutines. We only care that the containers error wins.
 
 	svc := NewService(repo)
 	_, err := svc.LoadSnapshot()
 	if err == nil {
 		t.Fatalf("LoadSnapshot() error = nil, want non-nil")
+	}
+}
+
+func TestServiceLoadSnapshot_ReturnsPartialWhenResourcesFail(t *testing.T) {
+	rows := []ContainerRow{{FullID: "id-1", Name: "one"}, {FullID: "id-2", Name: "two"}}
+	repo := &mockRepository{}
+	repo.loadContainerRowsFn = func(ctx context.Context) ([]ContainerRow, error) {
+		return rows, nil
+	}
+	repo.loadSupportingResourcesFn = func(ctx context.Context) (Snapshot, error) {
+		return Snapshot{}, errors.New("resource error")
+	}
+	repo.loadContainerMetricsFn = func(ctx context.Context, gotRows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
+		// Metrics should still run even when resources fail (partial tolerance)
+		return nil, 0, 0, nil
+	}
+
+	svc := NewService(repo)
+	snapshot, err := svc.LoadSnapshot()
+	if err != nil {
+		t.Fatalf("LoadSnapshot() error = %v, want nil (partial tolerance)", err)
+	}
+
+	if len(snapshot.Containers) != 2 {
+		t.Fatalf("snapshot.Containers len = %d, want 2", len(snapshot.Containers))
+	}
+	// ComposeProjects should still be computed from containers
+	if snapshot.ComposeProjects == nil {
+		t.Fatalf("ComposeProjects should be computed even when resources fail")
+	}
+	if snapshot.Timestamp.IsZero() {
+		t.Fatalf("snapshot timestamp should be populated")
+	}
+}
+
+func TestServiceLoadSnapshot_ReturnsPartialWhenMetricsFail(t *testing.T) {
+	rows := []ContainerRow{{FullID: "id-1", Name: "one", ComposeProject: "shop"}}
+	repo := &mockRepository{}
+	repo.loadContainerRowsFn = func(ctx context.Context) ([]ContainerRow, error) {
+		return rows, nil
+	}
+	repo.loadSupportingResourcesFn = func(ctx context.Context) (Snapshot, error) {
+		return Snapshot{Images: []ImageRow{{ID: "img"}}}, nil
+	}
+	repo.loadContainerMetricsFn = func(ctx context.Context, gotRows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
+		return nil, 0, 0, errors.New("metrics error")
+	}
+
+	svc := NewService(repo)
+	snapshot, err := svc.LoadSnapshot()
+	if err != nil {
+		t.Fatalf("LoadSnapshot() error = %v, want nil (partial tolerance)", err)
+	}
+
+	if len(snapshot.Containers) != 1 {
+		t.Fatalf("snapshot.Containers len = %d, want 1", len(snapshot.Containers))
+	}
+	if len(snapshot.Images) != 1 {
+		t.Fatalf("snapshot.Images len = %d, want 1 (resources should still be present)", len(snapshot.Images))
+	}
+	// CPU/Mem should be zero since metrics failed
+	if snapshot.Containers[0].CPUPercent != 0 {
+		t.Fatalf("container CPU should be 0 when metrics fail, got %v", snapshot.Containers[0].CPUPercent)
+	}
+	if snapshot.Timestamp.IsZero() {
+		t.Fatalf("snapshot timestamp should be populated")
 	}
 }
 
