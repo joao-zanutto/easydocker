@@ -36,7 +36,7 @@ func (r *Repository) LoadContainerLiveData(ctx context.Context, containerID stri
 	if err != nil {
 		return core.ContainerLiveData{}, fmt.Errorf("container logs: %w", err)
 	}
-	defer logReader.Close()
+	defer func() { _ = logReader.Close() }()
 
 	rawLogBytes, err := io.ReadAll(logReader)
 	if err != nil {
@@ -86,7 +86,7 @@ func (r *Repository) LoadContainerLogs(ctx context.Context, containerID string, 
 	if err != nil {
 		return nil, fmt.Errorf("container logs: %w", err)
 	}
-	defer logReader.Close()
+	defer func() { _ = logReader.Close() }()
 
 	rawLogBytes, err := io.ReadAll(logReader)
 	if err != nil {

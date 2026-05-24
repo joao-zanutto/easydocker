@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-func HumanBytes(size int64) string {
+func HumanBytes(size uint64) string {
 	const unit = 1024
 	if size < unit {
 		return fmt.Sprintf("%d B", size)
 	}
-	div, exp := int64(unit), 0
+	div, exp := uint64(unit), 0
 	for n := size / unit; n >= unit; n /= unit {
 		div *= unit
 		exp++
@@ -41,7 +41,7 @@ func ContainerMemoryTableValue(container ContainerRow, loadingIndicator string) 
 		}
 		return "-"
 	}
-	return fmt.Sprintf("%s", container.MemoryUsage)
+	return container.MemoryUsage
 }
 
 func metricsLoadingValue(loadingIndicator string) string {

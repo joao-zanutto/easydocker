@@ -159,9 +159,9 @@ func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, load
 		}
 		return fmt.Sprintf("CPU %s  MEM %s", indicator, indicator)
 	}
-	mem := core.HumanBytes(int64(snapshot.TotalMem))
+	mem := core.HumanBytes(snapshot.TotalMem)
 	if snapshot.TotalLimit > 0 {
-		return fmt.Sprintf("CPU %s  MEM %s", renderPercent(snapshot.TotalCPU), formatMemoryUsage(mem, (float64(snapshot.TotalMem)/float64(snapshot.TotalLimit))*100, core.HumanBytes(int64(snapshot.TotalLimit))))
+		return fmt.Sprintf("CPU %s  MEM %s", renderPercent(snapshot.TotalCPU), formatMemoryUsage(mem, (float64(snapshot.TotalMem)/float64(snapshot.TotalLimit))*100, core.HumanBytes(snapshot.TotalLimit)))
 	}
 	return fmt.Sprintf("CPU %s  MEM %s", renderPercent(snapshot.TotalCPU), mem)
 }

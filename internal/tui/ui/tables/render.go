@@ -122,11 +122,7 @@ func renderTable(styles Styles, width, height int, defs []ColumnDef, rows []Row,
 	for _, row := range rows {
 		privateRows = append(privateRows, tableRow(row))
 	}
-	privateStyles := tableStyles{
-		Header:   styles.Header,
-		Cell:     styles.Cell,
-		Selected: styles.Selected,
-	}
+	privateStyles := tableStyles(styles)
 
 	t := newTable(
 		withColumns(cols),

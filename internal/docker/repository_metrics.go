@@ -133,10 +133,10 @@ func computeMemoryUsage(stats container.StatsResponse) (float64, string, string,
 	used := effectiveMemoryUsage(stats)
 	limit := stats.MemoryStats.Limit
 	if limit == 0 {
-		return 0, core.HumanBytes(int64(used)), "-", used, 0
+		return 0, core.HumanBytes(used), "-", used, 0
 	}
 	percent := (float64(used) / float64(limit)) * 100
-	return percent, core.HumanBytes(int64(used)), core.HumanBytes(int64(limit)), used, limit
+	return percent, core.HumanBytes(used), core.HumanBytes(limit), used, limit
 }
 
 func effectiveMemoryUsage(stats container.StatsResponse) uint64 {

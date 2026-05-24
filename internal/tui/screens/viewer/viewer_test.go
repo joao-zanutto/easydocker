@@ -236,8 +236,8 @@ func TestSyncFromData(t *testing.T) {
 		state.SyncFromData(80, 10)
 
 		// Viewport should be at bottom in follow mode
-		if state.Viewport.YOffset() != 0 {
-			// YOffset 0 means at bottom in bubbletea viewport
+		if got := state.Viewport.YOffset(); got != 0 {
+			t.Errorf("viewport YOffset = %d, want 0 (meaning bottom)", got)
 		}
 	})
 }
