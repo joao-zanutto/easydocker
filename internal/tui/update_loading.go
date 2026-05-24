@@ -99,5 +99,3 @@ func (m *model) finishLoadingStage(err error) bool {
 	m.applyLoadingTransition(transition)
 	return ok
 }
-
-

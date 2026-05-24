@@ -16,7 +16,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var updated tea.Model
 	var cmd tea.Cmd
 
-
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		updated, cmd = m.handleWindowSizeMsg(msg)
@@ -157,7 +156,6 @@ func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 	return m, nil
 }
-
 
 func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{tickCmd()}

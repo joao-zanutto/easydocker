@@ -89,19 +89,19 @@ func NewHelpState(width, height int) HelpState {
 }
 
 type HelpKeyLabels struct {
-	MoveUpDown    string
-	PageUpDown    string
-	HomeEnd       string
-	TabLeftRight  string
-	LeftRight     string
-	OpenLogs      string
-	OpenFilter    string
-	ToggleScope   string
-	OpenInspect   string
-	OpenShell     string
-	ToggleWrap    string
-	ToggleFollow  string
-	BackClose     string
+	MoveUpDown   string
+	PageUpDown   string
+	HomeEnd      string
+	TabLeftRight string
+	LeftRight    string
+	OpenLogs     string
+	OpenFilter   string
+	ToggleScope  string
+	OpenInspect  string
+	OpenShell    string
+	ToggleWrap   string
+	ToggleFollow string
+	BackClose    string
 }
 
 func BuildHelpCommands(labels HelpKeyLabels) []HelpCommand {

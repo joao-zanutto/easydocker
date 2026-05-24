@@ -13,7 +13,6 @@ const (
 	TailStep    = 200
 )
 
-
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	m.previousScreen = m.screen
 	m.screen = shared.Logs

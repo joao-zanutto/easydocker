@@ -74,7 +74,6 @@ func (m model) renderMain(height int) string {
 	return util.RenderFramedContent(m.styles.MainFrame, layout, content)
 }
 
-
 func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalHeight int) string {
 	m.viewer.Width = totalWidth
 	m.viewer.Height = totalHeight

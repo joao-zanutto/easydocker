@@ -79,6 +79,7 @@ func (m model) selectedContainerListRow() (tables.ContainerListRow, bool) {
 	}
 	return rows[m.browse.ContainerCursor], true
 }
+
 type footerKeyMap struct {
 	bindings []key.Binding
 }
