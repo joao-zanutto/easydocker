@@ -81,7 +81,9 @@ func (r *Repository) LoadSupportingResources(ctx context.Context) (core.Snapshot
 
 	snapshot.TotalCPU = 0
 	snapshot.TotalMem = 0
-	snapshot.TotalLimit = uint64(info.MemTotal)
+	if info.MemTotal > 0 {
+		snapshot.TotalLimit = uint64(info.MemTotal)
+	}
 
 	return snapshot, nil
 }

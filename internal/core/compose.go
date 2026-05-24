@@ -70,12 +70,12 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 			project.Created = "-"
 		}
 		if project.MemoryUsageBytes > 0 {
-			project.MemoryUsage = HumanBytes(int64(project.MemoryUsageBytes))
+			project.MemoryUsage = HumanBytes(project.MemoryUsageBytes)
 		} else {
 			project.MemoryUsage = "-"
 		}
 		if project.MemoryLimitBytes > 0 {
-			project.MemoryLimit = HumanBytes(int64(project.MemoryLimitBytes))
+			project.MemoryLimit = HumanBytes(project.MemoryLimitBytes)
 		} else {
 			project.MemoryLimit = "-"
 		}

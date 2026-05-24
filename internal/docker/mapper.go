@@ -49,7 +49,7 @@ func mapImageRow(item image.Summary) core.ImageRow {
 	return core.ImageRow{
 		ID:          shortID(item.ID),
 		Tags:        formatTags(item.RepoTags),
-		Size:        core.HumanBytes(item.Size),
+		Size:        humanBytesUnknown(item.Size),
 		Created:     core.HumanAge(time.Unix(item.Created, 0)),
 		CreatedUnix: item.Created,
 		Containers:  item.Containers,
@@ -162,7 +162,7 @@ func humanBytesUnknown(size int64) string {
 	if size < 0 {
 		return "-"
 	}
-	return core.HumanBytes(size)
+	return core.HumanBytes(uint64(size))
 }
 
 func humanTimestamp(value string) string {
