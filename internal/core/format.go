@@ -41,7 +41,7 @@ func ContainerMemoryTableValue(container ContainerRow, loadingIndicator string) 
 		}
 		return "-"
 	}
-	return fmt.Sprintf("%s", container.MemoryUsage)
+	return container.MemoryUsage
 }
 
 func metricsLoadingValue(loadingIndicator string) string {

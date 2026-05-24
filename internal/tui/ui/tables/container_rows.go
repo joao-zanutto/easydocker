@@ -176,7 +176,7 @@ func ComposeProjectTableRow(item ContainerListRow, loadingIndicator string) []st
 	}
 	mem := "-"
 	if item.ComposeProject.MemoryUsage != "-" {
-		mem = fmt.Sprintf("%s", item.ComposeProject.MemoryUsage)
+		mem = item.ComposeProject.MemoryUsage
 	} else if item.ComposeProject.RunningCount > 0 && loadingIndicator != "" {
 		mem = loadingIndicator
 	}
