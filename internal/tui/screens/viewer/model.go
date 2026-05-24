@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"easydocker/internal/core"
 	"easydocker/internal/tui/shared"
 
 	"charm.land/bubbles/v2/key"
@@ -20,7 +21,7 @@ type Model struct {
 	EmptyMsg      string
 	Breadcrumb    string
 	ContainerName string
-	ResourceType  ResourceType
+	ResourceType  core.ResourceType
 	Width         int
 	Height        int
 	Styles        ViewStyles

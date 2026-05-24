@@ -22,10 +22,6 @@ func HelpBodyHeight(containerHeight int, frame lipgloss.Style) int {
 }
 
 func helpBodyLines(commands []HelpCommand, format func(HelpCommand) string) []string {
-	if len(commands) == 0 {
-		commands = buildHelpCommands()
-	}
-
 	lines := make([]string, 0, len(commands))
 	var prevGroup string
 	for _, cmd := range commands {

@@ -11,38 +11,50 @@ import (
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	m = m.setupBrowseCallbacks()
+	m = m.syncBrowseData()
+
+	var updated tea.Model
+	var cmd tea.Cmd
+
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		return m.handleWindowSizeMsg(msg)
+		updated, cmd = m.handleWindowSizeMsg(msg)
 	case tea.KeyPressMsg:
-		return m.handleKey(msg)
+		updated, cmd = m.handleKey(msg)
 	case containersResultMsg:
-		return m.handleContainersResultMsg(msg)
+		updated, cmd = m.handleContainersResultMsg(msg)
 	case resourcesResultMsg:
-		return m.handleResourcesResultMsg(msg)
+		updated, cmd = m.handleResourcesResultMsg(msg)
 	case metricsResultMsg:
-		return m.handleMetricsResultMsg(msg)
+		updated, cmd = m.handleMetricsResultMsg(msg)
 	case loadResultMsg:
-		return m.handleLoadResultMsg(msg)
+		updated, cmd = m.handleLoadResultMsg(msg)
 	case viewer.ContentMsg:
-		return m.handleViewerContentMsg(msg)
+		updated, cmd = m.handleViewerContentMsg(msg)
 	case inspectResultMsg:
-		return m.handleInspectResultMsg(msg)
+		updated, cmd = m.handleInspectResultMsg(msg)
 	case shellDoneMsg:
-		return m, nil
+		m.err = msg.err
+		updated, cmd = m, nil
 	case tickMsg:
-		return m.handleTickMsg(msg)
+		updated, cmd = m.handleTickMsg(msg)
 	case spinner.TickMsg:
-		return m.handleSpinnerTickMsg(msg)
+		updated, cmd = m.handleSpinnerTickMsg(msg)
 	case browse.TransitionMsg:
-		return m.handleBrowseTransition(msg)
+		updated, cmd = m.handleBrowseTransition(msg)
 	case viewer.TransitionMsg:
-		return m.handleViewerTransition(msg)
+		updated, cmd = m.handleViewerTransition(msg)
 	}
 
-	return m, nil
+	switch v := updated.(type) {
+	case model:
+		m = v
+	case *model:
+		m = *v
+	}
+	m = m.syncBrowseData()
+	return m, cmd
 }
 
 func (m *model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
@@ -125,6 +137,7 @@ func (m model) handleViewerTransition(msg viewer.TransitionMsg) (tea.Model, tea.
 
 func (m model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	keys := menu.NewKeyMap()
+	m.help.Commands = m.buildHelpCommands()
 	transition := menu.Controller{}.HandleKey(&m.menu, &m.help, msg, keys)
 	if transition.Quit {
 		return m, tea.Quit
@@ -145,38 +158,6 @@ func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) setupBrowseCallbacks() model {
-	m.browse.DetailProvider = m.browseDetailRenderer()
-	m.browse.ListRenderer = func(width, h int) string {
-		return m.renderResourceList(width, h)
-	}
-	m.browse.ContainerMetricsLoadingIndicator = m.containerMetricsLoadingIndicator
-	m.browse.ContainerListRows = func() []browse.ContainerListRow {
-		rows := m.containerListRows()
-		out := make([]browse.ContainerListRow, len(rows))
-		for i, r := range rows {
-			out[i] = browse.ContainerListRow{
-				Kind:            int(r.Kind),
-				Container:       r.Container,
-				ComposeProject:  r.ComposeProject,
-				ComposeExpanded: r.ComposeExpanded,
-			}
-		}
-		return out
-	}
-	m.browse.FilteredImages = m.filteredImages
-	m.browse.FilteredNetworks = m.filteredNetworks
-	m.browse.FilteredVolumes = m.filteredVolumes
-	return m
-}
-
-func (m model) shouldAnimateLogsLoadingIndicator() bool {
-	return (m.screen == shared.Logs || m.screen == shared.Inspect) && (m.viewer.InitialLoad || m.viewer.HistoryLoad)
-}
-
-func (m model) shouldAnimateMetricsLoadingIndicator() bool {
-	return !m.metricsLoaded && m.loadingStage != loadStageIdle
-}
 
 func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{tickCmd()}

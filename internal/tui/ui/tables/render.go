@@ -1,13 +1,59 @@
 package tables
 
 import (
-	"easydocker/internal/tui/ui/tables/btable"
 	"easydocker/internal/tui/util"
 
 	"charm.land/lipgloss/v2"
 )
 
 type Row []string
+
+// allocateColumns distributes total width across desired column widths.
+func allocateColumns(total int, desired []int) []int {
+	if len(desired) == 0 {
+		return []int{}
+	}
+	if total <= 0 {
+		out := make([]int, len(desired))
+		for i := range out {
+			out[i] = 1
+		}
+		return out
+	}
+
+	out := make([]int, len(desired))
+	sum := 0
+	for i, width := range desired {
+		if width < 1 {
+			width = 1
+		}
+		out[i] = width
+		sum += width
+	}
+	if sum == total {
+		return out
+	}
+	if sum < total {
+		out[len(out)-1] += total - sum
+		return out
+	}
+
+	over := sum - total
+	for over > 0 {
+		changed := false
+		for i := range out {
+			if out[i] > 1 && over > 0 {
+				out[i]--
+				over--
+				changed = true
+			}
+		}
+		if !changed {
+			break
+		}
+	}
+	return out
+}
 
 type Styles struct {
 	Header   lipgloss.Style
@@ -34,7 +80,7 @@ func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 		desired = append(desired, width)
 	}
 
-	widths := util.AllocateColumns(max(1, tableWidth-((len(defs)-1)*2)), desired)
+	widths := allocateColumns(max(1, tableWidth-((len(defs)-1)*2)), desired)
 	resolved := make([]ColumnDef, 0, len(defs))
 	for index, def := range defs {
 		def.MinWidth = widths[index]
@@ -63,34 +109,34 @@ func RenderOrEmpty(width, height int, emptyMessage string, columns []ColumnDef, 
 	if len(rows) == 0 {
 		return util.ConstrainLine(emptyMessage, width)
 	}
-	return RenderBubblesTable(styles, width, height, columns, rows, cursor)
+	return renderTable(styles, width, height, columns, rows, cursor)
 }
 
-// RenderBubblesTable creates a rendered btable.Table with styled rows and cursor.
-func RenderBubblesTable(styles Styles, width, height int, defs []ColumnDef, rows []Row, cursor int) string {
-	cols := make([]btable.Column, 0, len(defs))
+// renderTable creates a rendered table with styled rows and cursor.
+func renderTable(styles Styles, width, height int, defs []ColumnDef, rows []Row, cursor int) string {
+	cols := make([]tableColumn, 0, len(defs))
 	for _, def := range defs {
-		cols = append(cols, btable.Column{Title: def.Header, Width: def.MinWidth})
+		cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth})
 	}
-	privateRows := make([]btable.Row, 0, len(rows))
+	privateRows := make([]tableRow, 0, len(rows))
 	for _, row := range rows {
-		privateRows = append(privateRows, btable.Row(row))
+		privateRows = append(privateRows, tableRow(row))
 	}
-	privateStyles := btable.Styles{
+	privateStyles := tableStyles{
 		Header:   styles.Header,
 		Cell:     styles.Cell,
 		Selected: styles.Selected,
 	}
 
-	t := btable.New(
-		btable.WithColumns(cols),
-		btable.WithRows(privateRows),
-		btable.WithStyles(privateStyles),
-		btable.WithWidth(max(1, width)),
-		btable.WithHeight(max(2, height)),
+	t := newTable(
+		withColumns(cols),
+		withRows(privateRows),
+		withStyles(privateStyles),
+		withWidth(max(1, width)),
+		withHeight(max(2, height)),
 	)
 	if len(rows) > 0 {
-		t.SetCursor(util.Clamp(cursor, 0, len(rows)-1))
+		t.setCursor(util.Clamp(cursor, 0, len(rows)-1))
 	}
-	return t.View()
+	return t.view()
 }

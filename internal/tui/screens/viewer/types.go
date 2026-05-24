@@ -61,15 +61,6 @@ const (
 	ContentTypeInspect
 )
 
-type ResourceType int
-
-const (
-	ResourceTypeContainer ResourceType = iota
-	ResourceTypeVolume
-	ResourceTypeNetwork
-	ResourceTypeImage
-)
-
 type State struct {
 	ContainerID  string
 	Data         []string

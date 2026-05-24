@@ -1,4 +1,4 @@
-package btable
+package tables
 
 import (
 	"strings"
@@ -9,41 +9,41 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type Row []string
+type tableRow []string
 
-type Column struct {
+type tableColumn struct {
 	Title string
 	Width int
 }
 
-type Styles struct {
+type tableStyles struct {
 	Header   lipgloss.Style
 	Cell     lipgloss.Style
 	Selected lipgloss.Style
 }
 
-func DefaultStyles() Styles {
-	return Styles{
+func defaultTableStyles() tableStyles {
+	return tableStyles{
 		Header:   lipgloss.NewStyle().Bold(true),
 		Cell:     lipgloss.NewStyle(),
 		Selected: lipgloss.NewStyle().Bold(true),
 	}
 }
 
-type Model struct {
-	cols   []Column
-	rows   []Row
+type tableModel struct {
+	cols   []tableColumn
+	rows   []tableRow
 	cursor int
-	styles Styles
+	styles tableStyles
 
 	viewport viewport.Model
 }
 
-type Option func(*Model)
+type tableOption func(*tableModel)
 
-func New(opts ...Option) Model {
-	m := Model{
-		styles:   DefaultStyles(),
+func newTable(opts ...tableOption) tableModel {
+	m := tableModel{
+		styles:   defaultTableStyles(),
 		viewport: viewport.New(viewport.WithWidth(0), viewport.WithHeight(20)),
 	}
 	for _, opt := range opts {
@@ -53,38 +53,38 @@ func New(opts ...Option) Model {
 	return m
 }
 
-func WithColumns(cols []Column) Option {
-	return func(m *Model) {
+func withColumns(cols []tableColumn) tableOption {
+	return func(m *tableModel) {
 		m.cols = cols
 	}
 }
 
-func WithRows(rows []Row) Option {
-	return func(m *Model) {
+func withRows(rows []tableRow) tableOption {
+	return func(m *tableModel) {
 		m.rows = rows
 	}
 }
 
-func WithHeight(h int) Option {
-	return func(m *Model) {
+func withHeight(h int) tableOption {
+	return func(m *tableModel) {
 		headerHeight := lipgloss.Height(m.headersView())
 		m.viewport.SetHeight(max(1, h-headerHeight))
 	}
 }
 
-func WithWidth(w int) Option {
-	return func(m *Model) {
+func withWidth(w int) tableOption {
+	return func(m *tableModel) {
 		m.viewport.SetWidth(max(1, w))
 	}
 }
 
-func WithStyles(s Styles) Option {
-	return func(m *Model) {
+func withStyles(s tableStyles) tableOption {
+	return func(m *tableModel) {
 		m.styles = s
 	}
 }
 
-func (m *Model) SetCursor(n int) {
+func (m *tableModel) setCursor(n int) {
 	if len(m.rows) == 0 {
 		m.cursor = 0
 		m.updateViewport()
@@ -94,7 +94,7 @@ func (m *Model) SetCursor(n int) {
 	m.updateViewport()
 }
 
-func (m Model) View() string {
+func (m tableModel) view() string {
 	header := m.styles.Header.Render(m.headersView())
 	body := m.viewport.View()
 	if body == "" {
@@ -103,7 +103,7 @@ func (m Model) View() string {
 	return header + "\n" + body
 }
 
-func (m *Model) updateViewport() {
+func (m *tableModel) updateViewport() {
 	if m.viewport.Width() <= 0 {
 		m.viewport.SetWidth(1)
 	}
@@ -127,7 +127,7 @@ func (m *Model) updateViewport() {
 	m.viewport.SetYOffset(0)
 }
 
-func (m Model) headersView() string {
+func (m tableModel) headersView() string {
 	parts := make([]string, 0, len(m.cols))
 	for _, col := range m.cols {
 		if col.Width <= 0 {
@@ -138,7 +138,7 @@ func (m Model) headersView() string {
 	return joinWithGap(parts, "  ")
 }
 
-func (m Model) renderRow(rowIndex int) string {
+func (m tableModel) renderRow(rowIndex int) string {
 	parts := make([]string, 0, len(m.cols))
 	for colIndex, col := range m.cols {
 		if col.Width <= 0 {

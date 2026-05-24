@@ -24,7 +24,7 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	m.viewer.Data = nil
 	m.viewer.ContainerID = resourceID
 	m.viewer.ResourceName = resourceName
-	m.viewer.ResourceType = resourceTypeFromTab(m.browse.ActiveTab)
+	m.viewer.ResourceType = resourceType
 	m.viewer.ContentType = viewer.ContentTypeInspect
 	m.viewer.LoadingMsg = "Loading inspect..."
 	m.viewer.EmptyMsg = "No inspect data available."
@@ -41,10 +41,10 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
 }
 
-func (m *model) loadInspectCmd(resourceType shared.Tab, resourceID, resourceName string) tea.Cmd {
+func (m *model) loadInspectCmd(resourceType core.ResourceType, resourceID, resourceName string) tea.Cmd {
 	svc := m.service
 	return func() tea.Msg {
-		data, err := svc.InspectResource(tabToResourceType(resourceType), resourceID)
+		data, err := svc.InspectResource(resourceType, resourceID)
 		return inspectResultMsg{
 			resourceType: int(resourceType),
 			resourceID:   resourceID,
@@ -55,47 +55,32 @@ func (m *model) loadInspectCmd(resourceType shared.Tab, resourceID, resourceName
 	}
 }
 
-func tabToResourceType(tab shared.Tab) core.ResourceType {
-	switch tab {
-	case tabContainers:
-		return core.ResourceContainer
-	case tabImages:
-		return core.ResourceImage
-	case tabNetworks:
-		return core.ResourceNetwork
-	case tabVolumes:
-		return core.ResourceVolume
-	default:
-		return core.ResourceContainer
-	}
-}
-
-func (m model) selectedInspectResource() (shared.Tab, string, string, bool) {
+func (m model) selectedInspectResource() (core.ResourceType, string, string, bool) {
 	switch m.browse.ActiveTab {
 	case tabContainers:
 		c, ok := m.selectedContainer()
 		if !ok {
 			return 0, "", "", false
 		}
-		return tabContainers, c.FullID, c.Name, true
+		return core.ResourceContainer, c.FullID, c.Name, true
 	case tabImages:
 		img, ok := m.selectedImage()
 		if !ok {
 			return 0, "", "", false
 		}
-		return tabImages, img.ID, img.Tags, true
+		return core.ResourceImage, img.ID, img.Tags, true
 	case tabNetworks:
 		net, ok := m.selectedNetwork()
 		if !ok {
 			return 0, "", "", false
 		}
-		return tabNetworks, net.ID, net.Name, true
+		return core.ResourceNetwork, net.ID, net.Name, true
 	case tabVolumes:
 		vol, ok := m.selectedVolume()
 		if !ok {
 			return 0, "", "", false
 		}
-		return tabVolumes, vol.Name, vol.Name, true
+		return core.ResourceVolume, vol.Name, vol.Name, true
 	default:
 		return 0, "", "", false
 	}

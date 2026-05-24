@@ -80,12 +80,8 @@ func (m model) filteredVolumes() []core.VolumeRow {
 	return core.FilterVolumesByQuery(m.browse.Snapshot.Volumes, m.browse.Filter.Query)
 }
 
-func (m model) containerListRows() []tables.ContainerListRow {
-	return tables.BuildContainerListRows(m.filteredContainers(), m.browse.ComposeExpanded)
-}
-
 func (m model) findContainerIndexByID(id string) (int, bool) {
-	for index, row := range m.containerListRows() {
+	for index, row := range m.browse.Data.ContainerListRows {
 		if row.Kind != tables.ContainerListRowContainer {
 			continue
 		}

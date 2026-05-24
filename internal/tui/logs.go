@@ -13,6 +13,7 @@ const (
 	TailStep    = 200
 )
 
+
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	m.previousScreen = m.screen
 	m.screen = shared.Logs
@@ -34,7 +35,7 @@ func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	m.viewer.Filter.Query = ""
 	m.viewer.Filter.Input.SetValue("")
 	m.viewer.ContentType = viewer.ContentTypeLogs
-	m.viewer.ResourceType = viewer.ResourceTypeContainer
+	m.viewer.ResourceType = core.ResourceContainer
 	m.viewer.LoadingMsg = "Loading logs..."
 	m.viewer.EmptyMsg = "No logs found for this container."
 	m.viewer.Breadcrumb = ""

@@ -40,7 +40,6 @@ type Set struct {
 	KeyText      lipgloss.Style // Chrome: footer key descriptions
 	FollowOn     lipgloss.Style // Viewer: follow mode enabled
 	FollowOff    lipgloss.Style // Viewer: follow mode disabled
-	MonitorBox   lipgloss.Style // (unused)
 	StateRun     lipgloss.Style // Browse: running state color
 	StateWarn    lipgloss.Style // Browse: warning state color
 	StateStop    lipgloss.Style // Browse: stopped state color

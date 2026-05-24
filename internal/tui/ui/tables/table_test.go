@@ -1,4 +1,4 @@
-package btable
+package tables
 
 import (
 	"strings"
@@ -6,11 +6,11 @@ import (
 )
 
 func TestRenderRow_ColoredCellDoesNotSpillIntoNextColumn(t *testing.T) {
-	m := New(
-		WithColumns([]Column{{Title: "STATE", Width: 4}, {Title: "STATUS", Width: 6}}),
-		WithRows([]Row{{"\x1b[32mrunning\x1b[39m", "ok"}}),
-		WithWidth(20),
-		WithHeight(2),
+	m := newTable(
+		withColumns([]tableColumn{{Title: "STATE", Width: 4}, {Title: "STATUS", Width: 6}}),
+		withRows([]tableRow{{"\x1b[32mrunning\x1b[39m", "ok"}}),
+		withWidth(20),
+		withHeight(2),
 	)
 
 	row := m.renderRow(0)

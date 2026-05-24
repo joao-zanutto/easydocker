@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"easydocker/internal/core"
 	"easydocker/internal/tui/ui/components"
 	"easydocker/internal/tui/util"
 
@@ -31,7 +32,7 @@ type ViewModel struct {
 	Height           int
 	Styles           ViewStyles
 	ContentType      ContentType
-	ResourceType     ResourceType
+	ResourceType     core.ResourceType
 	HistoryLoad      bool
 }
 
@@ -46,7 +47,7 @@ func RenderContent(vm ViewModel) string {
 	headerVM.Width = layout.ContentWidth
 	breadcrumb := vm.Breadcrumb
 	if breadcrumb == "" {
-		resourceLabel := getResourceLabel(vm.ResourceType)
+		resourceLabel := core.ResourceLabel(vm.ResourceType)
 		contentLabel := getContentLabel(vm.ContentType)
 		breadcrumb = util.ClampSingleLine(
 			fmt.Sprintf("%s / %s / %s", resourceLabel, vm.ContainerName, contentLabel),
@@ -225,25 +226,6 @@ func renderRightPriorityLine(left, right string, width int) string {
 	leftRenderedWidth := util.DisplayWidth(left)
 	spacing := max(0, width-leftRenderedWidth-rightWidth)
 	return left + strings.Repeat(" ", spacing) + right
-}
-
-func getResourceLabel(rt ResourceType) string {
-	switch rt {
-	case ResourceTypeContainer:
-		return "Containers"
-	case ResourceTypeVolume:
-		return "Volumes"
-	case ResourceTypeNetwork:
-		return "Networks"
-	case ResourceTypeImage:
-		return "Images"
-	default:
-		return "Containers"
-	}
-}
-
-func GetResourceLabel(rt ResourceType) string {
-	return getResourceLabel(rt)
 }
 
 func getContentLabel(ct ContentType) string {
