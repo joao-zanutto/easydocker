@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [ "1.25" ]
+        go-version: ["1.25"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
 
@@ -27,7 +27,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./coverage.out
           flags: unittests
@@ -37,36 +37,30 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [ "1.25" ]
+        go-version: ["1.25"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Check go fmt
-        run: |
-          if [ -n "$(gofmt -s -l .)" ]; then
-            echo "Go formatting issues found:"
-            gofmt -s -d .
-            exit 1
-          fi
-
-      - name: Run go vet
-        run: go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.12
 
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [ "1.25" ]
+        go-version: ["1.25"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
 
