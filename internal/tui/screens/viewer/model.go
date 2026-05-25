@@ -12,8 +12,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-const spinnerInterval = time.Second / 7
-
 type Model struct {
 	State
 	Loading       bool
@@ -265,7 +263,7 @@ func (m *Model) applyPollWithMerge(data []string) {
 }
 
 func (m Model) spinnerTickCmd() tea.Cmd {
-	return tea.Tick(spinnerInterval, func(t time.Time) tea.Msg {
+	return tea.Tick(shared.SpinnerTickInterval, func(t time.Time) tea.Msg {
 		return spinner.TickMsg{Time: t, ID: m.Spinner.ID()}
 	})
 }

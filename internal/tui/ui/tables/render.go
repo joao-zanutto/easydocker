@@ -8,53 +8,6 @@ import (
 
 type Row []string
 
-// allocateColumns distributes total width across desired column widths.
-func allocateColumns(total int, desired []int) []int {
-	if len(desired) == 0 {
-		return []int{}
-	}
-	if total <= 0 {
-		out := make([]int, len(desired))
-		for i := range out {
-			out[i] = 1
-		}
-		return out
-	}
-
-	out := make([]int, len(desired))
-	sum := 0
-	for i, width := range desired {
-		if width < 1 {
-			width = 1
-		}
-		out[i] = width
-		sum += width
-	}
-	if sum == total {
-		return out
-	}
-	if sum < total {
-		out[len(out)-1] += total - sum
-		return out
-	}
-
-	over := sum - total
-	for over > 0 {
-		changed := false
-		for i := range out {
-			if out[i] > 1 && over > 0 {
-				out[i]--
-				over--
-				changed = true
-			}
-		}
-		if !changed {
-			break
-		}
-	}
-	return out
-}
-
 type Styles struct {
 	Header   lipgloss.Style
 	Cell     lipgloss.Style
@@ -80,7 +33,7 @@ func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 		desired = append(desired, width)
 	}
 
-	widths := allocateColumns(max(1, tableWidth-((len(defs)-1)*2)), desired)
+	widths := util.AllocateColumns(max(1, tableWidth-((len(defs)-1)*2)), desired)
 	resolved := make([]ColumnDef, 0, len(defs))
 	for index, def := range defs {
 		def.MinWidth = widths[index]

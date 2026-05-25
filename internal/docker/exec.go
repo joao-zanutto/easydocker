@@ -58,7 +58,8 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 		fd := f.Fd()
 		oldState, rawErr := mobyterm.MakeRaw(fd)
 		if rawErr == nil {
-			defer mobyterm.RestoreTerminal(fd, oldState) //nolint:errcheck
+			defer func() { _ = mobyterm.RestoreTerminal(fd, oldState) }()
+
 		}
 	}
 

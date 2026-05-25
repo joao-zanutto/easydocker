@@ -161,30 +161,6 @@ func (s *Service) LoadSnapshot() (Snapshot, error) {
 	return resources, nil
 }
 
-func (s *Service) InspectContainer(containerID string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
-	defer cancel()
-	return s.repo.InspectContainer(ctx, containerID)
-}
-
-func (s *Service) InspectImage(imageRef string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
-	defer cancel()
-	return s.repo.InspectImage(ctx, imageRef)
-}
-
-func (s *Service) InspectNetwork(networkID string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
-	defer cancel()
-	return s.repo.InspectNetwork(ctx, networkID)
-}
-
-func (s *Service) InspectVolume(volumeName string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
-	defer cancel()
-	return s.repo.InspectVolume(ctx, volumeName)
-}
-
 func (s *Service) InspectResource(rt ResourceType, id string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
 	defer cancel()
