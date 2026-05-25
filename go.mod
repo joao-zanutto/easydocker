@@ -9,9 +9,11 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/moby/term v0.5.2
+	go.uber.org/mock v0.6.0
 )
 
 require (
+	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/Microsoft/go-winio v0.4.21 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

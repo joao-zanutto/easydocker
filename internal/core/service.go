@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+//go:generate mockgen -source=service.go -destination=mock_repository_test.go -package=core Repository
 type Repository interface {
 	LoadContainerRows(ctx context.Context) ([]ContainerRow, error)
 	LoadSupportingResources(ctx context.Context) (Snapshot, error)

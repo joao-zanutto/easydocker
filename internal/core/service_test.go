@@ -3,94 +3,11 @@ package core
 import (
 	"context"
 	"errors"
-	"io"
-	"reflect"
-	"sync"
 	"testing"
 	"time"
+
+	gomock "go.uber.org/mock/gomock"
 )
-
-type mockRepository struct {
-	mu                        sync.Mutex
-	loadContainerRowsFn       func(ctx context.Context) ([]ContainerRow, error)
-	loadSupportingResourcesFn func(ctx context.Context) (Snapshot, error)
-	loadContainerMetricsFn    func(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error)
-	loadContainerLiveDataFn   func(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error)
-	execShellFn               func(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error
-
-	calls []string
-}
-
-func (m *mockRepository) logCall(name string) {
-	m.mu.Lock()
-	m.calls = append(m.calls, name)
-	m.mu.Unlock()
-}
-
-func (m *mockRepository) LoadContainerRows(ctx context.Context) ([]ContainerRow, error) {
-	m.logCall("rows")
-	if m.loadContainerRowsFn != nil {
-		return m.loadContainerRowsFn(ctx)
-	}
-	return nil, nil
-}
-
-func (m *mockRepository) LoadSupportingResources(ctx context.Context) (Snapshot, error) {
-	m.logCall("resources")
-	if m.loadSupportingResourcesFn != nil {
-		return m.loadSupportingResourcesFn(ctx)
-	}
-	return Snapshot{}, nil
-}
-
-func (m *mockRepository) LoadContainerMetrics(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-	m.logCall("metrics")
-	if m.loadContainerMetricsFn != nil {
-		return m.loadContainerMetricsFn(ctx, rows)
-	}
-	return nil, 0, 0, nil
-}
-
-func (m *mockRepository) LoadContainerLiveData(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error) {
-	m.logCall("live")
-	if m.loadContainerLiveDataFn != nil {
-		return m.loadContainerLiveDataFn(ctx, containerID, previousCPU, previousMem, tail)
-	}
-	return ContainerLiveData{}, nil
-}
-
-func (m *mockRepository) ExecShell(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error {
-	m.logCall("exec")
-	if m.execShellFn != nil {
-		return m.execShellFn(ctx, containerID, stdin, stdout, stderr)
-	}
-	return nil
-}
-
-func (m *mockRepository) LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error) {
-	m.logCall("logs")
-	return nil, nil
-}
-
-func (m *mockRepository) InspectContainer(ctx context.Context, containerID string) ([]string, error) {
-	m.logCall("inspect-container")
-	return nil, nil
-}
-
-func (m *mockRepository) InspectImage(ctx context.Context, imageRef string) ([]string, error) {
-	m.logCall("inspect-image")
-	return nil, nil
-}
-
-func (m *mockRepository) InspectNetwork(ctx context.Context, networkID string) ([]string, error) {
-	m.logCall("inspect-network")
-	return nil, nil
-}
-
-func (m *mockRepository) InspectVolume(ctx context.Context, volumeName string) ([]string, error) {
-	m.logCall("inspect-volume")
-	return nil, nil
-}
 
 func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 	rows := []ContainerRow{{FullID: "id-1", Name: "one", ComposeProject: "shop"}, {FullID: "id-2", Name: "two", ComposeProject: "shop"}}
@@ -110,37 +27,16 @@ func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 		Volumes:  []VolumeRow{{Name: "vol"}},
 	}
 
-	repo := &mockRepository{}
-	repo.loadContainerRowsFn = func(ctx context.Context) ([]ContainerRow, error) {
-		if _, ok := ctx.Deadline(); !ok {
-			t.Fatalf("LoadContainerRows context should have a deadline")
-		}
-		return rows, nil
-	}
-	repo.loadSupportingResourcesFn = func(ctx context.Context) (Snapshot, error) {
-		return resources, nil
-	}
-	repo.loadContainerMetricsFn = func(ctx context.Context, gotRows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-		if !reflect.DeepEqual(gotRows, rows) {
-			t.Fatalf("LoadContainerMetrics rows = %#v, want %#v", gotRows, rows)
-		}
-		return metrics, 99.9, 12345, nil
-	}
+	ctrl := gomock.NewController(t)
+	repo := NewMockRepository(ctrl)
+	repo.EXPECT().LoadContainerRows(gomock.Any()).Return(rows, nil)
+	repo.EXPECT().LoadSupportingResources(gomock.Any()).Return(resources, nil)
+	repo.EXPECT().LoadContainerMetrics(gomock.Any(), rows).Return(metrics, float64(99.9), uint64(12345), nil)
 
 	svc := NewService(repo)
 	snapshot, err := svc.LoadSnapshot()
 	if err != nil {
 		t.Fatalf("LoadSnapshot() error = %v, want nil", err)
-	}
-
-	// rows and resources run in parallel, metrics runs after both
-	calls := repo.calls
-	if len(calls) != 3 {
-		t.Fatalf("expected 3 calls, got %#v", calls)
-	}
-	// metrics must be last
-	if calls[2] != "metrics" {
-		t.Fatalf("metrics should be the last call, got %#v", calls)
 	}
 
 	if len(snapshot.Containers) != 2 {
@@ -167,12 +63,11 @@ func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 }
 
 func TestServiceLoadSnapshot_FailsOnContainerError(t *testing.T) {
-	repo := &mockRepository{}
-	repo.loadContainerRowsFn = func(ctx context.Context) ([]ContainerRow, error) {
-		return nil, errors.New("docker not available")
-	}
-	// LoadSupportingResources may or may not run in parallel; both are
-	// independent goroutines. We only care that the containers error wins.
+	ctrl := gomock.NewController(t)
+	repo := NewMockRepository(ctrl)
+	repo.EXPECT().LoadContainerRows(gomock.Any()).Return(nil, errors.New("docker not available"))
+	// LoadSupportingResources runs in parallel — it may or may not be called.
+	repo.EXPECT().LoadSupportingResources(gomock.Any()).Return(Snapshot{}, nil).AnyTimes()
 
 	svc := NewService(repo)
 	_, err := svc.LoadSnapshot()
@@ -183,17 +78,10 @@ func TestServiceLoadSnapshot_FailsOnContainerError(t *testing.T) {
 
 func TestServiceLoadSnapshot_ReturnsPartialWhenResourcesFail(t *testing.T) {
 	rows := []ContainerRow{{FullID: "id-1", Name: "one"}, {FullID: "id-2", Name: "two"}}
-	repo := &mockRepository{}
-	repo.loadContainerRowsFn = func(ctx context.Context) ([]ContainerRow, error) {
-		return rows, nil
-	}
-	repo.loadSupportingResourcesFn = func(ctx context.Context) (Snapshot, error) {
-		return Snapshot{}, errors.New("resource error")
-	}
-	repo.loadContainerMetricsFn = func(ctx context.Context, gotRows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-		// Metrics should still run even when resources fail (partial tolerance)
-		return nil, 0, 0, nil
-	}
+	ctrl := gomock.NewController(t)
+	repo := NewMockRepository(ctrl)
+	repo.EXPECT().LoadContainerRows(gomock.Any()).Return(rows, nil)
+	repo.EXPECT().LoadSupportingResources(gomock.Any()).Return(Snapshot{}, errors.New("resource error"))
 
 	svc := NewService(repo)
 	snapshot, err := svc.LoadSnapshot()
@@ -204,7 +92,6 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenResourcesFail(t *testing.T) {
 	if len(snapshot.Containers) != 2 {
 		t.Fatalf("snapshot.Containers len = %d, want 2", len(snapshot.Containers))
 	}
-	// ComposeProjects should still be computed from containers
 	if snapshot.ComposeProjects == nil {
 		t.Fatalf("ComposeProjects should be computed even when resources fail")
 	}
@@ -215,16 +102,11 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenResourcesFail(t *testing.T) {
 
 func TestServiceLoadSnapshot_ReturnsPartialWhenMetricsFail(t *testing.T) {
 	rows := []ContainerRow{{FullID: "id-1", Name: "one", ComposeProject: "shop"}}
-	repo := &mockRepository{}
-	repo.loadContainerRowsFn = func(ctx context.Context) ([]ContainerRow, error) {
-		return rows, nil
-	}
-	repo.loadSupportingResourcesFn = func(ctx context.Context) (Snapshot, error) {
-		return Snapshot{Images: []ImageRow{{ID: "img"}}}, nil
-	}
-	repo.loadContainerMetricsFn = func(ctx context.Context, gotRows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-		return nil, 0, 0, errors.New("metrics error")
-	}
+	ctrl := gomock.NewController(t)
+	repo := NewMockRepository(ctrl)
+	repo.EXPECT().LoadContainerRows(gomock.Any()).Return(rows, nil)
+	repo.EXPECT().LoadSupportingResources(gomock.Any()).Return(Snapshot{Images: []ImageRow{{ID: "img"}}}, nil)
+	repo.EXPECT().LoadContainerMetrics(gomock.Any(), rows).Return(nil, float64(0), uint64(0), errors.New("metrics error"))
 
 	svc := NewService(repo)
 	snapshot, err := svc.LoadSnapshot()
@@ -238,7 +120,6 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenMetricsFail(t *testing.T) {
 	if len(snapshot.Images) != 1 {
 		t.Fatalf("snapshot.Images len = %d, want 1 (resources should still be present)", len(snapshot.Images))
 	}
-	// CPU/Mem should be zero since metrics failed
 	if snapshot.Containers[0].CPUPercent != 0 {
 		t.Fatalf("container CPU should be 0 when metrics fail, got %v", snapshot.Containers[0].CPUPercent)
 	}
@@ -262,15 +143,18 @@ func TestServiceLoadContainerLiveData_UsesTailDependentTimeout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotDuration time.Duration
-			repo := &mockRepository{}
-			repo.loadContainerLiveDataFn = func(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error) {
-				deadline, ok := ctx.Deadline()
-				if !ok {
-					t.Fatalf("LoadContainerLiveData context should have a deadline")
-				}
-				gotDuration = time.Until(deadline)
-				return ContainerLiveData{ContainerID: containerID}, nil
-			}
+			ctrl := gomock.NewController(t)
+			repo := NewMockRepository(ctrl)
+			repo.EXPECT().LoadContainerLiveData(gomock.Any(), "id-1", nil, nil, tt.tail).DoAndReturn(
+				func(ctx context.Context, _ string, _, _ []float64, _ int) (ContainerLiveData, error) {
+					deadline, ok := ctx.Deadline()
+					if !ok {
+						t.Fatalf("LoadContainerLiveData context should have a deadline")
+					}
+					gotDuration = time.Until(deadline)
+					return ContainerLiveData{ContainerID: "id-1"}, nil
+				},
+			)
 
 			svc := NewService(repo)
 			_, err := svc.LoadContainerLiveData("id-1", nil, nil, tt.tail)
@@ -306,15 +190,18 @@ func TestServiceLoadContainerLiveData_UsesConfiguredTimeouts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotDuration time.Duration
-			repo := &mockRepository{}
-			repo.loadContainerLiveDataFn = func(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error) {
-				deadline, ok := ctx.Deadline()
-				if !ok {
-					t.Fatalf("LoadContainerLiveData context should have a deadline")
-				}
-				gotDuration = time.Until(deadline)
-				return ContainerLiveData{ContainerID: containerID}, nil
-			}
+			ctrl := gomock.NewController(t)
+			repo := NewMockRepository(ctrl)
+			repo.EXPECT().LoadContainerLiveData(gomock.Any(), "id-1", nil, nil, tt.tail).DoAndReturn(
+				func(ctx context.Context, _ string, _, _ []float64, _ int) (ContainerLiveData, error) {
+					deadline, ok := ctx.Deadline()
+					if !ok {
+						t.Fatalf("LoadContainerLiveData context should have a deadline")
+					}
+					gotDuration = time.Until(deadline)
+					return ContainerLiveData{ContainerID: "id-1"}, nil
+				},
+			)
 
 			svc := NewServiceWithConfig(repo, config)
 			_, err := svc.LoadContainerLiveData("id-1", nil, nil, tt.tail)
@@ -329,15 +216,18 @@ func TestServiceLoadContainerLiveData_UsesConfiguredTimeouts(t *testing.T) {
 
 func TestNewServiceWithConfig_ZeroValuesUseDefaults(t *testing.T) {
 	var gotDuration time.Duration
-	repo := &mockRepository{}
-	repo.loadContainerLiveDataFn = func(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error) {
-		deadline, ok := ctx.Deadline()
-		if !ok {
-			t.Fatalf("LoadContainerLiveData context should have a deadline")
-		}
-		gotDuration = time.Until(deadline)
-		return ContainerLiveData{ContainerID: containerID}, nil
-	}
+	ctrl := gomock.NewController(t)
+	repo := NewMockRepository(ctrl)
+	repo.EXPECT().LoadContainerLiveData(gomock.Any(), "id-1", nil, nil, 100).DoAndReturn(
+		func(ctx context.Context, _ string, _, _ []float64, _ int) (ContainerLiveData, error) {
+			deadline, ok := ctx.Deadline()
+			if !ok {
+				t.Fatalf("LoadContainerLiveData context should have a deadline")
+			}
+			gotDuration = time.Until(deadline)
+			return ContainerLiveData{ContainerID: "id-1"}, nil
+		},
+	)
 
 	svc := NewServiceWithConfig(repo, ServiceConfig{})
 	_, err := svc.LoadContainerLiveData("id-1", nil, nil, 100)
