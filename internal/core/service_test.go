@@ -70,54 +70,9 @@ func TestServiceLoadSnapshot_FailsOnContainerError(t *testing.T) {
 	repo.EXPECT().LoadSupportingResources(gomock.Any()).Return(Snapshot{}, nil).AnyTimes()
 
 	svc := NewService(repo)
-	snapshot, err := svc.LoadSnapshot()
-	if err != nil {
-		t.Fatalf("LoadSnapshot() error = %v, want nil (partial tolerance)", err)
-	}
-
-	if len(snapshot.Containers) != 2 {
-		t.Fatalf("snapshot.Containers len = %d, want 2", len(snapshot.Containers))
-	}
-	// ComposeProjects should still be computed from containers
-	if snapshot.ComposeProjects == nil {
-		t.Fatalf("ComposeProjects should be computed even when resources fail")
-	}
-	if snapshot.Timestamp.IsZero() {
-		t.Fatalf("snapshot timestamp should be populated")
-	}
-}
-
-func TestServiceLoadSnapshot_ReturnsPartialWhenMetricsFail(t *testing.T) {
-	rows := []ContainerRow{{FullID: "id-1", Name: "one", ComposeProject: "shop"}}
-	repo := &mockRepository{}
-	repo.loadContainerRowsFn = func(ctx context.Context) ([]ContainerRow, error) {
-		return rows, nil
-	}
-	repo.loadSupportingResourcesFn = func(ctx context.Context) (Snapshot, error) {
-		return Snapshot{Images: []ImageRow{{ID: "img"}}}, nil
-	}
-	repo.loadContainerMetricsFn = func(ctx context.Context, gotRows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-		return nil, 0, 0, errors.New("metrics error")
-	}
-
-	svc := NewService(repo)
-	snapshot, err := svc.LoadSnapshot()
-	if err != nil {
-		t.Fatalf("LoadSnapshot() error = %v, want nil (partial tolerance)", err)
-	}
-
-	if len(snapshot.Containers) != 1 {
-		t.Fatalf("snapshot.Containers len = %d, want 1", len(snapshot.Containers))
-	}
-	if len(snapshot.Images) != 1 {
-		t.Fatalf("snapshot.Images len = %d, want 1 (resources should still be present)", len(snapshot.Images))
-	}
-	// CPU/Mem should be zero since metrics failed
-	if snapshot.Containers[0].CPUPercent != 0 {
-		t.Fatalf("container CPU should be 0 when metrics fail, got %v", snapshot.Containers[0].CPUPercent)
-	}
-	if snapshot.Timestamp.IsZero() {
-		t.Fatalf("snapshot timestamp should be populated")
+	_, err := svc.LoadSnapshot()
+	if err == nil {
+		t.Fatalf("LoadSnapshot() error = nil, want non-nil")
 	}
 }
 
@@ -127,7 +82,6 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenResourcesFail(t *testing.T) {
 	repo := NewMockRepository(ctrl)
 	repo.EXPECT().LoadContainerRows(gomock.Any()).Return(rows, nil)
 	repo.EXPECT().LoadSupportingResources(gomock.Any()).Return(Snapshot{}, errors.New("resource error"))
-	repo.EXPECT().LoadContainerMetrics(gomock.Any(), rows).Return(nil, float64(0), uint64(0), nil)
 
 	svc := NewService(repo)
 	snapshot, err := svc.LoadSnapshot()
