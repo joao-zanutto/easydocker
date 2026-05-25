@@ -1,5 +1,10 @@
 package shared
 
+import "time"
+
+// SpinnerTickInterval is the common interval used for all spinner ticks.
+const SpinnerTickInterval = time.Second / 7
+
 // Stage represents the async loading lifecycle in the TUI.
 type Stage int
 

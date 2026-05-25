@@ -5,7 +5,10 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/ui/theme"
 	"easydocker/internal/tui/util"
+
+	"charm.land/lipgloss/v2"
 )
 
 type ContainerListRowKind int
@@ -195,18 +198,5 @@ func ansiBold(value string) string {
 }
 
 func colorStateLabel(label, state string) string {
-	var code string
-	switch strings.ToLower(state) {
-	case "running":
-		code = "42"
-	case "paused", "restarting", "created":
-		code = "214"
-	case "exited", "stopped":
-		code = "203"
-	case "dead":
-		code = "199"
-	default:
-		code = "110"
-	}
-	return "\x1b[38;5;" + code + "m" + label + "\x1b[39m"
+	return lipgloss.NewStyle().Foreground(theme.ContainerStateColor(state)).Render(label)
 }
