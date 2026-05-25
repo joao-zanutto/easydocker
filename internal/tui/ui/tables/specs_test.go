@@ -163,6 +163,34 @@ func TestContainerTableRow_StateColoringByWidth(t *testing.T) {
 	}
 }
 
+func TestColorStateLabel_DoesNotUseAllReset(t *testing.T) {
+	// colorStateLabel must use \x1b[39m (foreground reset), not \x1b[m (SGR 0).
+	// SGR 0 kills the parent Selected row's background highlight.
+	tests := []struct {
+		name  string
+		state string
+		width int
+	}{
+		{name: "normal width", state: "running", width: 20},
+		{name: "narrow (bullet fallback)", state: "running", width: 1},
+		{name: "exited", state: "exited", width: 20},
+		{name: "paused", state: "paused", width: 20},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			container := core.ContainerRow{Name: "test", State: tt.state}
+			row := ContainerTableRow(container, tt.width, "", "")
+			cell := row[1]
+			if strings.Contains(cell, "\x1b[m") {
+				t.Fatalf("state cell must not contain SGR 0 (all reset), got %q", cell)
+			}
+			if !strings.HasSuffix(cell, "\x1b[39m") {
+				t.Fatalf("state cell must end with foreground reset \\x1b[39m, got %q", cell)
+			}
+		})
+	}
+}
+
 func TestBuildContainerSpec_LoadingIndicatorOnlyOnSelectedRow(t *testing.T) {
 	items := []core.ContainerRow{
 		{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"},
