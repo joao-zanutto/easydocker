@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+//go:generate mockgen -source=service.go -destination=mock_repository_test.go -package=core Repository
 type Repository interface {
 	LoadContainerRows(ctx context.Context) ([]ContainerRow, error)
 	LoadSupportingResources(ctx context.Context) (Snapshot, error)
@@ -122,7 +123,6 @@ func (s *Service) LoadSnapshot() (Snapshot, error) {
 		containers    []ContainerRow
 		resources     Snapshot
 		containersErr error
-		resourcesErr  error
 	)
 
 	var wg sync.WaitGroup
@@ -134,7 +134,7 @@ func (s *Service) LoadSnapshot() (Snapshot, error) {
 	}()
 	go func() {
 		defer wg.Done()
-		resources, resourcesErr = s.LoadSupportingResources()
+		resources, _ = s.LoadSupportingResources()
 	}()
 	wg.Wait()
 
@@ -144,17 +144,13 @@ func (s *Service) LoadSnapshot() (Snapshot, error) {
 
 	resources.Containers = containers
 
-	if resourcesErr == nil {
-		metricsByID, totalCPU, totalMem, metricsErr := s.LoadContainerMetrics(containers)
-		if metricsErr == nil {
-			resources.Containers = ApplyMetricsToContainers(containers, metricsByID)
-			resources.TotalCPU = totalCPU
-			resources.TotalMem = totalMem
-		}
-		resources.ComposeProjects = AggregateComposeProjects(resources.Containers)
-	} else {
-		resources.ComposeProjects = AggregateComposeProjects(containers)
+	metricsByID, totalCPU, totalMem, metricsErr := s.LoadContainerMetrics(containers)
+	if metricsErr == nil {
+		resources.Containers = ApplyMetricsToContainers(containers, metricsByID)
+		resources.TotalCPU = totalCPU
+		resources.TotalMem = totalMem
 	}
+	resources.ComposeProjects = AggregateComposeProjects(resources.Containers)
 	resources.Timestamp = time.Now()
 
 	return resources, nil
