@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
@@ -25,30 +26,12 @@ func (r *Repository) LoadContainerLiveData(ctx context.Context, containerID stri
 
 	inspected, err := cli.ContainerInspect(ctx, containerID)
 	if err != nil {
-		return core.ContainerLiveData{}, fmt.Errorf("inspect container: %w", err)
+		return core.ContainerLiveData{}, wrapDockerError("inspect container", err)
 	}
 
-	logReader, err := cli.ContainerLogs(ctx, containerID, container.LogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Tail:       tailOption(tail),
-	})
+	logs, err := fetchRawLogs(ctx, cli, containerID, tail)
 	if err != nil {
-		return core.ContainerLiveData{}, fmt.Errorf("container logs: %w", err)
-	}
-	defer func() { _ = logReader.Close() }()
-
-	rawLogBytes, err := io.ReadAll(logReader)
-	if err != nil {
-		return core.ContainerLiveData{}, fmt.Errorf("read container logs: %w", err)
-	}
-
-	var merged bytes.Buffer
-	// Docker returns multiplexed streams for non-TTY containers and raw streams
-	// for TTY containers. Try stdcopy first, then fall back to raw bytes.
-	if _, err := stdcopy.StdCopy(&merged, &merged, bytes.NewReader(rawLogBytes)); err != nil {
-		merged.Reset()
-		_, _ = merged.Write(rawLogBytes)
+		return core.ContainerLiveData{}, err
 	}
 
 	metrics, err := r.loadSingleContainerMetrics(ctx, cli, containerID)
@@ -58,7 +41,7 @@ func (r *Repository) LoadContainerLiveData(ctx context.Context, containerID stri
 
 	return core.ContainerLiveData{
 		ContainerID:   containerID,
-		Logs:          normalizeLogs(merged.String(), ""),
+		Logs:          logs,
 		CPUPercent:    metrics.CPUPercent,
 		MemoryPercent: metrics.MemoryPercent,
 		MemoryUsage:   metrics.MemoryUsage,
@@ -73,27 +56,30 @@ func (r *Repository) LoadContainerLiveData(ctx context.Context, containerID stri
 }
 
 func (r *Repository) LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error) {
-	cli, err := r.dockerClient()
-	if err != nil {
-		return nil, err
-	}
+	return withClientResult(r, func(cli *client.Client) ([]string, error) {
+		return fetchRawLogs(ctx, cli, containerID, tail)
+	})
+}
 
+func fetchRawLogs(ctx context.Context, cli *client.Client, containerID string, tail int) ([]string, error) {
 	logReader, err := cli.ContainerLogs(ctx, containerID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       tailOption(tail),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("container logs: %w", err)
+		return nil, wrapDockerError("container logs", err)
 	}
 	defer func() { _ = logReader.Close() }()
 
 	rawLogBytes, err := io.ReadAll(logReader)
 	if err != nil {
-		return nil, fmt.Errorf("read container logs: %w", err)
+		return nil, wrapDockerError("read container logs", err)
 	}
 
 	var merged bytes.Buffer
+	// Docker returns multiplexed streams for non-TTY containers and raw streams
+	// for TTY containers. Try stdcopy first, then fall back to raw bytes.
 	if _, err := stdcopy.StdCopy(&merged, &merged, bytes.NewReader(rawLogBytes)); err != nil {
 		merged.Reset()
 		_, _ = merged.Write(rawLogBytes)
