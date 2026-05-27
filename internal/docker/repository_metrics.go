@@ -74,27 +74,16 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 }
 
 func (r *Repository) loadSingleContainerMetrics(ctx context.Context, cli *client.Client, containerID string) (core.ContainerMetrics, error) {
-	var lastErr error
-	for attempt := 0; attempt < 2; attempt++ {
-		statsCtx, cancel := context.WithTimeout(ctx, 1500*time.Millisecond)
-		statsReader, err := cli.ContainerStats(statsCtx, containerID, false)
+	return retryWithBackoff(ctx, 2, 1500*time.Millisecond, func(ctx context.Context) (core.ContainerMetrics, error) {
+		statsReader, err := cli.ContainerStats(ctx, containerID, false)
 		if err != nil {
-			cancel()
-			lastErr = err
-			continue
+			return core.ContainerMetrics{}, err
 		}
+		defer func() { _ = statsReader.Body.Close() }()
 
 		var stats container.StatsResponse
-		decodeErr := json.NewDecoder(statsReader.Body).Decode(&stats)
-		closeErr := statsReader.Body.Close()
-		cancel()
-		if decodeErr != nil {
-			lastErr = decodeErr
-			continue
-		}
-		if closeErr != nil {
-			lastErr = closeErr
-			continue
+		if err := json.NewDecoder(statsReader.Body).Decode(&stats); err != nil {
+			return core.ContainerMetrics{}, err
 		}
 
 		cpuPercent := computeCPUPercent(stats)
@@ -108,9 +97,22 @@ func (r *Repository) loadSingleContainerMetrics(ctx context.Context, cli *client
 			MemoryUsageBytes: memoryBytes,
 			MemoryLimitBytes: memoryMax,
 		}, nil
-	}
+	})
+}
 
-	return core.ContainerMetrics{}, lastErr
+func retryWithBackoff[T any](ctx context.Context, maxAttempts int, timeout time.Duration, fn func(context.Context) (T, error)) (T, error) {
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		opCtx, cancel := context.WithTimeout(ctx, timeout)
+		result, err := fn(opCtx)
+		cancel()
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+	}
+	var zero T
+	return zero, lastErr
 }
 
 func computeCPUPercent(stats container.StatsResponse) float64 {
