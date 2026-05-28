@@ -115,21 +115,6 @@ func (mr *MockRepositoryMockRecorder) InspectVolume(ctx, volumeName any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectVolume", reflect.TypeOf((*MockRepository)(nil).InspectVolume), ctx, volumeName)
 }
 
-// LoadContainerLiveData mocks base method.
-func (m *MockRepository) LoadContainerLiveData(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadContainerLiveData", ctx, containerID, previousCPU, previousMem, tail)
-	ret0, _ := ret[0].(ContainerLiveData)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LoadContainerLiveData indicates an expected call of LoadContainerLiveData.
-func (mr *MockRepositoryMockRecorder) LoadContainerLiveData(ctx, containerID, previousCPU, previousMem, tail any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadContainerLiveData", reflect.TypeOf((*MockRepository)(nil).LoadContainerLiveData), ctx, containerID, previousCPU, previousMem, tail)
-}
-
 // LoadContainerLogs mocks base method.
 func (m *MockRepository) LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error) {
 	m.ctrl.T.Helper()

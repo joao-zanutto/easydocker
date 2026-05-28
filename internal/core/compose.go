@@ -9,9 +9,6 @@ import (
 func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 	projects := make(map[string]*ComposeProject)
 	order := make([]string, 0)
-	memoryPercentSums := make(map[string]float64)
-	memoryPercentCounts := make(map[string]int)
-
 	for _, container := range containers {
 		projectName := strings.TrimSpace(container.ComposeProject)
 		if projectName == "" {
@@ -52,15 +49,15 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		if container.MemoryUsageBytes > 0 {
 			project.MemoryUsageBytes += container.MemoryUsageBytes
 		}
-		if container.MemoryLimitBytes > 0 {
+		if container.MemoryLimitBytes > 0 && container.MemoryLimitBytes > project.MemoryLimitBytes {
 			project.MemoryLimitBytes = container.MemoryLimitBytes
-		}
-		if hasComposeMemoryPercent(container) {
-			memoryPercentSums[projectName] += container.MemoryPercent
-			memoryPercentCounts[projectName]++
 		}
 	}
 
+	return enrichComposeProjects(projects, order)
+}
+
+func enrichComposeProjects(projects map[string]*ComposeProject, order []string) []ComposeProject {
 	for _, name := range order {
 		project := projects[name]
 		SortContainers(project.Containers)
@@ -76,12 +73,9 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		}
 		if project.MemoryLimitBytes > 0 {
 			project.MemoryLimit = HumanBytes(project.MemoryLimitBytes)
+			project.MemoryPercent = float64(project.MemoryUsageBytes) / float64(project.MemoryLimitBytes) * 100
 		} else {
 			project.MemoryLimit = "-"
-		}
-		if memoryPercentCounts[name] > 0 {
-			project.MemoryPercent = memoryPercentSums[name]
-		} else {
 			project.MemoryPercent = 0
 		}
 	}
@@ -132,17 +126,6 @@ func maxFloat(value, floor float64) float64 {
 		return value
 	}
 	return floor
-}
-
-func hasComposeMemoryPercent(container ContainerRow) bool {
-	if container.MemoryPercent <= 0 {
-		return false
-	}
-	if container.MemoryUsageBytes > 0 {
-		return true
-	}
-	memoryUsage := strings.TrimSpace(strings.ToLower(container.MemoryUsage))
-	return memoryUsage != "" && memoryUsage != "-" && memoryUsage != "loading"
 }
 
 func fmtDurationMinutes(delta time.Duration) string {

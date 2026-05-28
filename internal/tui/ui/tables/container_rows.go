@@ -11,15 +11,15 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type ContainerListRowKind int
+type RowKind int
 
 const (
-	ContainerListRowContainer ContainerListRowKind = iota
-	ContainerListRowComposeProject
+	RowContainer RowKind = iota
+	RowComposeProject
 )
 
 type ContainerListRow struct {
-	Kind            ContainerListRowKind
+	Kind            RowKind
 	Container       core.ContainerRow
 	ComposeProject  core.ComposeProject
 	ComposeExpanded bool
@@ -44,7 +44,7 @@ func BuildContainerListRows(items []core.ContainerRow, composeExpanded map[strin
 	for _, container := range items {
 		projectName := strings.TrimSpace(container.ComposeProject)
 		if projectName == "" {
-			rows = append(rows, ContainerListRow{Kind: ContainerListRowContainer, Container: container})
+			rows = append(rows, ContainerListRow{Kind: RowContainer, Container: container})
 			continue
 		}
 		if emittedProjects[projectName] {
@@ -56,7 +56,7 @@ func BuildContainerListRows(items []core.ContainerRow, composeExpanded map[strin
 		}
 		expanded := composeExpanded[projectName]
 		rows = append(rows, ContainerListRow{
-			Kind:            ContainerListRowComposeProject,
+			Kind:            RowComposeProject,
 			ComposeProject:  project,
 			ComposeExpanded: expanded,
 		})
@@ -74,7 +74,7 @@ func BuildContainerListRows(items []core.ContainerRow, composeExpanded map[strin
 				prefix = "└─ "
 			}
 			rows = append(rows, ContainerListRow{
-				Kind:       ContainerListRowContainer,
+				Kind:       RowContainer,
 				Container:  child,
 				TreePrefix: prefix,
 			})
@@ -91,12 +91,12 @@ func BuildContainerSpec(width, cursor int, items []ContainerListRow, includeScop
 	stateWidth := ContainerStateColumnWidth(columns)
 	selectedContainerID := ""
 	selectedComposeProject := ""
-	selectedKind := ContainerListRowContainer
+	selectedKind := RowContainer
 	hasSelectedKind := false
 	if cursor >= 0 && cursor < len(items) {
 		hasSelectedKind = true
 		selectedKind = items[cursor].Kind
-		if items[cursor].Kind == ContainerListRowContainer {
+		if items[cursor].Kind == RowContainer {
 			selectedContainerID = items[cursor].Container.FullID
 		} else {
 			selectedComposeProject = items[cursor].ComposeProject.Name
@@ -113,16 +113,16 @@ func BuildContainerSpec(width, cursor int, items []ContainerListRow, includeScop
 		Items:        items,
 		Columns:      columns,
 		RowBuilder: func(item ContainerListRow) []string {
-			if item.Kind == ContainerListRowComposeProject {
+			if item.Kind == RowComposeProject {
 				rowLoadingIndicator := ""
-				if hasSelectedKind && selectedKind == ContainerListRowComposeProject && item.ComposeProject.Name == selectedComposeProject {
+				if hasSelectedKind && selectedKind == RowComposeProject && item.ComposeProject.Name == selectedComposeProject {
 					rowLoadingIndicator = loadingIndicator
 				}
 				return ComposeProjectTableRow(item, rowLoadingIndicator)
 			}
 			container := item.Container
 			rowLoadingIndicator := ""
-			if hasSelectedKind && selectedKind == ContainerListRowContainer && selectedContainerID != "" && container.FullID == selectedContainerID {
+			if hasSelectedKind && selectedKind == RowContainer && selectedContainerID != "" && container.FullID == selectedContainerID {
 				rowLoadingIndicator = loadingIndicator
 			}
 			return ContainerTableRow(container, stateWidth, rowLoadingIndicator, item.TreePrefix)

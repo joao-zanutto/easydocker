@@ -1,10 +1,8 @@
 package core
 
 import (
-	"context"
 	"errors"
 	"testing"
-	"time"
 
 	gomock "go.uber.org/mock/gomock"
 )
@@ -125,124 +123,5 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenMetricsFail(t *testing.T) {
 	}
 	if snapshot.Timestamp.IsZero() {
 		t.Fatalf("snapshot timestamp should be populated")
-	}
-}
-
-func TestServiceLoadContainerLiveData_UsesTailDependentTimeout(t *testing.T) {
-	tests := []struct {
-		name string
-		tail int
-		want time.Duration
-	}{
-		{name: "default timeout", tail: 100, want: 5 * time.Second},
-		{name: "medium tail timeout", tail: 600, want: 20 * time.Second},
-		{name: "all logs timeout", tail: 0, want: 60 * time.Second},
-		{name: "large tail timeout", tail: 5000, want: 60 * time.Second},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var gotDuration time.Duration
-			ctrl := gomock.NewController(t)
-			repo := NewMockRepository(ctrl)
-			repo.EXPECT().LoadContainerLiveData(gomock.Any(), "id-1", nil, nil, tt.tail).DoAndReturn(
-				func(ctx context.Context, _ string, _, _ []float64, _ int) (ContainerLiveData, error) {
-					deadline, ok := ctx.Deadline()
-					if !ok {
-						t.Fatalf("LoadContainerLiveData context should have a deadline")
-					}
-					gotDuration = time.Until(deadline)
-					return ContainerLiveData{ContainerID: "id-1"}, nil
-				},
-			)
-
-			svc := NewService(repo)
-			_, err := svc.LoadContainerLiveData("id-1", nil, nil, tt.tail)
-			if err != nil {
-				t.Fatalf("LoadContainerLiveData() error = %v, want nil", err)
-			}
-
-			assertDurationApprox(t, gotDuration, tt.want, 2*time.Second)
-		})
-	}
-}
-
-func TestServiceLoadContainerLiveData_UsesConfiguredTimeouts(t *testing.T) {
-	config := ServiceConfig{
-		RequestTimeout:              3 * time.Second,
-		LiveDataMediumTailThreshold: 50,
-		LiveDataMediumTailTimeout:   7 * time.Second,
-		LiveDataLargeTailThreshold:  100,
-		LiveDataLargeTailTimeout:    11 * time.Second,
-	}
-
-	tests := []struct {
-		name string
-		tail int
-		want time.Duration
-	}{
-		{name: "uses configured default timeout", tail: 10, want: 3 * time.Second},
-		{name: "uses configured medium timeout", tail: 60, want: 7 * time.Second},
-		{name: "uses configured large timeout for tail all", tail: 0, want: 11 * time.Second},
-		{name: "uses configured large timeout over large threshold", tail: 200, want: 11 * time.Second},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var gotDuration time.Duration
-			ctrl := gomock.NewController(t)
-			repo := NewMockRepository(ctrl)
-			repo.EXPECT().LoadContainerLiveData(gomock.Any(), "id-1", nil, nil, tt.tail).DoAndReturn(
-				func(ctx context.Context, _ string, _, _ []float64, _ int) (ContainerLiveData, error) {
-					deadline, ok := ctx.Deadline()
-					if !ok {
-						t.Fatalf("LoadContainerLiveData context should have a deadline")
-					}
-					gotDuration = time.Until(deadline)
-					return ContainerLiveData{ContainerID: "id-1"}, nil
-				},
-			)
-
-			svc := NewServiceWithConfig(repo, config)
-			_, err := svc.LoadContainerLiveData("id-1", nil, nil, tt.tail)
-			if err != nil {
-				t.Fatalf("LoadContainerLiveData() error = %v, want nil", err)
-			}
-
-			assertDurationApprox(t, gotDuration, tt.want, 2*time.Second)
-		})
-	}
-}
-
-func TestNewServiceWithConfig_ZeroValuesUseDefaults(t *testing.T) {
-	var gotDuration time.Duration
-	ctrl := gomock.NewController(t)
-	repo := NewMockRepository(ctrl)
-	repo.EXPECT().LoadContainerLiveData(gomock.Any(), "id-1", nil, nil, 100).DoAndReturn(
-		func(ctx context.Context, _ string, _, _ []float64, _ int) (ContainerLiveData, error) {
-			deadline, ok := ctx.Deadline()
-			if !ok {
-				t.Fatalf("LoadContainerLiveData context should have a deadline")
-			}
-			gotDuration = time.Until(deadline)
-			return ContainerLiveData{ContainerID: "id-1"}, nil
-		},
-	)
-
-	svc := NewServiceWithConfig(repo, ServiceConfig{})
-	_, err := svc.LoadContainerLiveData("id-1", nil, nil, 100)
-	if err != nil {
-		t.Fatalf("LoadContainerLiveData() error = %v, want nil", err)
-	}
-
-	assertDurationApprox(t, gotDuration, 5*time.Second, 2*time.Second)
-}
-
-func assertDurationApprox(t *testing.T, got, want, tolerance time.Duration) {
-	t.Helper()
-	min := want - tolerance
-	max := want + tolerance
-	if got < min || got > max {
-		t.Fatalf("duration = %v, want within [%v, %v]", got, min, max)
 	}
 }

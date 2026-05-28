@@ -69,13 +69,3 @@ func (s *State) SyncFromData(visibleWidth, visibleRows int) {
 	lines := PrepareContentLines(s.Data, s.Filter.Query, visibleWidth, s.WrapLines)
 	s.SyncViewport(lines, visibleWidth, visibleRows)
 }
-
-func (s *State) ApplyContentForPoll(data []string) {
-	s.Data = data
-	s.InitialLoad = false
-}
-
-func (s *State) ApplyContentInitial(data []string) {
-	s.Data = data
-	s.InitialLoad = false
-}

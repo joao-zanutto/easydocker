@@ -9,11 +9,11 @@ func (m model) shouldAnimateLogsLoadingIndicator() bool {
 }
 
 func (m model) shouldAnimateMetricsLoadingIndicator() bool {
-	return !m.metricsLoaded && m.loadingStage != loadStageIdle
+	return !m.metricsLoaded && m.loadingStage != shared.StageIdle
 }
 
 func (m model) shouldReloadSnapshotOnTick() bool {
-	return m.loadingStage == loadStageIdle
+	return m.loadingStage == shared.StageIdle
 }
 
 func (m model) shouldLoadHistoryOnTick() bool {

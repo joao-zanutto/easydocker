@@ -14,7 +14,7 @@ import (
 //   - Menu/Help: MenuFrame, MenuSelector, MenuItem, MenuDesc, HelpFrame, HelpTitle,
 //     HelpSection, HelpCommand, HelpKey, HelpContext, HelpFooter, Scrollbar
 //   - States: StateRun, StateWarn, StateStop, StateDead, StateOther
-//   - Misc: ErrorText, MonitorBox, ActiveBG
+//   - Misc: ErrorText, ActiveBG
 type Set struct {
 	Page         lipgloss.Style // Chrome: page background
 	Header       lipgloss.Style // Chrome: header frame

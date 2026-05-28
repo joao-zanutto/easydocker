@@ -16,25 +16,11 @@ type tableColumn struct {
 	Width int
 }
 
-type tableStyles struct {
-	Header   lipgloss.Style
-	Cell     lipgloss.Style
-	Selected lipgloss.Style
-}
-
-func defaultTableStyles() tableStyles {
-	return tableStyles{
-		Header:   lipgloss.NewStyle().Bold(true),
-		Cell:     lipgloss.NewStyle(),
-		Selected: lipgloss.NewStyle().Bold(true),
-	}
-}
-
 type tableModel struct {
 	cols   []tableColumn
 	rows   []tableRow
 	cursor int
-	styles tableStyles
+	styles Styles
 
 	viewport viewport.Model
 }
@@ -43,7 +29,7 @@ type tableOption func(*tableModel)
 
 func newTable(opts ...tableOption) tableModel {
 	m := tableModel{
-		styles:   defaultTableStyles(),
+		styles:   DefaultStyles(),
 		viewport: viewport.New(viewport.WithWidth(0), viewport.WithHeight(20)),
 	}
 	for _, opt := range opts {
@@ -78,7 +64,7 @@ func withWidth(w int) tableOption {
 	}
 }
 
-func withStyles(s tableStyles) tableOption {
+func withStyles(s Styles) tableOption {
 	return func(m *tableModel) {
 		m.styles = s
 	}

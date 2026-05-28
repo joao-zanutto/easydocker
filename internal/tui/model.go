@@ -21,11 +21,6 @@ const (
 	tabVolumes    = shared.TabVolumes
 
 	pollInterval = time.Second
-
-	loadStageIdle       = int(shared.StageIdle)
-	loadStageContainers = int(shared.StageContainers)
-	loadStageResources  = int(shared.StageResources)
-	loadStageMetrics    = int(shared.StageMetrics)
 )
 
 type tickMsg time.Time
@@ -55,7 +50,7 @@ type loadResultMsg struct {
 type shellDoneMsg struct{ err error }
 
 type inspectResultMsg struct {
-	resourceType int
+	resourceType core.ResourceType
 	resourceID   string
 	resourceName string
 	data         []string
@@ -76,7 +71,7 @@ type model struct {
 	previousScreen shared.Screen
 
 	loading          bool
-	loadingStage     int
+	loadingStage     shared.Stage
 	metricsLoaded    bool
 	metricsSpinner   spinner.Model
 	containerSpinner spinner.Model
@@ -98,7 +93,7 @@ func New(service *core.Service) tea.Model {
 		service:          service,
 		loading:          true,
 		screen:           shared.Browse,
-		loadingStage:     loadStageContainers,
+		loadingStage:     shared.StageContainers,
 		styles:           defaultStyles(),
 		metricsSpinner:   metricsSpinner,
 		containerSpinner: containerSpinner,
@@ -113,9 +108,6 @@ func (m model) Init() tea.Cmd {
 	cmds := []tea.Cmd{loadContainersCmd(m.service), tickCmd()}
 
 	cmds = append(cmds,
-		tea.Tick(shared.SpinnerTickInterval, func(t time.Time) tea.Msg {
-			return spinner.TickMsg{Time: t, ID: m.metricsSpinner.ID()}
-		}),
 		tea.Tick(shared.SpinnerTickInterval, func(t time.Time) tea.Msg {
 			return spinner.TickMsg{Time: t, ID: m.metricsSpinner.ID()}
 		}),

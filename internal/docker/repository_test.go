@@ -9,20 +9,8 @@ func TestNormalizeLogs(t *testing.T) {
 	tests := []struct {
 		name   string
 		stdout string
-		stderr string
 		want   []string
 	}{
-		{
-			name:   "joins stdout and stderr",
-			stdout: "one\ntwo\n",
-			stderr: "three\n",
-			want:   []string{"one", "two", "three"},
-		},
-		{
-			name:   "collapses carriage return progress lines",
-			stdout: "step 1\rstep 2\rfinished\n",
-			want:   []string{"finished"},
-		},
 		{
 			name:   "applies backspaces",
 			stdout: "abc\b\bdone\n",
@@ -42,7 +30,7 @@ func TestNormalizeLogs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := normalizeLogs(tt.stdout, tt.stderr)
+			got := normalizeLogs(tt.stdout)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("normalizeLogs() = %v, want %v", got, tt.want)
 			}

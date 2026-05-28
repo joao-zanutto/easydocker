@@ -20,12 +20,12 @@ type ViewModel struct {
 	MetricsLoadingIndicator string
 	Width                   int
 	Height                  int
-	Styles                  ViewStyles
+	Styles                  Styles
 	Selections              SelectionSet
 	Filter                  FilterState
 }
 
-type ViewStyles struct {
+type Styles struct {
 	Divider lipgloss.Style
 	Muted   lipgloss.Style
 	Section lipgloss.Style
@@ -54,7 +54,7 @@ func RenderContent(vm ViewModel, list string, detailProvider DetailProvider) str
 		return util.ConstrainLine(vm.Styles.Muted.Render("Loading Docker resources..."), vm.Width)
 	}
 
-	filterHeight, listHeight, detailHeight := contentHeights(vm.Height, vm.Filter.Active)
+	filterHeight, listHeight, detailHeight := ContentHeightsFromFilter(vm.Height, vm.Filter.Active)
 	listLines := util.ClipAndPadLines(
 		util.ConstrainLines(strings.Split(list, "\n"), vm.Width),
 		listHeight,
@@ -97,7 +97,7 @@ func ListHeight(height int) int {
 }
 
 func ListHeightForContent(height int, filterActive bool) int {
-	_, listHeight, _ := contentHeights(height, filterActive)
+	_, listHeight, _ := ContentHeightsFromFilter(height, filterActive)
 	return listHeight
 }
 
@@ -129,10 +129,6 @@ func ContentHeightsFromFilter(height int, filterActive bool) (int, int, int) {
 	}
 
 	return filterHeight, listHeight, detailHeight
-}
-
-func contentHeights(height int, filterActive bool) (int, int, int) {
-	return ContentHeightsFromFilter(height, filterActive)
 }
 
 func RenderDetail(activeTab shared.Tab, selections SelectionSet, loadingIndicator string, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {

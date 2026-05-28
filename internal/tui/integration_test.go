@@ -129,7 +129,7 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 func TestIntegration_UpdateResultFlow(t *testing.T) {
 	m := model{
 		loading:      true,
-		loadingStage: loadStageContainers,
+		loadingStage: shared.StageContainers,
 		styles:       defaultStyles(),
 		browse: browse.Model{
 			Filter: browse.NewFilterState(),
@@ -144,13 +144,13 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 
 	updated, cmd := m.Update(containersResultMsg{containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}})
 	current := unwrapModel(updated)
-	if cmd == nil || current.loadingStage != loadStageResources {
+	if cmd == nil || current.loadingStage != shared.StageResources {
 		t.Fatalf("expected transition to resources stage")
 	}
 
 	updated, cmd = current.Update(resourcesResultMsg{snapshot: core.Snapshot{Images: []core.ImageRow{{ID: "img-1"}}, Networks: []core.NetworkRow{{ID: "net-1"}}, Volumes: []core.VolumeRow{{Name: "vol-1"}}, TotalLimit: 1000}})
 	current = unwrapModel(updated)
-	if cmd == nil || current.loadingStage != loadStageMetrics {
+	if cmd == nil || current.loadingStage != shared.StageMetrics {
 		t.Fatalf("expected transition to metrics stage")
 	}
 
@@ -159,7 +159,7 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 	if cmd != nil {
 		t.Fatalf("metrics stage should not schedule command")
 	}
-	if current.loading || current.loadingStage != loadStageIdle {
+	if current.loading || current.loadingStage != shared.StageIdle {
 		t.Fatalf("expected load flow to finish at idle")
 	}
 	if current.browse.Snapshot.TotalCPU != 12.5 || current.browse.Snapshot.TotalMem != 10 {
@@ -175,7 +175,7 @@ func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 		width:        120,
 		height:       30,
 		loading:      false,
-		loadingStage: loadStageIdle,
+		loadingStage: shared.StageIdle,
 		styles:       defaultStyles(),
 		browse: browse.Model{
 			ActiveTab: tabContainers,
@@ -224,7 +224,7 @@ func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 		width:        120,
 		height:       30,
 		loading:      true,
-		loadingStage: loadStageMetrics,
+		loadingStage: shared.StageMetrics,
 		styles:       defaultStyles(),
 		browse: browse.Model{
 			ActiveTab: tabContainers,

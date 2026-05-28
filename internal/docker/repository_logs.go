@@ -8,52 +8,11 @@ import (
 	"strings"
 	"unicode"
 
-	"easydocker/internal/core"
-
 	"github.com/charmbracelet/x/ansi"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 )
-
-const maxHistoryPoints = 32
-
-func (r *Repository) LoadContainerLiveData(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (core.ContainerLiveData, error) {
-	cli, err := r.dockerClient()
-	if err != nil {
-		return core.ContainerLiveData{}, err
-	}
-
-	inspected, err := cli.ContainerInspect(ctx, containerID)
-	if err != nil {
-		return core.ContainerLiveData{}, wrapDockerError("inspect container", err)
-	}
-
-	logs, err := fetchRawLogs(ctx, cli, containerID, tail)
-	if err != nil {
-		return core.ContainerLiveData{}, err
-	}
-
-	metrics, err := r.loadSingleContainerMetrics(ctx, cli, containerID)
-	if err != nil {
-		metrics = core.ContainerMetrics{MemoryUsage: "-", MemoryLimit: "-"}
-	}
-
-	return core.ContainerLiveData{
-		ContainerID:   containerID,
-		Logs:          logs,
-		CPUPercent:    metrics.CPUPercent,
-		MemoryPercent: metrics.MemoryPercent,
-		MemoryUsage:   metrics.MemoryUsage,
-		MemoryLimit:   metrics.MemoryLimit,
-		MemoryBytes:   metrics.MemoryUsageBytes,
-		MemoryMax:     metrics.MemoryLimitBytes,
-		CPUHistory:    appendHistory(previousCPU, metrics.CPUPercent),
-		MemHistory:    appendHistory(previousMem, metrics.MemoryPercent),
-		State:         inspected.State.Status,
-		UpdatedAt:     r.now(),
-	}, nil
-}
 
 func (r *Repository) LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error) {
 	return withClientResult(r, func(cli *client.Client) ([]string, error) {
@@ -85,7 +44,7 @@ func fetchRawLogs(ctx context.Context, cli *client.Client, containerID string, t
 		_, _ = merged.Write(rawLogBytes)
 	}
 
-	return normalizeLogs(merged.String(), ""), nil
+	return normalizeLogs(merged.String()), nil
 }
 
 func tailOption(tail int) string {
@@ -95,14 +54,8 @@ func tailOption(tail int) string {
 	return fmt.Sprintf("%d", tail)
 }
 
-func normalizeLogs(stdout, stderr string) []string {
+func normalizeLogs(stdout string) []string {
 	combined := strings.TrimRight(stdout, "\n")
-	if strings.TrimSpace(stderr) != "" {
-		if combined != "" {
-			combined += "\n"
-		}
-		combined += strings.TrimRight(stderr, "\n")
-	}
 	combined = normalizeTerminalBoundaries(combined)
 	// Normalize CRLF, but keep bare carriage returns for per-line compaction
 	// so progress-style output does not explode into artificial new lines.
@@ -171,10 +124,3 @@ func isControlOnlyLogLine(line string) bool {
 	return strings.TrimSpace(visible) == ""
 }
 
-func appendHistory(history []float64, value float64) []float64 {
-	history = append(history, value)
-	if len(history) > maxHistoryPoints {
-		history = history[len(history)-maxHistoryPoints:]
-	}
-	return history
-}

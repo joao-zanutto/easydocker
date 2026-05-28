@@ -43,8 +43,6 @@ func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Tran
 		return Transition{}
 	case key.Matches(msg, keys.OpenShell):
 		return Transition{LaunchShell: true}
-	case key.Matches(msg, keys.Back):
-		return Transition{ExitToBrowse: true}
 	default:
 		return Transition{}
 	}

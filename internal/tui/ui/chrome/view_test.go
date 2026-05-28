@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
 
 	"charm.land/bubbles/v2/key"
@@ -30,9 +31,9 @@ func TestRenderHeaderTabs_WidthFallback(t *testing.T) {
 		{Tab: 2, Icon: "🔌", Name: "Networks", Count: 1},
 		{Tab: 3, Icon: "📂", Name: "Volumes", Count: 2},
 	}
-	renderTab := func(tab int, label string) string { return label }
-
-	wide := util.StripANSI(strings.Join(RenderHeaderTabs(specs, 200, renderTab), " "))
+	renderTab := func(tab shared.Tab, label string) string { return label }
+	RenderTabs := RenderHeaderTabs(specs, 200, renderTab)
+	wide := util.StripANSI(strings.Join(RenderTabs, " "))
 	for _, token := range []string{"Containers (2)", "Images (2)", "Networks (1)", "Volumes (2)"} {
 		if !strings.Contains(wide, token) {
 			t.Fatalf("expected wide header tabs to contain %q, got %q", token, wide)
@@ -97,7 +98,7 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 			Badge:     lipgloss.NewStyle(),
 			ErrorText: lipgloss.NewStyle(),
 		},
-		RenderTab: func(tab int, label string) string { return label },
+		RenderTab: func(tab shared.Tab, label string) string { return label },
 	})
 	if !strings.Contains(util.StripANSI(header), "EasyDocker") {
 		t.Fatalf("expected header to contain title, got %q", header)
@@ -126,7 +127,7 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 
 func TestRenderTotalsLabel(t *testing.T) {
 	snapshot := core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048}
-	if got := RenderTotalsLabel(snapshot, 0, 1, 3, true, ""); !strings.Contains(got, "CPU") || !strings.Contains(got, "MEM") {
+	if got := RenderTotalsLabel(snapshot, shared.StageIdle, true, ""); !strings.Contains(got, "CPU") || !strings.Contains(got, "MEM") {
 		t.Fatalf("RenderTotalsLabel() = %q, want CPU/MEM text", got)
 	}
 }
@@ -134,12 +135,12 @@ func TestRenderTotalsLabel(t *testing.T) {
 func TestRenderTotalsLabel_UsesIndicatorOnlyBeforeFirstMetricsLoad(t *testing.T) {
 	snapshot := core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048}
 
-	loading := RenderTotalsLabel(snapshot, 3, 0, 3, false, "⠋")
+	loading := RenderTotalsLabel(snapshot, shared.StageMetrics, false, "⠋")
 	if !strings.Contains(loading, "CPU ⠋") || !strings.Contains(loading, "MEM ⠋") {
 		t.Fatalf("pre-metrics totals should show spinner indicator, got %q", loading)
 	}
 
-	stale := RenderTotalsLabel(snapshot, 3, 0, 3, true, "⠋")
+	stale := RenderTotalsLabel(snapshot, shared.StageMetrics, true, "⠋")
 	if strings.Contains(stale, "⠋") {
 		t.Fatalf("post-metrics totals should keep stale numbers, got %q", stale)
 	}

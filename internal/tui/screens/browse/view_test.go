@@ -86,7 +86,7 @@ func TestRenderContent_FilterKeepsDividerAnchored(t *testing.T) {
 		ActiveTab: 0,
 		Width:     80,
 		Height:    20,
-		Styles: ViewStyles{
+		Styles: Styles{
 			Divider: lipgloss.NewStyle(),
 			Muted:   lipgloss.NewStyle(),
 			Section: lipgloss.NewStyle(),

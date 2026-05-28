@@ -52,7 +52,7 @@ func (m model) footerKeyMap() help.KeyMap {
 	}
 	if m.browse.ActiveTab == tabContainers {
 		bindings = append(bindings, browseKeys.ToggleScope)
-		if row, ok := m.selectedContainerListRow(); ok && row.Kind == tables.ContainerListRowComposeProject {
+		if row, ok := m.selectedContainerListRow(); ok && row.Kind == tables.RowComposeProject {
 			action := "expand"
 			if row.ComposeExpanded {
 				action = "collapse"

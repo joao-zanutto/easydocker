@@ -154,9 +154,9 @@ func normalizeLine(line string) string {
 	return line
 }
 
-func MergePolledLogs(prev, polled []string, maxLines int) ([]string, bool) {
+func MergePolledLogs(prev, polled []string) ([]string, bool) {
 	if len(prev) == 0 {
-		return trimLogLines(polled, maxLines), true
+		return polled, true
 	}
 	if len(polled) == 0 {
 		return prev, true
@@ -174,27 +174,18 @@ func MergePolledLogs(prev, polled []string, maxLines int) ([]string, bool) {
 	maxOverlap := min(len(normPrev), len(normPolled))
 	for o := maxOverlap; o > 0; o-- {
 		if equalLogSlices(normPrev[len(normPrev)-o:], normPolled[:o]) {
-			merged := append([]string{}, normPrev...)
-			merged = append(merged, normPolled[o:]...)
-			return trimLogLines(merged, maxLines), true
+			return append(append([]string{}, normPrev...), normPolled[o:]...), true
 		}
 	}
 
 	if equalLogSlices(normPrev, normPolled) {
-		return trimLogLines(normPrev, maxLines), true
+		return normPrev, true
 	}
 	if len(normPolled) < len(normPrev) && equalLogSlices(normPrev[len(normPrev)-len(normPolled):], normPolled) {
-		return trimLogLines(normPrev, maxLines), true
+		return normPrev, true
 	}
 
-	return trimLogLines(normPolled, maxLines), false
-}
-
-func trimLogLines(lines []string, maxLines int) []string {
-	if maxLines <= 0 || len(lines) <= maxLines {
-		return lines
-	}
-	return lines[len(lines)-maxLines:]
+	return normPolled, false
 }
 
 func equalLogSlices(a, b []string) bool {

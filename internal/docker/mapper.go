@@ -3,7 +3,6 @@ package docker
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,8 +29,6 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 		ComposeService:         strings.TrimSpace(item.Labels["com.docker.compose.service"]),
 		ComposeWorkingDir:      strings.TrimSpace(item.Labels["com.docker.compose.project.working_dir"]),
 		ComposeConfigFiles:     strings.TrimSpace(item.Labels["com.docker.compose.project.config_files"]),
-		ComposeOneOff:          strings.EqualFold(item.Labels["com.docker.compose.oneoff"], "true"),
-		ComposeContainerNumber: parseContainerNumber(item.Labels["com.docker.compose.container-number"]),
 		Image:                  item.Image,
 		State:                  item.State,
 		Status:                 item.Status,
@@ -130,17 +127,6 @@ func cleanCommand(command string) string {
 		return trimmed
 	}
 	return trimmed[:61] + "..."
-}
-
-func parseContainerNumber(value string) int {
-	if value == "" {
-		return 0
-	}
-	parsed, err := strconv.Atoi(value)
-	if err != nil {
-		return 0
-	}
-	return parsed
 }
 
 func formatTags(tags []string) string {

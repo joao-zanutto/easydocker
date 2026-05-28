@@ -17,7 +17,7 @@ func (m model) handleContainersResultMsg(msg containersResultMsg) (tea.Model, te
 	}
 
 	m.browse.Snapshot.Containers = core.PreserveRunningContainerMetrics(msg.containers, m.browse.Snapshot.Containers)
-	m.beginLoadingStage(loadStageResources)
+	m.beginLoadingStage(shared.StageResources)
 	return m, loadResourcesCmd(m.service)
 }
 
@@ -31,7 +31,7 @@ func (m model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea.
 	m.browse.Snapshot.Networks = msg.snapshot.Networks
 	m.browse.Snapshot.Volumes = msg.snapshot.Volumes
 	m.browse.Snapshot.TotalLimit = msg.snapshot.TotalLimit
-	m.beginLoadingStage(loadStageMetrics)
+	m.beginLoadingStage(shared.StageMetrics)
 	return m, loadMetricsCmd(m.service, m.browse.Snapshot.Containers)
 }
 
@@ -81,7 +81,7 @@ func (m model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd)
 
 func (m *model) applyLoadingTransition(transition shared.Transition) {
 	m.loading = transition.Loading
-	m.loadingStage = int(transition.Stage)
+	m.loadingStage = transition.Stage
 	m.err = transition.Err
 }
 
@@ -89,8 +89,8 @@ func (m *model) setLoadError(err error) {
 	m.applyLoadingTransition(shared.Fail(err))
 }
 
-func (m *model) beginLoadingStage(stage int) {
-	m.applyLoadingTransition(shared.Begin(shared.Stage(stage)))
+func (m *model) beginLoadingStage(stage shared.Stage) {
+	m.applyLoadingTransition(shared.Begin(stage))
 	m.browse.Snapshot.Timestamp = time.Now()
 }
 

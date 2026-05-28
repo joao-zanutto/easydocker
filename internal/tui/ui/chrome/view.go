@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
 
 	"charm.land/bubbles/v2/help"
@@ -30,7 +31,7 @@ func renderPercent(value float64) string {
 }
 
 type TabSpec struct {
-	Tab   int
+	Tab   shared.Tab
 	Icon  string
 	Name  string
 	Count int
@@ -57,12 +58,12 @@ type HeaderInput struct {
 	Title            string
 	TotalsText       string
 	LoadingStageText string
-	ActiveTab        int
+	ActiveTab        shared.Tab
 	ShowAll          bool
 	Err              error
 	Tabs             []TabSpec
 	Styles           HeaderStyles
-	RenderTab        func(tab int, label string) string
+	RenderTab        func(tab shared.Tab, label string) string
 }
 
 type FooterInput struct {
@@ -80,7 +81,7 @@ const (
 	tabLabelIconOnly
 )
 
-func RenderHeaderTabs(specs []TabSpec, maxWidth int, renderTab func(tab int, label string) string) []string {
+func RenderHeaderTabs(specs []TabSpec, maxWidth int, renderTab func(tab shared.Tab, label string) string) []string {
 	for _, variant := range []tabLabelVariant{tabLabelFullWithParens, tabLabelFullCompact, tabLabelIconWithCount} {
 		tabs := renderHeaderTabsVariant(specs, variant, renderTab)
 		if joinedDisplayWidth(tabs) <= maxWidth {
@@ -151,8 +152,8 @@ func RenderFooter(input FooterInput) string {
 	return input.Styles.Footer.Render(lipgloss.PlaceHorizontal(innerWidth, lipgloss.Center, line))
 }
 
-func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, loadStageMetrics int, metricsLoaded bool, loadingIndicator string) string {
-	if !metricsLoaded && (loadingStage == loadStageMetrics || (loadingStage != loadStageIdle && snapshot.TotalCPU == 0 && snapshot.TotalMem == 0)) {
+func RenderTotalsLabel(snapshot core.Snapshot, loadingStage shared.Stage, metricsLoaded bool, loadingIndicator string) string {
+	if !metricsLoaded && (loadingStage == shared.StageMetrics || (loadingStage != shared.StageIdle && snapshot.TotalCPU == 0 && snapshot.TotalMem == 0)) {
 		indicator := loadingIndicator
 		if strings.TrimSpace(indicator) == "" {
 			indicator = "-"
@@ -166,13 +167,13 @@ func RenderTotalsLabel(snapshot core.Snapshot, loadingStage, loadStageIdle, load
 	return fmt.Sprintf("CPU %s  MEM %s", renderPercent(snapshot.TotalCPU), mem)
 }
 
-func RenderLoadingStageLabel(loadingStage, loadStageContainers, loadStageResources, loadStageMetrics int, metricsLoaded bool) string {
+func RenderLoadingStageLabel(loadingStage shared.Stage, metricsLoaded bool) string {
 	switch loadingStage {
-	case loadStageContainers:
+	case shared.StageContainers:
 		return "loading containers"
-	case loadStageResources:
+	case shared.StageResources:
 		return "loading resources"
-	case loadStageMetrics:
+	case shared.StageMetrics:
 		if metricsLoaded {
 			return ""
 		}
@@ -214,7 +215,7 @@ func renderPinnedHeaderLine(leftStyle lipgloss.Style, leftText, right string, wi
 	return util.ClampSingleLine(left+strings.Repeat(" ", spacing)+right, width)
 }
 
-func renderHeaderTabsVariant(specs []TabSpec, variant tabLabelVariant, renderTab func(tab int, label string) string) []string {
+func renderHeaderTabsVariant(specs []TabSpec, variant tabLabelVariant, renderTab func(tab shared.Tab, label string) string) []string {
 	tabs := make([]string, 0, len(specs))
 	for _, spec := range specs {
 		tabs = append(tabs, renderTab(spec.Tab, headerTabLabel(spec, variant)))

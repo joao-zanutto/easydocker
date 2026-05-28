@@ -28,7 +28,7 @@ func TestMergePolledLogs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotOverlap := viewer.MergePolledLogs(tt.previous, tt.polled, 0)
+			got, gotOverlap := viewer.MergePolledLogs(tt.previous, tt.polled)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MergePolledLogs() = %v, want %v", got, tt.want)
 			}
@@ -38,10 +38,11 @@ func TestMergePolledLogs(t *testing.T) {
 		})
 	}
 
-	t.Run("max lines trims merged result", func(t *testing.T) {
-		got, gotOverlap := viewer.MergePolledLogs([]string{"1", "2", "3"}, []string{"3", "4", "5"}, 3)
-		if !reflect.DeepEqual(got, []string{"3", "4", "5"}) {
-			t.Errorf("MergePolledLogs() = %v, want %v", got, []string{"3", "4", "5"})
+	t.Run("overlap detected and merged", func(t *testing.T) {
+		got, gotOverlap := viewer.MergePolledLogs([]string{"1", "2", "3"}, []string{"3", "4", "5"})
+		want := []string{"1", "2", "3", "4", "5"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("MergePolledLogs() = %v, want %v", got, want)
 		}
 		if !gotOverlap {
 			t.Error("expected overlap true")
@@ -108,11 +109,10 @@ func TestViewerControllerHistoryKey(t *testing.T) {
 		state.Follow = false
 
 		trans := viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyHome}, viewer.NewKeyMap())
-		if state.Viewport.AtTop() && state.Follow == false && trans.Load == nil {
-			// Expected: home moves to top, does not trigger history load directly
-		} else {
-			t.Fatalf("unexpected state after Home: AtTop=%v, Follow=%v, Load=%v", state.Viewport.AtTop(), state.Follow, trans.Load)
+		if !state.Viewport.AtTop() || state.Follow {
+			t.Fatalf("unexpected state after Home: AtTop=%v, Follow=%v", state.Viewport.AtTop(), state.Follow)
 		}
+		_ = trans
 	})
 
 	t.Run("End key enables follow", func(t *testing.T) {
@@ -133,9 +133,7 @@ func TestViewerControllerHistoryKey(t *testing.T) {
 		state.Viewport.SetYOffset(0)
 		state.Follow = false
 
-		trans := viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyPgUp}, viewer.NewKeyMap())
-		if trans.Load != nil {
-			t.Fatal("expected no load request from PgUp in current architecture; history loading is tick-driven")
-		}
+		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyPgUp}, viewer.NewKeyMap())
+		// PgUp does not trigger a load request; history loading is tick-driven
 	})
 }
