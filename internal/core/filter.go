@@ -8,7 +8,7 @@ func FilterContainersByScope(containers []ContainerRow, showAll bool) []Containe
 	}
 	filtered := make([]ContainerRow, 0, len(containers))
 	for _, container := range containers {
-		if strings.EqualFold(container.State, "running") {
+		if container.State == StateRunning {
 			filtered = append(filtered, container)
 		}
 	}

@@ -36,8 +36,6 @@ type ViewModel struct {
 	HistoryLoad      bool
 }
 
-const filterHeaderHeight = 2
-
 func RenderContent(vm ViewModel) string {
 	if vm.Width == 0 || vm.Height == 0 {
 		return ""
@@ -47,7 +45,7 @@ func RenderContent(vm ViewModel) string {
 	headerVM.Width = layout.ContentWidth
 	breadcrumb := vm.Breadcrumb
 	if breadcrumb == "" {
-		resourceLabel := core.ResourceLabel(vm.ResourceType)
+		resourceLabel := util.ResourceLabel(vm.ResourceType)
 		contentLabel := getContentLabel(vm.ContentType)
 		breadcrumb = util.ClampSingleLine(
 			fmt.Sprintf("%s / %s / %s", resourceLabel, vm.ContainerName, contentLabel),
@@ -76,7 +74,7 @@ func RenderContent(vm ViewModel) string {
 func VisibleRowsForContent(contentHeight int, filterActive bool) int {
 	overhead := 2
 	if filterActive {
-		overhead += filterHeaderHeight
+		overhead += components.FilterHeaderHeight
 	}
 	return max(1, contentHeight-overhead)
 }

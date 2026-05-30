@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,7 +21,7 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 
 	runningRows := make([]core.ContainerRow, 0, len(rows))
 	for _, row := range rows {
-		if strings.EqualFold(row.State, "running") {
+		if row.State == core.StateRunning {
 			runningRows = append(runningRows, row)
 		}
 	}
@@ -31,6 +30,7 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 	}
 
 	metricsByID := make(map[string]core.ContainerMetrics, len(runningRows))
+	metricsErrors := make(map[string]error)
 	workerCount := min(len(runningRows), max(2, min(runtime.NumCPU(), 6)))
 	jobs := make(chan core.ContainerRow)
 	var mu sync.Mutex
@@ -43,6 +43,9 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 		for row := range jobs {
 			metrics, err := r.loadSingleContainerMetrics(ctx, cli, row.FullID)
 			if err != nil {
+				mu.Lock()
+				metricsErrors[row.FullID] = err
+				mu.Unlock()
 				continue
 			}
 
@@ -70,6 +73,7 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 	close(jobs)
 	wg.Wait()
 
+	_ = metricsErrors
 	return metricsByID, totalCPU, totalMem, nil
 }
 
@@ -103,6 +107,10 @@ func (r *Repository) loadSingleContainerMetrics(ctx context.Context, cli *client
 func retryWithBackoff[T any](ctx context.Context, maxAttempts int, timeout time.Duration, fn func(context.Context) (T, error)) (T, error) {
 	var lastErr error
 	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if ctx.Err() != nil {
+			var zero T
+			return zero, ctx.Err()
+		}
 		opCtx, cancel := context.WithTimeout(ctx, timeout)
 		result, err := fn(opCtx)
 		cancel()

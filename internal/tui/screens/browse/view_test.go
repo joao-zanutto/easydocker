@@ -17,7 +17,7 @@ func (fakeProvider) DetailLine(label, value string, width int) string {
 	return util.ConstrainLine(line, width)
 }
 func (fakeProvider) RenderContainerState(container core.ContainerRow) string {
-	return core.ContainerStateText(container)
+	return util.ContainerStateText(container)
 }
 
 func TestShouldRenderLoading(t *testing.T) {

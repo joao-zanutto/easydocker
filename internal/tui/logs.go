@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"context"
+
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
@@ -15,7 +17,7 @@ const (
 
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	m.previousScreen = m.screen
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.viewer.ContainerID = container.FullID
@@ -40,20 +42,20 @@ func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	m.viewer.Breadcrumb = ""
 	m.viewer.ContainerName = container.Name
 	m.viewer.Styles = viewer.Styles{
-		Breadcrumb:   m.styles.Breadcrumb,
-		FollowOn:     m.styles.FollowOn,
-		FollowOff:    m.styles.FollowOff,
-		Muted:        m.styles.Muted,
-		Divider:      m.styles.Divider,
-		SubpageFrame: m.styles.SubpageFrame,
+		Breadcrumb:   m.styles.Viewer.Breadcrumb,
+		FollowOn:     m.styles.Viewer.FollowOn,
+		FollowOff:    m.styles.Viewer.FollowOff,
+		Muted:        m.styles.Browse.Muted,
+		Divider:      m.styles.Browse.Divider,
+		SubpageFrame: m.styles.Viewer.SubpageFrame,
 	}
 	m.err = nil
 	return LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.SessionID, m.viewer.TailLines, viewer.SourceInitial)
 }
 
-func LoadLogsCmd(service *core.Service, containerID string, sessionID, tail int, src viewer.Source) tea.Cmd {
+func LoadLogsCmd(service core.ServiceInterface, containerID string, sessionID, tail int, src viewer.Source) tea.Cmd {
 	return func() tea.Msg {
-		logs, err := service.LoadContainerLogs(containerID, tail)
+		logs, err := service.LoadContainerLogs(context.Background(), containerID, tail)
 		return viewer.ContentMsg{
 			ContainerID: containerID,
 			SessionID:   sessionID,

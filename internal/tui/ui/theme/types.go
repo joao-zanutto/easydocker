@@ -6,56 +6,75 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// Set contains all style primitives used by the root TUI orchestrator.
-// Fields are grouped by the screen/component that primarily uses them:
-//   - Chrome: Page, Header, Title, TitleMeta, Badge, Tab, ActiveTab, Footer, Key, KeyText
-//   - Browse: Divider, Muted, Section, Label, Value, HeaderRow, Row, ActiveRow
-//   - Viewer (Logs/Inspect): Breadcrumb, FollowOn, FollowOff, SubpageFrame
-//   - Menu/Help: MenuFrame, MenuSelector, MenuItem, MenuDesc, HelpFrame, HelpTitle,
-//     HelpSection, HelpCommand, HelpKey, HelpContext, HelpFooter, Scrollbar
-//   - States: StateRun, StateWarn, StateStop, StateDead, StateOther
-//   - Misc: ErrorText, ActiveBG
+type ChromeStyles struct {
+	Page      lipgloss.Style
+	Header    lipgloss.Style
+	Title     lipgloss.Style
+	TitleMeta lipgloss.Style
+	Badge     lipgloss.Style
+	ErrorText lipgloss.Style
+	Footer    lipgloss.Style
+	Key       lipgloss.Style
+	KeyText   lipgloss.Style
+}
+
+type TabStyles struct {
+	Tab       lipgloss.Style
+	ActiveTab lipgloss.Style
+}
+
+type TableStyles struct {
+	HeaderRow lipgloss.Style
+	Row       lipgloss.Style
+	ActiveRow lipgloss.Style
+}
+
+type BrowseStyles struct {
+	MainFrame lipgloss.Style
+	Divider   lipgloss.Style
+	Muted     lipgloss.Style
+	Section   lipgloss.Style
+	Label     lipgloss.Style
+	Value     lipgloss.Style
+}
+
+type ViewerStyles struct {
+	Breadcrumb   lipgloss.Style
+	FollowOn     lipgloss.Style
+	FollowOff    lipgloss.Style
+	SubpageFrame lipgloss.Style
+}
+
+type MenuStyles struct {
+	Frame           lipgloss.Style
+	Selector        lipgloss.Style
+	ItemNormal      lipgloss.Style
+	ItemDescription lipgloss.Style
+	HelpFrame       lipgloss.Style
+	HelpTitle       lipgloss.Style
+	HelpSection     lipgloss.Style
+	HelpCommand     lipgloss.Style
+	HelpKey         lipgloss.Style
+	HelpContext     lipgloss.Style
+	HelpFooter      lipgloss.Style
+	Scrollbar       lipgloss.Style
+}
+
+type StateStyles struct {
+	StateRun   lipgloss.Style
+	StateWarn  lipgloss.Style
+	StateStop  lipgloss.Style
+	StateDead  lipgloss.Style
+	StateOther lipgloss.Style
+}
+
 type Set struct {
-	Page         lipgloss.Style // Chrome: page background
-	Header       lipgloss.Style // Chrome: header frame
-	Title        lipgloss.Style // Chrome: title text
-	TitleMeta    lipgloss.Style // Chrome: totals/loading metadata
-	Breadcrumb   lipgloss.Style // Viewer: breadcrumb text
-	Tab          lipgloss.Style // Chrome: inactive tab
-	ActiveTab    lipgloss.Style // Chrome: active tab
-	Badge        lipgloss.Style // Chrome: scope badge
-	Muted        lipgloss.Style // Browse/Viewer: muted text
-	MainFrame    lipgloss.Style // Browse: main content frame
-	SubpageFrame lipgloss.Style // Viewer: logs/inspect subpage frame
-	Divider      lipgloss.Style // Browse/Viewer: horizontal dividers
-	HeaderRow    lipgloss.Style // Browse: table header row
-	Row          lipgloss.Style // Browse: table rows
-	ActiveRow    lipgloss.Style // Browse: selected table row
-	Section      lipgloss.Style // Browse: detail section header
-	Label        lipgloss.Style // Browse: detail labels
-	Value        lipgloss.Style // Browse: detail values
-	ErrorText    lipgloss.Style // Chrome: error messages
-	Footer       lipgloss.Style // Chrome: footer frame
-	Key          lipgloss.Style // Chrome: footer key bindings
-	KeyText      lipgloss.Style // Chrome: footer key descriptions
-	FollowOn     lipgloss.Style // Viewer: follow mode enabled
-	FollowOff    lipgloss.Style // Viewer: follow mode disabled
-	StateRun     lipgloss.Style // Browse: running state color
-	StateWarn    lipgloss.Style // Browse: warning state color
-	StateStop    lipgloss.Style // Browse: stopped state color
-	StateDead    lipgloss.Style // Browse: dead state color
-	StateOther   lipgloss.Style // Browse: other state color
-	MenuFrame    lipgloss.Style // Menu: menu overlay frame
-	MenuSelector lipgloss.Style // Menu: menu selection indicator
-	MenuItem     lipgloss.Style // Menu: menu item text
-	MenuDesc     lipgloss.Style // Menu: menu item description
-	HelpFrame    lipgloss.Style // Help: help overlay frame
-	HelpTitle    lipgloss.Style // Help: help title
-	HelpSection  lipgloss.Style // Help: help section header
-	HelpCommand  lipgloss.Style // Help: help command text
-	HelpKey      lipgloss.Style // Help: help key binding
-	HelpContext  lipgloss.Style // Help: help context text
-	HelpFooter   lipgloss.Style // Help: help footer
-	Scrollbar    lipgloss.Style // Menu/Help: scrollbar styling
-	ActiveBG     color.Color    // Shared: active background color
+	Chrome   ChromeStyles
+	Tabs     TabStyles
+	Tables   TableStyles
+	Browse   BrowseStyles
+	Viewer   ViewerStyles
+	Menu     MenuStyles
+	States   StateStyles
+	ActiveBG color.Color
 }

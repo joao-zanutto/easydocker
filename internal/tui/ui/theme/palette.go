@@ -2,8 +2,8 @@ package theme
 
 import (
 	"image/color"
-	"strings"
 
+	"easydocker/internal/core"
 	"charm.land/lipgloss/v2"
 )
 
@@ -38,15 +38,15 @@ var (
 	Pink   = lipgloss.Color("199")
 )
 
-func ContainerStateColor(state string) color.Color {
-	switch strings.ToLower(state) {
-	case "running":
+func ContainerStateColor(state core.ContainerState) color.Color {
+	switch state {
+	case core.StateRunning:
 		return Green
-	case "paused", "restarting", "created":
+	case core.StatePaused, core.StateRestarting, core.StateCreated:
 		return Orange
-	case "exited", "stopped":
+	case core.StateExited:
 		return Red
-	case "dead":
+	case core.StateDead:
 		return Pink
 	default:
 		return BlueGray

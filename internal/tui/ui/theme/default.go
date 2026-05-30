@@ -3,7 +3,7 @@ package theme
 import "charm.land/lipgloss/v2"
 
 func Default() Set {
-	s := Set{Page: lipgloss.NewStyle(), ActiveBG: Surface}
+	s := Set{Chrome: ChromeStyles{Page: lipgloss.NewStyle()}, ActiveBG: Surface}
 	applyChromeStyles(&s)
 	applyBrowseStyles(&s)
 	applyLogsStyles(&s)

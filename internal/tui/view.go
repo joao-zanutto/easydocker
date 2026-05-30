@@ -28,21 +28,21 @@ func (m model) View() tea.View {
 		baseContent := lipgloss.JoinVertical(lipgloss.Left, header, main, footer)
 
 		styles := menu.DefaultMenuStyles(
-			m.styles.MenuFrame,
-			m.styles.MenuSelector,
-			m.styles.MenuItem,
-			m.styles.MenuDesc,
-			m.styles.HelpFrame,
-			m.styles.HelpTitle,
-			m.styles.HelpSection,
-			m.styles.HelpCommand,
-			m.styles.HelpKey,
-			m.styles.HelpContext,
-			m.styles.HelpFooter,
-			m.styles.Scrollbar,
+			m.styles.Menu.Frame,
+			m.styles.Menu.Selector,
+			m.styles.Menu.ItemNormal,
+			m.styles.Menu.ItemDescription,
+			m.styles.Menu.HelpFrame,
+			m.styles.Menu.HelpTitle,
+			m.styles.Menu.HelpSection,
+			m.styles.Menu.HelpCommand,
+			m.styles.Menu.HelpKey,
+			m.styles.Menu.HelpContext,
+			m.styles.Menu.HelpFooter,
+			m.styles.Menu.Scrollbar,
 		)
 		content = menu.Render(baseContent, m.menu, m.help, styles, m.width, m.height)
-		content = m.styles.Page.Render(content)
+		content = m.styles.Chrome.Page.Render(content)
 	}
 
 	v := tea.NewView(content)
@@ -54,24 +54,24 @@ func (m model) renderMain(height int) string {
 	totalWidth := max(1, m.width)
 	totalHeight := max(1, height)
 
-	if m.screen == shared.Logs && m.browse.ActiveTab == tabContainers {
+	if m.screen == shared.LogViewer && m.browse.ActiveTab == tabContainers {
 		container, ok := m.selectedLogsContainer()
 		if !ok {
-			return m.styles.ErrorText.Render("Selected container is no longer available.")
+			return m.styles.Chrome.ErrorText.Render("Selected container is no longer available.")
 		}
 		return m.renderLogsContent(container, totalWidth, totalHeight)
 	}
 
-	if m.screen == shared.Inspect {
+	if m.screen == shared.InspectViewer {
 		return m.renderInspectContent(totalWidth, totalHeight)
 	}
 
-	layout := util.ComputeFrameLayout(totalWidth, totalHeight, m.styles.MainFrame)
+	layout := util.ComputeFrameLayout(totalWidth, totalHeight, m.styles.Browse.MainFrame)
 	m.browse.Width = layout.ContentWidth
 	m.browse.Height = layout.ContentHeight
 
 	content := m.browse.View()
-	return util.RenderFramedContent(m.styles.MainFrame, layout, content)
+	return util.RenderFramedContent(m.styles.Browse.MainFrame, layout, content)
 }
 
 func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalHeight int) string {
@@ -84,18 +84,18 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 	m.viewer.LoadingMsg = "Loading logs..."
 	m.viewer.EmptyMsg = "No logs found for this container."
 	m.viewer.Styles = viewer.Styles{
-		Breadcrumb:   m.styles.Breadcrumb,
-		FollowOn:     m.styles.FollowOn,
-		FollowOff:    m.styles.FollowOff,
-		Muted:        m.styles.Muted,
-		Divider:      m.styles.Divider,
-		SubpageFrame: m.styles.SubpageFrame,
+		Breadcrumb:   m.styles.Viewer.Breadcrumb,
+		FollowOn:     m.styles.Viewer.FollowOn,
+		FollowOff:    m.styles.Viewer.FollowOff,
+		Muted:        m.styles.Browse.Muted,
+		Divider:      m.styles.Browse.Divider,
+		SubpageFrame: m.styles.Viewer.SubpageFrame,
 	}
 	return m.viewer.View()
 }
 
 func (m model) renderInspectContent(totalWidth, totalHeight int) string {
-	resourceLabel := core.ResourceLabel(shared.TabToResourceType(m.browse.ActiveTab))
+	resourceLabel := util.ResourceLabel(shared.TabToResourceType(m.browse.ActiveTab))
 	containerName := m.viewer.ResourceName
 	breadcrumb := resourceLabel + " / " + containerName + " / Inspect"
 
@@ -108,12 +108,12 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	m.viewer.LoadingMsg = "Loading inspect..."
 	m.viewer.EmptyMsg = "No inspect data available."
 	m.viewer.Styles = viewer.Styles{
-		Breadcrumb:   m.styles.Breadcrumb,
-		FollowOn:     m.styles.FollowOn,
-		FollowOff:    m.styles.FollowOff,
-		Muted:        m.styles.Muted,
-		Divider:      m.styles.Divider,
-		SubpageFrame: m.styles.SubpageFrame,
+		Breadcrumb:   m.styles.Viewer.Breadcrumb,
+		FollowOn:     m.styles.Viewer.FollowOn,
+		FollowOff:    m.styles.Viewer.FollowOff,
+		Muted:        m.styles.Browse.Muted,
+		Divider:      m.styles.Browse.Divider,
+		SubpageFrame: m.styles.Viewer.SubpageFrame,
 	}
 	return m.viewer.View()
 }
@@ -148,11 +148,11 @@ func (m model) renderHeader() string {
 			{Tab: tabVolumes, Icon: "📂", Name: "Volumes", Count: len(m.browse.Snapshot.Volumes)},
 		},
 		Styles: chrome.HeaderStyles{
-			Header:    m.styles.Header,
-			Title:     m.styles.Title,
-			TitleMeta: m.styles.TitleMeta,
-			Badge:     m.styles.Badge,
-			ErrorText: m.styles.ErrorText,
+			Header:    m.styles.Chrome.Header,
+			Title:     m.styles.Chrome.Title,
+			TitleMeta: m.styles.Chrome.TitleMeta,
+			Badge:     m.styles.Chrome.Badge,
+			ErrorText: m.styles.Chrome.ErrorText,
 		},
 		RenderTab: m.renderChromeTab,
 	})
@@ -163,34 +163,34 @@ func (m model) renderFooter() string {
 		Width:  m.width,
 		KeyMap: m.footerKeyMap(),
 		Styles: chrome.FooterStyles{
-			Footer:  m.styles.Footer,
-			Key:     m.styles.Key,
-			KeyText: m.styles.KeyText,
+			Footer:  m.styles.Chrome.Footer,
+			Key:     m.styles.Chrome.Key,
+			KeyText: m.styles.Chrome.KeyText,
 		},
 	})
 }
 
 func (m model) renderChromeTab(tab shared.Tab, label string) string {
 	if m.browse.ActiveTab == tab {
-		return m.styles.ActiveTab.Render(label)
+		return m.styles.Tabs.ActiveTab.Render(label)
 	}
-	return m.styles.Tab.Render(label)
+	return m.styles.Tabs.Tab.Render(label)
 }
 
 func (m model) detailLineWithWidth(label, value string, width int) string {
 	labelText := label + ": "
 	if width <= 0 {
-		return m.styles.Label.Render(labelText) + m.styles.Value.Render(value)
+		return m.styles.Browse.Label.Render(labelText) + m.styles.Browse.Value.Render(value)
 	}
 
-	labelRendered := m.styles.Label.Render(labelText)
+	labelRendered := m.styles.Browse.Label.Render(labelText)
 	labelWidth := util.DisplayWidth(labelRendered)
 	if labelWidth >= width {
 		return util.ConstrainLine(labelRendered, width)
 	}
 
 	valueWidth := max(1, width-labelWidth)
-	return labelRendered + m.styles.Value.Render(util.ConstrainLine(value, valueWidth))
+	return labelRendered + m.styles.Browse.Value.Render(util.ConstrainLine(value, valueWidth))
 }
 
 func (m model) browseDetailRenderer() browse.DetailProvider {
@@ -201,21 +201,21 @@ func (m model) browseDetailRenderer() browse.DetailProvider {
 }
 
 func (m model) renderContainerState(container core.ContainerRow) string {
-	return m.stateStyle(container.State).Render(core.ContainerStateText(container))
+	return m.stateStyle(container.State).Render(util.ContainerStateText(container))
 }
 
-func (m model) stateStyle(state string) lipgloss.Style {
-	switch strings.ToLower(state) {
-	case "running":
-		return m.styles.StateRun
-	case "paused", "restarting", "created":
-		return m.styles.StateWarn
-	case "exited", "stopped":
-		return m.styles.StateStop
-	case "dead":
-		return m.styles.StateDead
+func (m model) stateStyle(state core.ContainerState) lipgloss.Style {
+	switch state {
+	case core.StateRunning:
+		return m.styles.States.StateRun
+	case core.StatePaused, core.StateRestarting, core.StateCreated:
+		return m.styles.States.StateWarn
+	case core.StateExited:
+		return m.styles.States.StateStop
+	case core.StateDead:
+		return m.styles.States.StateDead
 	default:
-		return m.styles.StateOther
+		return m.styles.States.StateOther
 	}
 }
 
@@ -238,9 +238,9 @@ func (m model) renderResourceList(width, height int) string {
 
 func renderResourceTableFromSpec[T any](m model, width, height int, spec tables.Spec[T]) string {
 	tableStyles := tables.DefaultStyles()
-	tableStyles.Header = m.styles.HeaderRow.Inline(true)
-	tableStyles.Cell = m.styles.Row.Inline(true)
-	tableStyles.Selected = m.styles.ActiveRow.Bold(true).Inline(true)
+	tableStyles.Header = m.styles.Tables.HeaderRow.Inline(true)
+	tableStyles.Cell = m.styles.Tables.Row.Inline(true)
+	tableStyles.Selected = m.styles.Tables.ActiveRow.Bold(true).Inline(true)
 	return tables.RenderFromSpec(width, height, spec, tableStyles)
 }
 

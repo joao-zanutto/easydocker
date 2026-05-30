@@ -5,7 +5,7 @@ import (
 )
 
 func (m model) shouldAnimateLogsLoadingIndicator() bool {
-	return (m.screen == shared.Logs || m.screen == shared.Inspect) && (m.viewer.InitialLoad || m.viewer.HistoryLoad)
+	return (m.screen == shared.LogViewer || m.screen == shared.InspectViewer) && (m.viewer.InitialLoad || m.viewer.HistoryLoad)
 }
 
 func (m model) shouldAnimateMetricsLoadingIndicator() bool {
@@ -17,7 +17,7 @@ func (m model) shouldReloadSnapshotOnTick() bool {
 }
 
 func (m model) shouldLoadHistoryOnTick() bool {
-	return m.screen == shared.Logs &&
+	return m.screen == shared.LogViewer &&
 		m.viewer.ContainerID != "" &&
 		m.viewer.Viewport.AtTop() &&
 		!m.viewer.InitialLoad &&
@@ -26,7 +26,7 @@ func (m model) shouldLoadHistoryOnTick() bool {
 }
 
 func (m model) shouldPollLogsOnTick() bool {
-	return m.screen == shared.Logs &&
+	return m.screen == shared.LogViewer &&
 		m.viewer.ContainerID != "" &&
 		!m.viewer.Viewport.AtTop() &&
 		!m.viewer.InitialLoad &&

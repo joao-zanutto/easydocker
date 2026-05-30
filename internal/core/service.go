@@ -7,16 +7,44 @@ import (
 	"time"
 )
 
-//go:generate mockgen -source=service.go -destination=mock_repository_test.go -package=core Repository
+//go:generate mockgen -source=service.go -destination=mock_repository_test.go -package=core Repository,ContainerLister,MetricsProvider,LogsProvider,Inspector,ShellProvider
+
+type ContainerLister interface {
+	LoadContainerRows(ctx context.Context) ([]ContainerRow, error)
+	LoadSupportingResources(ctx context.Context) (Snapshot, error)
+}
+
+type MetricsProvider interface {
+	LoadContainerMetrics(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error)
+}
+
+type LogsProvider interface {
+	LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error)
+}
+
+type Inspector interface {
+	InspectResource(ctx context.Context, resourceType ResourceType, id string) ([]string, error)
+}
+
+type ShellProvider interface {
+	ExecShell(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error
+}
+
 type Repository interface {
+	ContainerLister
+	MetricsProvider
+	LogsProvider
+	Inspector
+	ShellProvider
+}
+
+type ServiceInterface interface {
 	LoadContainerRows(ctx context.Context) ([]ContainerRow, error)
 	LoadSupportingResources(ctx context.Context) (Snapshot, error)
 	LoadContainerMetrics(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error)
 	LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error)
-	InspectContainer(ctx context.Context, containerID string) ([]string, error)
-	InspectImage(ctx context.Context, imageRef string) ([]string, error)
-	InspectNetwork(ctx context.Context, networkID string) ([]string, error)
-	InspectVolume(ctx context.Context, volumeName string) ([]string, error)
+	LoadSnapshot(ctx context.Context) (Snapshot, error)
+	InspectResource(ctx context.Context, resourceType ResourceType, id string) ([]string, error)
 	ExecShell(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error
 }
 
@@ -59,8 +87,10 @@ func (c ServiceConfig) normalized() ServiceConfig {
 }
 
 type Service struct {
-	repo   Repository
-	config ServiceConfig
+	repo                Repository
+	config              ServiceConfig
+	consecutiveFailures int
+	mu                  sync.Mutex
 }
 
 func NewService(repo Repository) *Service {
@@ -71,27 +101,27 @@ func NewServiceWithConfig(repo Repository, config ServiceConfig) *Service {
 	return &Service{repo: repo, config: config.normalized()}
 }
 
-func (s *Service) LoadContainerRows() ([]ContainerRow, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
+func (s *Service) LoadContainerRows(ctx context.Context) ([]ContainerRow, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.config.RequestTimeout)
 	defer cancel()
 	return s.repo.LoadContainerRows(ctx)
 }
 
-func (s *Service) LoadSupportingResources() (Snapshot, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
+func (s *Service) LoadSupportingResources(ctx context.Context) (Snapshot, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.config.RequestTimeout)
 	defer cancel()
 	return s.repo.LoadSupportingResources(ctx)
 }
 
-func (s *Service) LoadContainerMetrics(rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
+func (s *Service) LoadContainerMetrics(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.config.RequestTimeout)
 	defer cancel()
 	return s.repo.LoadContainerMetrics(ctx, rows)
 }
 
-func (s *Service) LoadContainerLogs(containerID string, tail int) ([]string, error) {
+func (s *Service) LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error) {
 	timeout := s.liveDataTimeoutForTail(tail)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	return s.repo.LoadContainerLogs(ctx, containerID, tail)
 }
@@ -106,11 +136,11 @@ func (s *Service) liveDataTimeoutForTail(tail int) time.Duration {
 	return s.config.RequestTimeout
 }
 
-func (s *Service) ExecShell(containerID string, stdin io.Reader, stdout, stderr io.Writer) error {
-	return s.repo.ExecShell(context.Background(), containerID, stdin, stdout, stderr)
+func (s *Service) ExecShell(ctx context.Context, containerID string, stdin io.Reader, stdout, stderr io.Writer) error {
+	return s.repo.ExecShell(ctx, containerID, stdin, stdout, stderr)
 }
 
-func (s *Service) LoadSnapshot() (Snapshot, error) {
+func (s *Service) LoadSnapshot(ctx context.Context) (Snapshot, error) {
 	var (
 		containers    []ContainerRow
 		resources     Snapshot
@@ -123,22 +153,31 @@ func (s *Service) LoadSnapshot() (Snapshot, error) {
 
 	go func() {
 		defer wg.Done()
-		containers, containersErr = s.LoadContainerRows()
+		containers, containersErr = s.LoadContainerRows(ctx)
 	}()
 	go func() {
 		defer wg.Done()
-		resources, resourcesErr = s.LoadSupportingResources()
+		resources, resourcesErr = s.LoadSupportingResources(ctx)
 	}()
 	wg.Wait()
 
 	if containersErr != nil {
+		s.mu.Lock()
+		s.consecutiveFailures++
+		backoff := time.Duration(min(1<<s.consecutiveFailures, 30)) * time.Second
+		s.mu.Unlock()
+		time.Sleep(backoff)
 		return Snapshot{}, containersErr
 	}
+
+	s.mu.Lock()
+	s.consecutiveFailures = 0
+	s.mu.Unlock()
 
 	resources.Containers = containers
 
 	if resourcesErr == nil {
-		metricsByID, totalCPU, totalMem, metricsErr := s.LoadContainerMetrics(containers)
+		metricsByID, totalCPU, totalMem, metricsErr := s.LoadContainerMetrics(ctx, containers)
 		if metricsErr == nil {
 			resources.Containers = ApplyMetricsToContainers(containers, metricsByID)
 			resources.TotalCPU = totalCPU
@@ -153,20 +192,6 @@ func (s *Service) LoadSnapshot() (Snapshot, error) {
 	return resources, nil
 }
 
-func (s *Service) InspectResource(rt ResourceType, id string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
-	defer cancel()
-
-	switch rt {
-	case ResourceContainer:
-		return s.repo.InspectContainer(ctx, id)
-	case ResourceImage:
-		return s.repo.InspectImage(ctx, id)
-	case ResourceNetwork:
-		return s.repo.InspectNetwork(ctx, id)
-	case ResourceVolume:
-		return s.repo.InspectVolume(ctx, id)
-	default:
-		return nil, nil
-	}
+func (s *Service) InspectResource(ctx context.Context, rt ResourceType, id string) ([]string, error) {
+	return s.repo.InspectResource(ctx, rt, id)
 }
