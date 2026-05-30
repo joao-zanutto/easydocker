@@ -21,7 +21,7 @@ func (m model) footerKeyMap() help.KeyMap {
 		if m.screen == shared.InspectViewer {
 			contentType = viewer.ContentTypeInspect
 		}
-		if m.viewer.Filter.Active {
+		if m.viewer.Vp.Filter.Active {
 			bindings := []key.Binding{
 				shared.EscBinding("clear/exit filter"),
 				shared.EnterBinding("apply/close filter"),
@@ -72,7 +72,7 @@ func (m model) footerKeyMap() help.KeyMap {
 	return footerKeyMap{bindings: bindings}
 }
 
-func (m model) selectedContainerListRow() (tables.ContainerListRow, bool) {
+func (m *model) selectedContainerListRow() (tables.ContainerListRow, bool) {
 	rows := m.browse.Data.ContainerListRows
 	var zero tables.ContainerListRow
 	if len(rows) == 0 || m.browse.ContainerCursor < 0 || m.browse.ContainerCursor >= len(rows) {
@@ -109,7 +109,7 @@ func joinKeyLabels(sep string, bindings ...key.Binding) string {
 	return strings.Join(labels, sep)
 }
 
-func (m model) buildHelpCommands() []menu.HelpCommand {
+func (m *model) buildHelpCommands() []menu.HelpCommand {
 	browseKeys := browse.NewKeyMap()
 	viewerKeys := viewer.NewKeyMap()
 	menuKeys := menu.NewKeyMap()

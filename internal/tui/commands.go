@@ -12,7 +12,7 @@ import (
 
 func tickCmd() tea.Cmd {
 	return tea.Tick(pollInterval, func(t time.Time) tea.Msg {
-		return tickMsg(t)
+		return tickMsg{}
 	})
 }
 

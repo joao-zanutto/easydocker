@@ -35,23 +35,23 @@ func (m *model) openShellIfContainerSelected() tea.Cmd {
 	return shellCmd(m.service, container.FullID)
 }
 
-func (m model) selectedContainer() (core.ContainerRow, bool) {
+func (m *model) selectedContainer() (core.ContainerRow, bool) {
 	return m.browse.SelectedContainer()
 }
 
-func (m model) selectedImage() (core.ImageRow, bool) {
+func (m *model) selectedImage() (core.ImageRow, bool) {
 	return m.browse.SelectedImage()
 }
 
-func (m model) selectedNetwork() (core.NetworkRow, bool) {
+func (m *model) selectedNetwork() (core.NetworkRow, bool) {
 	return m.browse.SelectedNetwork()
 }
 
-func (m model) selectedVolume() (core.VolumeRow, bool) {
+func (m *model) selectedVolume() (core.VolumeRow, bool) {
 	return m.browse.SelectedVolume()
 }
 
-func (m model) selectedLogsContainer() (core.ContainerRow, bool) {
+func (m *model) selectedLogsContainer() (core.ContainerRow, bool) {
 	if m.viewer.ContainerID == "" {
 		return core.ContainerRow{}, false
 	}
@@ -63,24 +63,24 @@ func (m model) selectedLogsContainer() (core.ContainerRow, bool) {
 	return core.ContainerRow{}, false
 }
 
-func (m model) filteredContainers() []core.ContainerRow {
+func (m *model) filteredContainers() []core.ContainerRow {
 	scoped := core.FilterContainersByScope(m.browse.Snapshot.Containers, m.browse.ShowAll)
 	return core.FilterContainersByQuery(scoped, m.browse.Filter.Query)
 }
 
-func (m model) filteredImages() []core.ImageRow {
+func (m *model) filteredImages() []core.ImageRow {
 	return core.FilterImagesByQuery(m.browse.Snapshot.Images, m.browse.Filter.Query)
 }
 
-func (m model) filteredNetworks() []core.NetworkRow {
+func (m *model) filteredNetworks() []core.NetworkRow {
 	return core.FilterNetworksByQuery(m.browse.Snapshot.Networks, m.browse.Filter.Query)
 }
 
-func (m model) filteredVolumes() []core.VolumeRow {
+func (m *model) filteredVolumes() []core.VolumeRow {
 	return core.FilterVolumesByQuery(m.browse.Snapshot.Volumes, m.browse.Filter.Query)
 }
 
-func (m model) findContainerIndexByID(id string) (int, bool) {
+func (m *model) findContainerIndexByID(id string) (int, bool) {
 	for index, row := range m.browse.Data.ContainerListRows {
 		if row.Kind != tables.RowContainer {
 			continue
@@ -99,6 +99,6 @@ func (m *model) reconcileLogsSelection() error {
 	if _, ok := m.findContainerIndexByID(m.viewer.ContainerID); ok {
 		return nil
 	}
-	m.screen = m.previousScreen
+	m.screen = m.popScreen()
 	return fmt.Errorf("selected container is no longer available")
 }

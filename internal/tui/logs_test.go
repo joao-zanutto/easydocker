@@ -52,50 +52,50 @@ func TestMergePolledLogs(t *testing.T) {
 
 func TestViewerStateHistory(t *testing.T) {
 	t.Run("at top triggers history condition", func(t *testing.T) {
-		state := viewer.NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(0)
-		if !state.Viewport.AtTop() {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetYOffset(0)
+		if !vp.AtTop() {
 			t.Fatal("expected viewport to be at top")
 		}
 	})
 
 	t.Run("not at top when scrolled", func(t *testing.T) {
-		state := viewer.NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetHeight(2)
-		state.Viewport.SetContent("line1\nline2\nline3")
-		state.Viewport.SetYOffset(1)
-		if state.Viewport.AtTop() {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetHeight(2)
+		vp.SetContent("line1\nline2\nline3")
+		vp.SetYOffset(1)
+		if vp.AtTop() {
 			t.Fatal("expected viewport not to be at top")
 		}
 	})
 
 	t.Run("set follow jumps to bottom", func(t *testing.T) {
-		state := viewer.NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetContent("line1\nline2\nline3")
-		state.SetFollow(true)
-		if !state.Viewport.AtBottom() {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetContent("line1\nline2\nline3")
+		vp.SetFollow(true)
+		if !vp.AtBottom() {
 			t.Fatal("expected follow to scroll to bottom")
 		}
 	})
 
 	t.Run("unfollow stops following", func(t *testing.T) {
-		state := viewer.NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetContent("line1\nline2\nline3")
-		state.SetFollow(false)
-		if state.Follow {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetContent("line1\nline2\nline3")
+		vp.SetFollow(false)
+		if vp.Follow {
 			t.Fatal("expected Follow to be false")
 		}
 	})
 
 	t.Run("SyncFromData applies content to viewport", func(t *testing.T) {
-		state := viewer.NewState()
-		state.Data = []string{"line-a", "line-b", "line-c"}
-		state.SyncFromData(80, 10)
-		if state.Viewport.View() == "" {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line-a", "line-b", "line-c"}
+		vp.SyncFromData(80, 10)
+		if vp.View() == "" {
 			t.Fatal("expected viewport to have content after SyncFromData")
 		}
 	})
@@ -103,37 +103,37 @@ func TestViewerStateHistory(t *testing.T) {
 
 func TestViewerControllerHistoryKey(t *testing.T) {
 	t.Run("Home key moves to top, disables follow", func(t *testing.T) {
-		state := viewer.NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(0)
-		state.Follow = false
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetYOffset(0)
+		vp.Follow = false
 
-		trans := viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyHome}, viewer.NewKeyMap())
-		if !state.Viewport.AtTop() || state.Follow {
-			t.Fatalf("unexpected state after Home: AtTop=%v, Follow=%v", state.Viewport.AtTop(), state.Follow)
+		trans := viewer.Controller{}.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyHome}, viewer.NewKeyMap())
+		if !vp.AtTop() || vp.Follow {
+			t.Fatalf("unexpected state after Home: AtTop=%v, Follow=%v", vp.AtTop(), vp.Follow)
 		}
 		_ = trans
 	})
 
 	t.Run("End key enables follow", func(t *testing.T) {
-		state := viewer.NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(0)
-		state.Follow = false
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetYOffset(0)
+		vp.Follow = false
 
-		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyEnd}, viewer.NewKeyMap())
-		if !state.Follow {
+		viewer.Controller{}.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyEnd}, viewer.NewKeyMap())
+		if !vp.Follow {
 			t.Fatal("expected follow to be enabled after End key")
 		}
 	})
 
 	t.Run("PgUp at top returns transition without load", func(t *testing.T) {
-		state := viewer.NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(0)
-		state.Follow = false
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetYOffset(0)
+		vp.Follow = false
 
-		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyPgUp}, viewer.NewKeyMap())
+		viewer.Controller{}.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyPgUp}, viewer.NewKeyMap())
 		// PgUp does not trigger a load request; history loading is tick-driven
 	})
 }

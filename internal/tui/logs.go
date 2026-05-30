@@ -16,26 +16,26 @@ const (
 )
 
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
-	m.previousScreen = m.screen
+	m.pushScreen(m.screen)
 	m.screen = shared.LogViewer
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.viewer.ContainerID = container.FullID
-	m.viewer.SessionID++
-	m.viewer.TailLines = InitialTail
-	m.viewer.InitialLoad = true
-	m.viewer.Follow = true
-	m.viewer.Data = nil
-	m.viewer.HistoryLoad = false
-	m.viewer.HistoryDone = false
-	m.viewer.HistoryBaseLen = 0
-	m.viewer.HistoryAppendedDuringLoad = 0
-	m.viewer.HistoryNoProgressCount = 0
-	m.viewer.Viewport.SetXOffset(0)
-	m.viewer.Filter.Active = false
-	m.viewer.Filter.Query = ""
-	m.viewer.Filter.Input.SetValue("")
-	m.viewer.ContentType = viewer.ContentTypeLogs
+	m.viewer.Logs.SessionID++
+	m.viewer.Logs.TailLines = InitialTail
+	m.viewer.Vp.InitialLoad = true
+	m.viewer.Vp.Follow = true
+	m.viewer.Vp.Data = nil
+	m.viewer.Logs.HistoryLoad = false
+	m.viewer.Logs.HistoryDone = false
+	m.viewer.Logs.HistoryBaseLen = 0
+	m.viewer.Logs.HistoryAppendedDuringLoad = 0
+	m.viewer.Logs.HistoryNoProgressCount = 0
+	m.viewer.Vp.SetXOffset(0)
+	m.viewer.Vp.Filter.Active = false
+	m.viewer.Vp.Filter.Query = ""
+	m.viewer.Vp.Filter.Input.SetValue("")
+	m.viewer.Vp.ContentType = viewer.ContentTypeLogs
 	m.viewer.ResourceType = core.ResourceContainer
 	m.viewer.LoadingMsg = "Loading logs..."
 	m.viewer.EmptyMsg = "No logs found for this container."
@@ -50,7 +50,7 @@ func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 		SubpageFrame: m.styles.Viewer.SubpageFrame,
 	}
 	m.err = nil
-	return LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.SessionID, m.viewer.TailLines, viewer.SourceInitial)
+	return LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.Logs.SessionID, m.viewer.Logs.TailLines, viewer.SourceInitial)
 }
 
 func LoadLogsCmd(service core.ServiceInterface, containerID string, sessionID, tail int, src viewer.Source) tea.Cmd {

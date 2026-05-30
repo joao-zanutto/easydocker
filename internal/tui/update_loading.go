@@ -10,18 +10,20 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-func (m model) handleContainersResultMsg(msg containersResultMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleContainersResultMsg(msg containersResultMsg) (tea.Model, tea.Cmd) {
+	m.dataDirty = true
 	if msg.err != nil {
 		m.setLoadError(msg.err)
 		return m, nil
 	}
 
 	m.browse.Snapshot.Containers = core.PreserveRunningContainerMetrics(msg.containers, m.browse.Snapshot.Containers)
-	m.beginLoadingStage(shared.StageResources)
+	m.loadingStage = m.loadingStage.Next()
 	return m, loadResourcesCmd(m.service)
 }
 
-func (m model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea.Cmd) {
+	m.dataDirty = true
 	if msg.err != nil {
 		m.setLoadError(msg.err)
 		return m, nil
@@ -31,11 +33,12 @@ func (m model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea.
 	m.browse.Snapshot.Networks = msg.snapshot.Networks
 	m.browse.Snapshot.Volumes = msg.snapshot.Volumes
 	m.browse.Snapshot.TotalLimit = msg.snapshot.TotalLimit
-	m.beginLoadingStage(shared.StageMetrics)
+	m.loadingStage = m.loadingStage.Next()
 	return m, loadMetricsCmd(m.service, m.browse.Snapshot.Containers)
 }
 
-func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd) {
+	m.dataDirty = true
 	if !m.finishLoadingStage(msg.err) {
 		return m, nil
 	}
@@ -45,10 +48,11 @@ func (m model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd)
 	m.browse.Snapshot.TotalMem = msg.totalMem
 	m.browse.Snapshot.Timestamp = time.Now()
 	m.metricsLoaded = true
-	return m, nil
+	return m, tickCmd()
 }
 
-func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
+	m.dataDirty = true
 	if !m.finishLoadingStage(msg.err) {
 		return m, nil
 	}
@@ -62,20 +66,20 @@ func (m model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) handleViewerContentMsg(msg viewer.ContentMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleViewerContentMsg(msg viewer.ContentMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.viewer, cmd = m.viewer.Update(msg)
 	return m, cmd
 }
 
-func (m model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		m.err = msg.err
-		m.viewer.InitialLoad = false
+		m.viewer.Vp.InitialLoad = false
 		return m, nil
 	}
 	m.viewer.ApplyInitial(msg.data)
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 	return m, nil
 }
 
@@ -87,11 +91,6 @@ func (m *model) applyLoadingTransition(transition shared.Transition) {
 
 func (m *model) setLoadError(err error) {
 	m.applyLoadingTransition(shared.Fail(err))
-}
-
-func (m *model) beginLoadingStage(stage shared.Stage) {
-	m.applyLoadingTransition(shared.Begin(stage))
-	m.browse.Snapshot.Timestamp = time.Now()
 }
 
 func (m *model) finishLoadingStage(err error) bool {

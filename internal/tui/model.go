@@ -23,7 +23,7 @@ const (
 	pollInterval = time.Second
 )
 
-type tickMsg time.Time
+type tickMsg struct{}
 
 type containersResultMsg struct {
 	containers []core.ContainerRow
@@ -67,14 +67,16 @@ type model struct {
 	browse browse.Model
 	viewer viewer.Model
 
-	screen         shared.Screen
-	previousScreen shared.Screen
+	screen      shared.Screen
+	screenStack []shared.Screen
 
-	loading          bool
-	loadingStage     shared.Stage
-	metricsLoaded    bool
-	metricsSpinner   spinner.Model
-	containerSpinner spinner.Model
+	dataDirty     bool
+	loading       bool
+	loadingStage  shared.Stage
+	metricsLoaded bool
+	spinner       spinner.Model
+
+	lastResizeTime time.Time
 
 	styles theme.Set
 	menu   menu.MenuState
@@ -82,40 +84,31 @@ type model struct {
 }
 
 func New(service core.ServiceInterface) tea.Model {
-	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
-	containerSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
+	s := spinner.New(spinner.WithSpinner(spinner.Points))
 
 	bm := browse.NewModel()
 	vm := viewer.NewModel()
-	vm.Spinner = spinner.New(spinner.WithSpinner(spinner.Dot))
 
 	return model{
-		service:          service,
-		loading:          true,
-		screen:           shared.Main,
-		loadingStage:     shared.StageContainers,
-		styles:           defaultStyles(),
-		metricsSpinner:   metricsSpinner,
-		containerSpinner: containerSpinner,
-		browse:           bm,
-		viewer:           vm,
-		menu:             menu.NewMenuState(),
-		help:             menu.NewHelpState(0, 0),
+		service:      service,
+		loading:      true,
+		screen:       shared.Main,
+		loadingStage: shared.StageContainers,
+		styles:       defaultStyles(),
+		spinner:      s,
+		browse:       bm,
+		viewer:       vm,
+		menu:         menu.NewMenuState(),
+		help:         menu.NewHelpState(0, 0),
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	cmds := []tea.Cmd{loadContainersCmd(m.service), tickCmd()}
+	cmds := []tea.Cmd{loadContainersCmd(m.service)}
 
 	cmds = append(cmds,
 		tea.Tick(shared.SpinnerTickInterval, func(t time.Time) tea.Msg {
-			return spinner.TickMsg{Time: t, ID: m.metricsSpinner.ID()}
-		}),
-		tea.Tick(shared.SpinnerTickInterval, func(t time.Time) tea.Msg {
-			return spinner.TickMsg{Time: t, ID: m.containerSpinner.ID()}
-		}),
-		tea.Tick(shared.SpinnerTickInterval, func(t time.Time) tea.Msg {
-			return spinner.TickMsg{Time: t, ID: m.viewer.Spinner.ID()}
+			return spinner.TickMsg{Time: t, ID: m.spinner.ID()}
 		}),
 	)
 
@@ -124,4 +117,17 @@ func (m model) Init() tea.Cmd {
 
 func defaultStyles() theme.Set {
 	return theme.Default()
+}
+
+func (m *model) pushScreen(s shared.Screen) {
+	m.screenStack = append(m.screenStack, s)
+}
+
+func (m *model) popScreen() shared.Screen {
+	if len(m.screenStack) == 0 {
+		return shared.Main
+	}
+	s := m.screenStack[len(m.screenStack)-1]
+	m.screenStack = m.screenStack[:len(m.screenStack)-1]
+	return s
 }

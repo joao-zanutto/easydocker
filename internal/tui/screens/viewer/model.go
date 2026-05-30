@@ -1,19 +1,17 @@
 package viewer
 
 import (
-	"strings"
-	"time"
-
 	"easydocker/internal/core"
-	"easydocker/internal/tui/shared"
 
 	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 )
 
 type Model struct {
-	State
+	Vp            *Viewport
+	Logs          LogsViewer
+	Inspect       InspectViewer
+	ContainerID   string
 	Loading       bool
 	LoadingMsg    string
 	EmptyMsg      string
@@ -23,38 +21,21 @@ type Model struct {
 	Width         int
 	Height        int
 	Styles        Styles
-	Spinner       spinner.Model
-
-	HistoryLoad               bool
-	HistoryDone               bool
-	SessionID                 int
-	TailLines                 int
-	HistoryBaseLen            int
-	HistoryAppendedDuringLoad int
-	HistoryNoProgressCount    int
-
-	LoadCmd func() tea.Msg
 }
 
 func NewModel() Model {
-	st := NewState()
+	vp := NewViewport()
 	return Model{
-		State:      st,
+		Vp:         vp,
+		Logs:       NewLogsViewer(),
+		Inspect:    NewInspectViewer(),
 		LoadingMsg: "Loading...",
 		EmptyMsg:   "No content available.",
-		Spinner:    spinner.New(spinner.WithSpinner(spinner.Dot)),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.spinnerTickCmd()}
-	if m.InitialLoad && m.LoadCmd != nil {
-		cmds = append(cmds, m.LoadCmd)
-	}
-	if len(cmds) == 0 {
-		return nil
-	}
-	return tea.Batch(cmds...)
+	return nil
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -62,19 +43,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
-		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	case ContentMsg:
 		return m.handleContentMsg(msg)
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.Spinner, cmd = m.Spinner.Update(msg)
-		if cmd != nil {
-			return m, tea.Batch(cmd, m.spinnerTickCmd())
-		}
-		return m, m.spinnerTickCmd()
 	}
 	return m, nil
 }
@@ -85,7 +59,7 @@ func (m Model) View() string {
 	}
 
 	vm := ViewModel{
-		State:            &m.State,
+		Vp:               m.Vp,
 		ContainerName:    m.ContainerName,
 		Breadcrumb:       m.Breadcrumb,
 		LineCount:        m.lineCountInfo(),
@@ -95,9 +69,9 @@ func (m Model) View() string {
 		Width:            m.Width,
 		Height:           m.Height,
 		Styles:           m.Styles,
-		ContentType:      m.ContentType,
+		ContentType:      m.Vp.ContentType,
 		ResourceType:     m.ResourceType,
-		HistoryLoad:      m.HistoryLoad,
+		Logs:             m.Logs,
 	}
 
 	return RenderContent(vm)
@@ -106,7 +80,7 @@ func (m Model) View() string {
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	keys := NewKeyMap()
 
-	if m.Filter.Active {
+	if m.Vp.Filter.Active {
 		return m.handleFilterKey(msg, keys)
 	}
 
@@ -115,33 +89,31 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	if key.Matches(msg, keys.ToggleWrap) {
-		logList := FilterLines(m.Data, m.Filter.Query)
-		currentStart, _ := VisibleContentRange(&m.State, logList)
-
-		m.SetWrapLines(!m.WrapLines)
-		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
-
-		if m.WrapLines {
+		logList := FilterLines(m.Vp.Data, m.Vp.Filter.Query)
+		currentStart, _ := VisibleContentRange(m.Vp, logList)
+		m.Vp.SetWrapLines(!m.Vp.WrapLines)
+		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+		if m.Vp.WrapLines {
 			w := m.VisibleWidth()
 			row := 0
 			for i := 0; i < currentStart && i < len(logList); i++ {
 				row += WrappedRowCount(SanitizeLine(logList[i]), w)
 			}
-			m.Viewport.SetYOffset(row)
+			m.Vp.SetYOffset(row)
 		} else {
-			m.Viewport.SetYOffset(currentStart)
+			m.Vp.SetYOffset(currentStart)
 		}
 		return m, nil
 	}
 
 	if key.Matches(msg, keys.ToggleFollow) {
-		m.SetFollow(!m.Follow)
+		m.Vp.SetFollow(!m.Vp.Follow)
 		return m, nil
 	}
 
 	if key.Matches(msg, keys.OpenFilter) {
-		m.OpenFilter()
-		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+		m.Vp.OpenFilter()
+		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
 	}
 
@@ -149,8 +121,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return m, func() tea.Msg { return TransitionMsg{LaunchShell: true} }
 	}
 
-	transition := Controller{}.HandleKey(&m.State, msg, keys)
-	m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+	transition := Controller{}.HandleKey(m.Vp, msg, keys)
+	m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 
 	if transition.LaunchShell {
 		return m, func() tea.Msg { return TransitionMsg{LaunchShell: true} }
@@ -161,34 +133,34 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 func (m Model) handleFilterKey(msg tea.KeyPressMsg, keys KeyMap) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Back):
-		m.CloseFilter(true)
-		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+		m.Vp.CloseFilter(true)
+		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
 	case msg.String() == "enter":
-		m.CloseFilter(false)
-		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+		m.Vp.CloseFilter(false)
+		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
 	default:
 		var cmd tea.Cmd
-		m.Filter.Input, cmd = m.Filter.Input.Update(msg)
-		m.Filter.Query = m.Filter.Input.Value()
-		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+		m.Vp.Filter.Input, cmd = m.Vp.Filter.Input.Update(msg)
+		m.Vp.Filter.Query = m.Vp.Filter.Input.Value()
+		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, cmd
 	}
 }
 
 func (m Model) handleContentMsg(msg ContentMsg) (Model, tea.Cmd) {
-	if msg.SessionID != m.SessionID || msg.ContainerID != m.ContainerID {
+	if msg.SessionID != m.Logs.SessionID || msg.ContainerID != m.ContainerID {
 		return m, nil
 	}
 	if msg.Err != nil {
-		m.InitialLoad = false
-		m.HistoryLoad = false
+		m.Vp.InitialLoad = false
+		m.Logs.HistoryLoad = false
 		return m, nil
 	}
 
-	if msg.Tail > 0 && msg.Tail > m.TailLines {
-		m.TailLines = msg.Tail
+	if msg.Tail > 0 && msg.Tail > m.Logs.TailLines {
+		m.Logs.TailLines = msg.Tail
 	}
 
 	switch msg.Src {
@@ -199,28 +171,28 @@ func (m Model) handleContentMsg(msg ContentMsg) (Model, tea.Cmd) {
 	default:
 		m.applyPollWithMerge(msg.Data)
 	}
-	m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+	m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 	return m, nil
 }
 
 func (m Model) loadingIndicator() string {
-	if m.InitialLoad || m.HistoryLoad {
-		return strings.TrimSpace(m.Spinner.View())
+	if m.Vp.InitialLoad || m.Logs.HistoryLoad {
+		return ""
 	}
 	return ""
 }
 
 func (m Model) lineCountInfo() *LineCountInfo {
-	logList := FilterLines(m.Data, m.Filter.Query)
-	start, end := VisibleContentRange(&m.State, logList)
+	logList := FilterLines(m.Vp.Data, m.Vp.Filter.Query)
+	start, end := VisibleContentRange(m.Vp, logList)
 	return &LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)}
 }
 
 func (m *Model) ApplyInitial(data []string) {
-	m.InitialLoad = false
-	m.HistoryLoad = false
-	m.HistoryDone = false
-	m.Data = data
+	m.Vp.InitialLoad = false
+	m.Logs.HistoryLoad = false
+	m.Logs.HistoryDone = false
+	m.Vp.Data = data
 }
 
 func (m Model) VisibleWidth() int {
@@ -228,53 +200,42 @@ func (m Model) VisibleWidth() int {
 }
 
 func (m Model) VisibleRows() int {
-	return VisibleRowsForContent(m.Height, m.Filter.Active)
+	return VisibleRowsForContent(m.Height, m.Vp.Filter.Active)
 }
 
 func (m *Model) applyHistoryWithMerge(data []string) {
-	previousLen := len(m.Data)
-	if m.HistoryBaseLen > 0 {
-		previousLen = m.HistoryBaseLen
+	previousLen := len(m.Vp.Data)
+	if m.Logs.HistoryBaseLen > 0 {
+		previousLen = m.Logs.HistoryBaseLen
 	}
 
-	m.HistoryLoad = false
-	prepended := len(data) - previousLen - m.HistoryAppendedDuringLoad
+	m.Logs.HistoryLoad = false
+	prepended := len(data) - previousLen - m.Logs.HistoryAppendedDuringLoad
 	if prepended < 0 {
 		prepended = 0
 	}
 
 	if prepended == 0 {
-		m.HistoryNoProgressCount++
+		m.Logs.HistoryNoProgressCount++
 	} else {
-		m.HistoryNoProgressCount = 0
+		m.Logs.HistoryNoProgressCount = 0
 	}
 
-	if m.HistoryNoProgressCount >= 3 {
-		m.HistoryDone = true
+	if m.Logs.HistoryNoProgressCount >= 3 {
+		m.Logs.HistoryDone = true
 	}
 
-	m.Data = data
-	m.HistoryBaseLen = 0
-	m.HistoryAppendedDuringLoad = 0
+	m.Vp.Data = data
+	m.Logs.HistoryBaseLen = 0
+	m.Logs.HistoryAppendedDuringLoad = 0
 }
 
 func (m *Model) applyPollWithMerge(data []string) {
-	previousLen := len(m.Data)
-	merged, _ := MergePolledLogs(m.Data, data)
-	if m.HistoryLoad {
-		m.HistoryAppendedDuringLoad += max(0, len(merged)-previousLen)
+	previousLen := len(m.Vp.Data)
+	merged, _ := MergePolledLogs(m.Vp.Data, data)
+	if m.Logs.HistoryLoad {
+		m.Logs.HistoryAppendedDuringLoad += max(0, len(merged)-previousLen)
 	}
-	m.Data = merged
-	m.InitialLoad = false
-}
-
-func (m Model) spinnerTickCmd() tea.Cmd {
-	return tea.Tick(shared.SpinnerTickInterval, func(t time.Time) tea.Msg {
-		return spinner.TickMsg{Time: t, ID: m.Spinner.ID()}
-	})
-}
-
-type TransitionMsg struct {
-	BackToBrowse bool
-	LaunchShell  bool
+	m.Vp.Data = merged
+	m.Vp.InitialLoad = false
 }

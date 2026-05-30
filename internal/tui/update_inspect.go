@@ -15,19 +15,19 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	if !ok {
 		return m, nil
 	}
-	m.previousScreen = m.screen
+	m.pushScreen(m.screen)
 	m.screen = shared.InspectViewer
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
-	m.viewer.Follow = false
-	m.viewer.Viewport.SetXOffset(0)
-	m.viewer.Viewport.GotoTop()
-	m.viewer.InitialLoad = true
-	m.viewer.Data = nil
+	m.viewer.Vp.Follow = false
+	m.viewer.Vp.SetXOffset(0)
+	m.viewer.Vp.GotoTop()
+	m.viewer.Vp.InitialLoad = true
+	m.viewer.Vp.Data = nil
 	m.viewer.ContainerID = resourceID
-	m.viewer.ResourceName = resourceName
+	m.viewer.Inspect.ResourceName = resourceName
 	m.viewer.ResourceType = resourceType
-	m.viewer.ContentType = viewer.ContentTypeInspect
+	m.viewer.Vp.ContentType = viewer.ContentTypeInspect
 	m.viewer.LoadingMsg = "Loading inspect..."
 	m.viewer.EmptyMsg = "No inspect data available."
 	m.viewer.Breadcrumb = ""
@@ -57,7 +57,7 @@ func (m *model) loadInspectCmd(resourceType core.ResourceType, resourceID, resou
 	}
 }
 
-func (m model) selectedInspectResource() (core.ResourceType, string, string, bool) {
+func (m *model) selectedInspectResource() (core.ResourceType, string, string, bool) {
 	switch m.browse.ActiveTab {
 	case tabContainers:
 		c, ok := m.selectedContainer()

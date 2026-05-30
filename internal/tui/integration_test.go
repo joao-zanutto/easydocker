@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/browse"
@@ -27,6 +26,12 @@ func unwrapModel(m tea.Model) *model {
 	}
 }
 
+func testViewerModel() viewer.Model {
+	vm := viewer.NewModel()
+	vm.Vp = viewer.NewViewport()
+	return vm
+}
+
 func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 	m := model{
 		width:  120,
@@ -40,12 +45,8 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 				Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 			},
 		},
-		viewer: viewer.Model{
-			State:   viewer.NewState(),
-			Spinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		},
-		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
-		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		viewer:  testViewerModel(),
+		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 	}
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
@@ -102,13 +103,11 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 				Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", Image: "nginx", Status: "Up"}},
 			},
 		},
-		viewer: viewer.Model{
-			State:   viewer.NewState(),
-			Spinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		},
-		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
-		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		viewer:  testViewerModel(),
+		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 	}
+	m = m.syncBrowseData()
+	m.dataDirty = false
 
 	browseView := m.View().Content
 	if !strings.Contains(browseView, "EasyDocker") {
@@ -117,8 +116,8 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 
 	m.screen = shared.LogViewer
 	m.viewer.ContainerID = "ctr-1"
-	m.viewer.Data = []string{"line-1", "line-2"}
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.Data = []string{"line-1", "line-2"}
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 
 	logsView := m.View().Content
 	if !strings.Contains(logsView, "Logs") || !strings.Contains(logsView, "api") {
@@ -134,12 +133,8 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 		browse: browse.Model{
 			Filter: browse.NewFilterState(),
 		},
-		viewer: viewer.Model{
-			State:   viewer.NewState(),
-			Spinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		},
-		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
-		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		viewer:  testViewerModel(),
+		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 	}
 
 	updated, cmd := m.Update(containersResultMsg{containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}})
@@ -156,8 +151,8 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 
 	updated, cmd = current.Update(metricsResultMsg{metricsByID: map[string]core.ContainerMetrics{"ctr-1": {CPUPercent: 12.5, MemoryUsage: "10 MiB", MemoryLimit: "100 MiB", MemoryUsageBytes: 10, MemoryLimitBytes: 100, MemoryPercent: 10}}, totalCPU: 12.5, totalMem: 10})
 	current = unwrapModel(updated)
-	if cmd != nil {
-		t.Fatalf("metrics stage should not schedule command")
+	if cmd == nil {
+		t.Fatalf("metrics stage should schedule tickCmd")
 	}
 	if current.loading || current.loadingStage != shared.StageIdle {
 		t.Fatalf("expected load flow to finish at idle")
@@ -195,12 +190,8 @@ func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 				}},
 			},
 		},
-		viewer: viewer.Model{
-			State:   viewer.NewState(),
-			Spinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		},
-		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
-		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		viewer:  testViewerModel(),
+		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 	}
 
 	updated, _ := m.Update(containersResultMsg{containers: []core.ContainerRow{{
@@ -234,12 +225,8 @@ func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 				Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"}},
 			},
 		},
-		viewer: viewer.Model{
-			State:   viewer.NewState(),
-			Spinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
-		},
-		metricsSpinner:   spinner.New(spinner.WithSpinner(spinner.Dot)),
-		containerSpinner: spinner.New(spinner.WithSpinner(spinner.Line)),
+		viewer:  testViewerModel(),
+		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
 	}
 
 	before := m.View().Content
@@ -296,16 +283,16 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
 	m.viewer.ContainerID = "ctr-1"
-	m.viewer.Data = []string{"abcdefghijklmnopqrstuvwxyz"}
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.Data = []string{"abcdefghijklmnopqrstuvwxyz"}
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
 	current := unwrapModel(updated)
-	if !current.viewer.WrapLines {
+	if !current.viewer.Vp.WrapLines {
 		t.Fatalf("wrap should be enabled after pressing w")
 	}
 
-	wrappedView := current.viewer.Viewport.View()
+	wrappedView := current.viewer.Vp.View()
 	if !strings.Contains(wrappedView, "\n") {
 		t.Fatalf("wrapped viewport should render on multiple lines, got %q", wrappedView)
 	}
@@ -316,8 +303,8 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	after := unwrapModel(updated)
-	if after.viewer.Viewport.XOffset() != current.viewer.Viewport.XOffset() {
-		t.Fatalf("horizontal scroll should be ignored while wrapped, got %d want %d", after.viewer.Viewport.XOffset(), current.viewer.Viewport.XOffset())
+	if after.viewer.Vp.XOffset() != current.viewer.Vp.XOffset() {
+		t.Fatalf("horizontal scroll should be ignored while wrapped, got %d want %d", after.viewer.Vp.XOffset(), current.viewer.Vp.XOffset())
 	}
 }
 
@@ -337,24 +324,24 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 	for i := 0; i < 300; i++ {
 		logsData = append(logsData, strconv.Itoa(i)+" "+strings.Repeat("x", 48))
 	}
-	m.viewer.Data = logsData
-	m.viewer.SetFollow(false)
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.Data = logsData
+	m.viewer.Vp.SetFollow(false)
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 
 	nearBottom := max(0, len(logsData)-m.viewer.VisibleRows()-1)
-	m.viewer.Viewport.SetYOffset(nearBottom)
+	m.viewer.Vp.SetYOffset(nearBottom)
 
-	beforeList := viewer.FilterLines(m.viewer.Data, m.viewer.Filter.Query)
-	beforeStart, _ := viewer.VisibleContentRange(&m.viewer.State, beforeList)
+	beforeList := viewer.FilterLines(m.viewer.Vp.Data, m.viewer.Vp.Filter.Query)
+	beforeStart, _ := viewer.VisibleContentRange(m.viewer.Vp, beforeList)
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
 	after := unwrapModel(updated)
-	if !after.viewer.WrapLines {
+	if !after.viewer.Vp.WrapLines {
 		t.Fatalf("wrap should be enabled after pressing w")
 	}
 
-	afterList := viewer.FilterLines(after.viewer.Data, after.viewer.Filter.Query)
-	afterStart, _ := viewer.VisibleContentRange(&after.viewer.State, afterList)
+	afterList := viewer.FilterLines(after.viewer.Vp.Data, after.viewer.Vp.Filter.Query)
+	afterStart, _ := viewer.VisibleContentRange(after.viewer.Vp, afterList)
 	if afterStart != beforeStart {
 		t.Fatalf("visible raw log anchor changed across wrap toggle, before=%d after=%d", beforeStart, afterStart)
 	}
@@ -362,7 +349,7 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 
 func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 	m := unwrapModel(New(nil))
-	m.viewer.Viewport.SetXOffset(24)
+	m.viewer.Vp.SetXOffset(24)
 	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
@@ -377,11 +364,11 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 		updated, _ = current.Update(msg)
 		current = unwrapModel(updated)
 	}
-	if got := current.viewer.Viewport.XOffset(); got != 0 {
+	if got := current.viewer.Vp.XOffset(); got != 0 {
 		t.Fatalf("logs entry should reset viewport x offset, got %d", got)
 	}
 
-	current.viewer.Viewport.SetXOffset(32)
+	current.viewer.Vp.SetXOffset(32)
 	current.browse.ActiveTab = tabContainers
 	current.screen = shared.Main
 	current.browse.Snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
@@ -391,7 +378,7 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("entering inspect mode should return a command")
 	}
-	if got := current.viewer.Viewport.XOffset(); got != 0 {
+	if got := current.viewer.Vp.XOffset(); got != 0 {
 		t.Fatalf("inspect entry should reset viewport x offset, got %d", got)
 	}
 }
@@ -445,6 +432,7 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 		},
 	}
 	*m = m.syncBrowseData()
+	m.dataDirty = false
 
 	if got := m.browse.ItemCountForTab(tabContainers); got != 1 {
 		t.Fatalf("collapsed compose list should show one row, got %d", got)
@@ -452,12 +440,14 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	afterExpand := unwrapModel(updated)
+	*afterExpand = afterExpand.syncBrowseData()
 	if got := afterExpand.browse.ItemCountForTab(tabContainers); got != 3 {
 		t.Fatalf("expanded compose list should show project + 2 containers, got %d", got)
 	}
 
 	updated, _ = afterExpand.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	afterCollapse := unwrapModel(updated)
+	*afterCollapse = afterCollapse.syncBrowseData()
 	if got := afterCollapse.browse.ItemCountForTab(tabContainers); got != 1 {
 		t.Fatalf("collapsed compose list should return to one row, got %d", got)
 	}
@@ -480,6 +470,7 @@ func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 	if after.screen != shared.Main {
 		t.Fatalf("screen = %v, want browse", after.screen)
 	}
+	*after = after.syncBrowseData()
 	if got := after.browse.ItemCountForTab(tabContainers); got != 2 {
 		t.Fatalf("enter on compose project should expand row, got item count %d", got)
 	}
@@ -494,6 +485,7 @@ func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
 	}
+	*m = m.syncBrowseData()
 
 	composeView := m.View().Content
 	if !strings.Contains(composeView, "expand") {
@@ -522,6 +514,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 		},
 	}
 	*m = m.syncBrowseData()
+	m.dataDirty = false
 
 	view := m.View().Content
 	if !strings.Contains(util.StripANSI(view), "Containers") {
@@ -566,21 +559,21 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
 	m.viewer.ContainerID = "ctr-1"
-	m.viewer.Data = []string{"alpha line", "quick match", "zeta line"}
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.Data = []string{"alpha line", "quick match", "zeta line"}
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	current := unwrapModel(updated)
-	if !current.viewer.Filter.Active {
+	if !current.viewer.Vp.Filter.Active {
 		t.Fatalf("slash should activate logs filter mode")
 	}
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	current = unwrapModel(updated)
-	if current.viewer.Filter.Query != "q" {
-		t.Fatalf("logs filter query = %q, want q", current.viewer.Filter.Query)
+	if current.viewer.Vp.Filter.Query != "q" {
+		t.Fatalf("logs filter query = %q, want q", current.viewer.Vp.Filter.Query)
 	}
-	filtered := current.viewer.Viewport.View()
+	filtered := current.viewer.Vp.View()
 	if !strings.Contains(filtered, "quick match") {
 		t.Fatalf("matching log line should be visible, got %q", filtered)
 	}
@@ -590,13 +583,13 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 
 	updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	after := unwrapModel(updated)
-	if after.viewer.Filter.Active {
+	if after.viewer.Vp.Filter.Active {
 		t.Fatalf("esc should exit logs filter mode")
 	}
-	if after.viewer.Filter.Query != "" {
-		t.Fatalf("esc should clear logs filter query, got %q", after.viewer.Filter.Query)
+	if after.viewer.Vp.Filter.Query != "" {
+		t.Fatalf("esc should clear logs filter query, got %q", after.viewer.Vp.Filter.Query)
 	}
-	restored := after.viewer.Viewport.View()
+	restored := after.viewer.Vp.View()
 	if !strings.Contains(restored, "alpha line") || !strings.Contains(restored, "quick match") || !strings.Contains(restored, "zeta line") {
 		t.Fatalf("logs viewport should restore full lines after clearing filter, got %q", restored)
 	}
@@ -619,22 +612,22 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 	for i := 0; i < 80; i++ {
 		lines = append(lines, "line-"+strconv.Itoa(i))
 	}
-	m.viewer.Data = lines
-	m.viewer.Filter.Active = true
-	m.viewer.Filter.Input.Focus()
-	m.viewer.Filter.Query = ""
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	m.viewer.SetFollow(false)
-	m.viewer.Viewport.GotoTop()
+	m.viewer.Vp.Data = lines
+	m.viewer.Vp.Filter.Active = true
+	m.viewer.Vp.Filter.Input.Focus()
+	m.viewer.Vp.Filter.Query = ""
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.SetFollow(false)
+	m.viewer.Vp.GotoTop()
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	after := unwrapModel(updated)
 
-	if !after.viewer.Filter.Active {
+	if !after.viewer.Vp.Filter.Active {
 		t.Fatalf("filter mode should remain active after Down key")
 	}
-	if after.viewer.Filter.Query != "" {
-		t.Fatalf("filter query should remain unchanged after Down key, got %q", after.viewer.Filter.Query)
+	if after.viewer.Vp.Filter.Query != "" {
+		t.Fatalf("filter query should remain unchanged after Down key, got %q", after.viewer.Vp.Filter.Query)
 	}
 }
 
@@ -655,17 +648,17 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		lines = append(lines, "line-"+strconv.Itoa(i))
 	}
-	m.viewer.Data = lines
-	m.viewer.SetFollow(false)
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	m.viewer.Viewport.SetYOffset(10)
+	m.viewer.Vp.Data = lines
+	m.viewer.Vp.SetFollow(false)
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.SetYOffset(10)
 
 	beforeRows := m.viewer.VisibleRows()
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	after := unwrapModel(updated)
 
-	if !after.viewer.Filter.Active {
+	if !after.viewer.Vp.Filter.Active {
 		t.Fatalf("slash should activate logs filter mode")
 	}
 	afterRows := after.viewer.VisibleRows()
@@ -691,29 +684,29 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		lines = append(lines, "line-"+strconv.Itoa(i))
 	}
-	m.viewer.Data = lines
-	m.viewer.SetFollow(false)
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	m.viewer.Viewport.SetYOffset(20)
+	m.viewer.Vp.Data = lines
+	m.viewer.Vp.SetFollow(false)
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.SetYOffset(20)
 
 	baseRows := m.viewer.VisibleRows()
-	baseBottom := m.viewer.Viewport.YOffset() + baseRows - 1
+	baseBottom := m.viewer.Vp.YOffset() + baseRows - 1
 
 	current := *m
 	for i := 0; i < 3; i++ {
 		updated, _ := current.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 		current = *unwrapModel(updated)
-		if !current.viewer.Filter.Active {
+		if !current.viewer.Vp.Filter.Active {
 			t.Fatalf("cycle %d: slash should activate logs filter mode", i)
 		}
 
 		updated, _ = current.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		current = *unwrapModel(updated)
-		if current.viewer.Filter.Active {
+		if current.viewer.Vp.Filter.Active {
 			t.Fatalf("cycle %d: enter should close logs filter mode", i)
 		}
 
-		bottom := current.viewer.Viewport.YOffset() + current.viewer.VisibleRows() - 1
+		bottom := current.viewer.Vp.YOffset() + current.viewer.VisibleRows() - 1
 		if bottom != baseBottom {
 			t.Fatalf("cycle %d: viewport drift detected, bottom=%d want=%d", i, bottom, baseBottom)
 		}
@@ -724,12 +717,12 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 	m := unwrapModel(New(nil))
 	m.screen = shared.LogViewer
 	m.viewer.ContainerID = "ctr-1"
-	m.viewer.Data = make([]string, 220)
-	for i := range m.viewer.Data {
-		m.viewer.Data[i] = "line"
+	m.viewer.Vp.Data = make([]string, 220)
+	for i := range m.viewer.Vp.Data {
+		m.viewer.Vp.Data[i] = "line"
 	}
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	m.viewer.Viewport.GotoTop()
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.GotoTop()
 
 	if !m.shouldLoadHistoryOnTick() {
 		t.Fatalf("should request history when viewport is at top")
@@ -738,7 +731,7 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 		t.Fatalf("should not poll while viewport is at top and history is available")
 	}
 
-	m.viewer.InitialLoad = true
+	m.viewer.Vp.InitialLoad = true
 	if m.shouldLoadHistoryOnTick() {
 		t.Fatalf("should not load history while initial load is in progress")
 	}
@@ -746,8 +739,8 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 		t.Fatalf("should not poll while initial logs load is in progress")
 	}
 
-	m.viewer.InitialLoad = false
-	m.viewer.HistoryLoad = true
+	m.viewer.Vp.InitialLoad = false
+	m.viewer.Logs.HistoryLoad = true
 	if m.shouldLoadHistoryOnTick() {
 		t.Fatalf("should not load history while history load is in progress")
 	}
@@ -755,9 +748,9 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 		t.Fatalf("should not poll while history logs load is in progress")
 	}
 
-	m.viewer.HistoryLoad = false
-	m.viewer.HistoryDone = true
-	m.viewer.Viewport.GotoBottom()
+	m.viewer.Logs.HistoryLoad = false
+	m.viewer.Logs.HistoryDone = true
+	m.viewer.Vp.GotoBottom()
 	if m.shouldLoadHistoryOnTick() {
 		t.Fatalf("should not load history after history is exhausted")
 	}
@@ -775,15 +768,15 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 	m := unwrapModel(New(nil))
 	m.screen = shared.LogViewer
 	m.viewer.ContainerID = "ctr-1"
-	m.viewer.Data = make([]string, 220)
-	for i := range m.viewer.Data {
-		m.viewer.Data[i] = "line"
+	m.viewer.Vp.Data = make([]string, 220)
+	for i := range m.viewer.Vp.Data {
+		m.viewer.Vp.Data[i] = "line"
 	}
-	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	m.viewer.Viewport.GotoTop()
-	m.viewer.InitialLoad = false
-	m.viewer.HistoryLoad = false
-	m.viewer.HistoryDone = false
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.Vp.GotoTop()
+	m.viewer.Vp.InitialLoad = false
+	m.viewer.Logs.HistoryLoad = false
+	m.viewer.Logs.HistoryDone = false
 
 	if !m.shouldLoadHistoryOnTick() {
 		t.Fatalf("expected history load to be scheduled when viewport is at top")
@@ -792,12 +785,12 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 		t.Fatalf("polling should stay disabled at top while history loading is available")
 	}
 
-	updated, cmd := m.Update(tickMsg(time.Now()))
+	updated, cmd := m.Update(tickMsg{})
 	current := unwrapModel(updated)
 	if cmd == nil {
 		t.Fatalf("tick at top should schedule a history load command")
 	}
-	if current.viewer.HistoryLoad {
+	if current.viewer.Logs.HistoryLoad {
 		t.Fatalf("tick handling should not mark history loading without result handling")
 	}
 }

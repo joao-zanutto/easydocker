@@ -11,7 +11,7 @@ func (m model) syncBrowseData() model {
 		FilteredImages:          m.filteredImages(),
 		FilteredNetworks:        m.filteredNetworks(),
 		FilteredVolumes:         m.filteredVolumes(),
-		MetricsLoadingIndicator: m.containerMetricsLoadingIndicator(),
+		MetricsLoadingIndicator: m.metricsLoadingIndicator(),
 	}
 	m.browse.DetailProvider = m.browseDetailRenderer()
 	m.browse.ListRenderer = func(width, h int) string {

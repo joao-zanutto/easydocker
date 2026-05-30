@@ -7,26 +7,26 @@ import (
 	"easydocker/internal/tui/util"
 )
 
-func ViewportRange(state *State, total int) (int, int) {
+func ViewportRange(vp *Viewport, total int) (int, int) {
 	if total <= 0 {
 		return 0, 0
 	}
-	start := util.Clamp(state.Viewport.YOffset(), 0, max(0, total-1))
-	visible := max(1, state.Viewport.VisibleLineCount())
+	start := util.Clamp(vp.YOffset(), 0, max(0, total-1))
+	visible := max(1, vp.VisibleLineCount())
 	end := min(total, start+visible)
 	return start, end
 }
 
-func VisibleContentRange(state *State, lines []string) (int, int) {
+func VisibleContentRange(vp *Viewport, lines []string) (int, int) {
 	total := len(lines)
 	if total <= 0 {
 		return 0, 0
 	}
-	if !state.WrapLines {
-		return ViewportRange(state, total)
+	if !vp.WrapLines {
+		return ViewportRange(vp, total)
 	}
 
-	wrapWidth := max(1, state.Viewport.Width())
+	wrapWidth := max(1, vp.Width())
 	totalRows := 0
 	for _, line := range lines {
 		totalRows += WrappedRowCount(line, wrapWidth)
@@ -35,8 +35,8 @@ func VisibleContentRange(state *State, lines []string) (int, int) {
 		return 0, 0
 	}
 
-	startRow := util.Clamp(state.Viewport.YOffset(), 0, totalRows-1)
-	visibleRows := max(1, state.Viewport.VisibleLineCount())
+	startRow := util.Clamp(vp.YOffset(), 0, totalRows-1)
+	visibleRows := max(1, vp.VisibleLineCount())
 	endRowExclusive := min(totalRows, startRow+visibleRows)
 
 	startLine := rowToLineIndex(lines, wrapWidth, startRow)
@@ -71,7 +71,7 @@ func WrappedRowCount(line string, width int) int {
 }
 
 func FilterLines(lines []string, query string) []string {
-	if strings.TrimSpace(query) == "" {
+	if query == "" || strings.TrimSpace(query) == "" {
 		return lines
 	}
 	filtered := make([]string, 0, len(lines))
@@ -162,6 +162,27 @@ func MergePolledLogs(prev, polled []string) ([]string, bool) {
 		return prev, true
 	}
 
+	maxOverlap := min(len(prev), len(polled))
+	for o := maxOverlap; o > 0; o-- {
+		match := true
+		for i := 0; i < o; i++ {
+			if strings.TrimRight(prev[len(prev)-o+i], "\r") != strings.TrimRight(polled[i], "\r") {
+				match = false
+				break
+			}
+		}
+		if match {
+			result := make([]string, len(prev)+len(polled)-o)
+			for i, l := range prev {
+				result[i] = strings.TrimRight(l, "\r")
+			}
+			for i := o; i < len(polled); i++ {
+				result[len(prev)+(i-o)] = strings.TrimRight(polled[i], "\r")
+			}
+			return result, true
+		}
+	}
+
 	normPrev := make([]string, len(prev))
 	for i, l := range prev {
 		normPrev[i] = strings.TrimRight(l, "\r")
@@ -169,13 +190,6 @@ func MergePolledLogs(prev, polled []string) ([]string, bool) {
 	normPolled := make([]string, len(polled))
 	for i, l := range polled {
 		normPolled[i] = strings.TrimRight(l, "\r")
-	}
-
-	maxOverlap := min(len(normPrev), len(normPolled))
-	for o := maxOverlap; o > 0; o-- {
-		if equalLogSlices(normPrev[len(normPrev)-o:], normPolled[:o]) {
-			return append(append([]string{}, normPrev...), normPolled[o:]...), true
-		}
 	}
 
 	if equalLogSlices(normPrev, normPolled) {
@@ -198,4 +212,16 @@ func equalLogSlices(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func (vp *Viewport) PrepareContentLines(data []string, query string, wrapWidth int, wrapEnabled bool) []string {
+	sanitized := vp.getSanitizedLines(data)
+
+	lines := FilterLines(sanitized, query)
+
+	if wrapEnabled && wrapWidth > 0 {
+		lines = WrapLines(lines, wrapWidth)
+	}
+
+	return lines
 }
