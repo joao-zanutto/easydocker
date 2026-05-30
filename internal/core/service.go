@@ -12,7 +12,6 @@ type Repository interface {
 	LoadContainerRows(ctx context.Context) ([]ContainerRow, error)
 	LoadSupportingResources(ctx context.Context) (Snapshot, error)
 	LoadContainerMetrics(ctx context.Context, rows []ContainerRow) (map[string]ContainerMetrics, float64, uint64, error)
-	LoadContainerLiveData(ctx context.Context, containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error)
 	LoadContainerLogs(ctx context.Context, containerID string, tail int) ([]string, error)
 	InspectContainer(ctx context.Context, containerID string) ([]string, error)
 	InspectImage(ctx context.Context, imageRef string) ([]string, error)
@@ -88,13 +87,6 @@ func (s *Service) LoadContainerMetrics(rows []ContainerRow) (map[string]Containe
 	ctx, cancel := context.WithTimeout(context.Background(), s.config.RequestTimeout)
 	defer cancel()
 	return s.repo.LoadContainerMetrics(ctx, rows)
-}
-
-func (s *Service) LoadContainerLiveData(containerID string, previousCPU, previousMem []float64, tail int) (ContainerLiveData, error) {
-	timeout := s.liveDataTimeoutForTail(tail)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	return s.repo.LoadContainerLiveData(ctx, containerID, previousCPU, previousMem, tail)
 }
 
 func (s *Service) LoadContainerLogs(containerID string, tail int) ([]string, error) {

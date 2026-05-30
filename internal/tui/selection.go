@@ -82,7 +82,7 @@ func (m model) filteredVolumes() []core.VolumeRow {
 
 func (m model) findContainerIndexByID(id string) (int, bool) {
 	for index, row := range m.browse.Data.ContainerListRows {
-		if row.Kind != tables.ContainerListRowContainer {
+		if row.Kind != tables.RowContainer {
 			continue
 		}
 		if row.Container.FullID == id {

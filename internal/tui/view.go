@@ -83,7 +83,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 	m.viewer.ResourceType = core.ResourceContainer
 	m.viewer.LoadingMsg = "Loading logs..."
 	m.viewer.EmptyMsg = "No logs found for this container."
-	m.viewer.Styles = viewer.ViewStyles{
+	m.viewer.Styles = viewer.Styles{
 		Breadcrumb:   m.styles.Breadcrumb,
 		FollowOn:     m.styles.FollowOn,
 		FollowOff:    m.styles.FollowOff,
@@ -107,7 +107,7 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	m.viewer.ResourceType = shared.TabToResourceType(m.browse.ActiveTab)
 	m.viewer.LoadingMsg = "Loading inspect..."
 	m.viewer.EmptyMsg = "No inspect data available."
-	m.viewer.Styles = viewer.ViewStyles{
+	m.viewer.Styles = viewer.Styles{
 		Breadcrumb:   m.styles.Breadcrumb,
 		FollowOn:     m.styles.FollowOn,
 		FollowOff:    m.styles.FollowOff,
@@ -136,16 +136,16 @@ func (m model) renderHeader() string {
 	return chrome.RenderHeader(chrome.HeaderInput{
 		Width:            m.width,
 		Title:            "EasyDocker",
-		TotalsText:       chrome.RenderTotalsLabel(m.browse.Snapshot, m.loadingStage, loadStageIdle, loadStageMetrics, m.metricsLoaded, m.metricsLoadingIndicator()),
-		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, loadStageContainers, loadStageResources, loadStageMetrics, m.metricsLoaded),
-		ActiveTab:        int(m.browse.ActiveTab),
+		TotalsText:       chrome.RenderTotalsLabel(m.browse.Snapshot, m.loadingStage, m.metricsLoaded, m.metricsLoadingIndicator()),
+		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, m.metricsLoaded),
+		ActiveTab:        m.browse.ActiveTab,
 		ShowAll:          m.browse.ShowAll,
 		Err:              m.err,
 		Tabs: []chrome.TabSpec{
-			{Tab: int(tabContainers), Icon: "🐳", Name: "Containers", Count: len(m.filteredContainers())},
-			{Tab: int(tabImages), Icon: "💿", Name: "Images", Count: len(m.browse.Snapshot.Images)},
-			{Tab: int(tabNetworks), Icon: "🔌", Name: "Networks", Count: len(m.browse.Snapshot.Networks)},
-			{Tab: int(tabVolumes), Icon: "📂", Name: "Volumes", Count: len(m.browse.Snapshot.Volumes)},
+			{Tab: tabContainers, Icon: "🐳", Name: "Containers", Count: len(m.filteredContainers())},
+			{Tab: tabImages, Icon: "💿", Name: "Images", Count: len(m.browse.Snapshot.Images)},
+			{Tab: tabNetworks, Icon: "🔌", Name: "Networks", Count: len(m.browse.Snapshot.Networks)},
+			{Tab: tabVolumes, Icon: "📂", Name: "Volumes", Count: len(m.browse.Snapshot.Volumes)},
 		},
 		Styles: chrome.HeaderStyles{
 			Header:    m.styles.Header,
@@ -170,8 +170,8 @@ func (m model) renderFooter() string {
 	})
 }
 
-func (m model) renderChromeTab(tab int, label string) string {
-	if int(m.browse.ActiveTab) == tab {
+func (m model) renderChromeTab(tab shared.Tab, label string) string {
+	if m.browse.ActiveTab == tab {
 		return m.styles.ActiveTab.Render(label)
 	}
 	return m.styles.Tab.Render(label)

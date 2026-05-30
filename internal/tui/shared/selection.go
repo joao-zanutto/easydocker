@@ -44,13 +44,6 @@ func (c *Cursors) setByTab(tab Tab, value int) bool {
 	}
 }
 
-// SelectionState groups browse tab/scope/cursor state.
-type SelectionState struct {
-	ActiveTab Tab
-	ShowAll   bool
-	Cursors   Cursors
-}
-
 // MoveActiveTab shifts active tab and clamps to [minTab, maxTab].
 func MoveActiveTab(current Tab, delta int, minTab, maxTab Tab) Tab {
 	return Tab(util.Clamp(int(current)+delta, int(minTab), int(maxTab)))

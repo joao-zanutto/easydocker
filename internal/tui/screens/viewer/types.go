@@ -1,42 +1,13 @@
 package viewer
 
 import (
-	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/components"
 
 	"charm.land/bubbles/v2/viewport"
 )
 
 type Transition struct {
-	ExitToBrowse bool
-	ForceTab     shared.Tab
-	Load         *LoadRequest
-	Err          error
-	LaunchShell  bool
-}
-
-type Source string
-
-const (
-	SourceInitial Source = "initial"
-	SourceHistory Source = "history"
-	SourcePoll    Source = "poll"
-)
-
-type LoadRequest struct {
-	ContainerID string
-	SessionID   int
-	Tail        int
-	Src         Source
-}
-
-type ResultMsg struct {
-	ContainerID string
-	SessionID   int
-	Data        any
-	Err         error
-	Tail        int
-	Src         Source
+	LaunchShell bool
 }
 
 type ContentMsg struct {
@@ -47,6 +18,14 @@ type ContentMsg struct {
 	Tail        int
 	Src         Source
 }
+
+type Source string
+
+const (
+	SourceInitial Source = "initial"
+	SourceHistory Source = "history"
+	SourcePoll    Source = "poll"
+)
 
 type LineCountInfo struct {
 	Total int

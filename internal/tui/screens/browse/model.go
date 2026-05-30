@@ -269,7 +269,7 @@ func (m Model) selections() SelectionSet {
 func (m Model) SelectedContainer() (core.ContainerRow, bool) {
 	if len(m.Data.ContainerListRows) > 0 {
 		row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
-		if !ok || row.Kind != tables.ContainerListRowContainer {
+		if !ok || row.Kind != tables.RowContainer {
 			return core.ContainerRow{}, false
 		}
 		return row.Container, true
@@ -282,7 +282,7 @@ func (m Model) SelectedComposeProject() (core.ComposeProject, bool) {
 		return core.ComposeProject{}, false
 	}
 	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
-	if !ok || row.Kind != tables.ContainerListRowComposeProject {
+	if !ok || row.Kind != tables.RowComposeProject {
 		return core.ComposeProject{}, false
 	}
 	return row.ComposeProject, true
@@ -317,7 +317,7 @@ func (m Model) cursorOnComposeRow() bool {
 		return false
 	}
 	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
-	return ok && row.Kind == tables.ContainerListRowComposeProject
+	return ok && row.Kind == tables.RowComposeProject
 }
 
 func (m Model) toggleCompose() Model {
@@ -325,7 +325,7 @@ func (m Model) toggleCompose() Model {
 		return m
 	}
 	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
-	if !ok || row.Kind != tables.ContainerListRowComposeProject {
+	if !ok || row.Kind != tables.RowComposeProject {
 		return m
 	}
 	projectName := row.ComposeProject.Name

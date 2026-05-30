@@ -21,10 +21,10 @@ func (e *ShellCommand) SetStdout(w io.Writer) { e.stdout = w }
 func (e *ShellCommand) SetStderr(w io.Writer) { e.stderr = w }
 
 func (e *ShellCommand) Run() error {
-	// Enter alternate screen buffer and move cursor to home position
+	// Enter/exit alternate screen buffer. Errors are intentionally discarded
+	// because terminal escape sequences are best-effort.
 	_, _ = io.WriteString(e.stdout, "\033[?1049h\033[H")
 	defer func() {
-		// Exit alternate screen buffer
 		_, _ = io.WriteString(e.stdout, "\033[?1049l")
 	}()
 	return e.service.ExecShell(e.containerID, e.stdin, e.stdout, e.stderr)

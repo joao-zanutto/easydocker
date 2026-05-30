@@ -11,7 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type ViewStyles struct {
+type Styles struct {
 	Breadcrumb   lipgloss.Style
 	FollowOn     lipgloss.Style
 	FollowOff    lipgloss.Style
@@ -30,7 +30,7 @@ type ViewModel struct {
 	LoadingIndicator string
 	Width            int
 	Height           int
-	Styles           ViewStyles
+	Styles           Styles
 	ContentType      ContentType
 	ResourceType     core.ResourceType
 	HistoryLoad      bool
@@ -138,7 +138,11 @@ func renderPanel(vm ViewModel, width, height int) string {
 	lines := strings.Split(vm.State.Viewport.View(), "\n")
 	lines = renderHorizontalScrollIndicators(vm.State, lines, filtered, contentWidth, vm.Styles.Muted.Reverse(true))
 	if vm.ContentType == ContentTypeLogs && vm.HistoryLoad {
-		lines = append([]string{renderHistoryLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator, vm.LoadingMessage)}, lines...)
+		msg := vm.LoadingMessage
+		if msg == "" {
+			msg = "Loading more..."
+		}
+		lines = append([]string{renderLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator, msg)}, lines...)
 	}
 	lines = util.ClipAndPadLines(lines, height, "")
 	return strings.Join(lines, "\n")
@@ -151,17 +155,6 @@ func renderLoadingLine(style lipgloss.Style, width int, indicator string, messag
 	}
 	if message == "" {
 		message = "Loading..."
-	}
-	return util.ClampSingleLine(style.Render(prefix+message), width)
-}
-
-func renderHistoryLoadingLine(style lipgloss.Style, width int, indicator string, message string) string {
-	prefix := strings.TrimSpace(indicator)
-	if prefix != "" {
-		prefix += " "
-	}
-	if message == "" {
-		message = "Loading more..."
 	}
 	return util.ClampSingleLine(style.Render(prefix+message), width)
 }

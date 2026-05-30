@@ -39,7 +39,7 @@ func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	m.viewer.EmptyMsg = "No logs found for this container."
 	m.viewer.Breadcrumb = ""
 	m.viewer.ContainerName = container.Name
-	m.viewer.Styles = viewer.ViewStyles{
+	m.viewer.Styles = viewer.Styles{
 		Breadcrumb:   m.styles.Breadcrumb,
 		FollowOn:     m.styles.FollowOn,
 		FollowOff:    m.styles.FollowOff,

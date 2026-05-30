@@ -34,8 +34,6 @@ type ContainerRow struct {
 	ComposeService         string
 	ComposeWorkingDir      string
 	ComposeConfigFiles     string
-	ComposeOneOff          bool
-	ComposeContainerNumber int
 	Image                  string
 	State                  string
 	Status                 string
@@ -101,21 +99,6 @@ type VolumeRow struct {
 	RefCount   int64
 	Created    string
 	CreatedAt  string
-}
-
-type ContainerLiveData struct {
-	ContainerID   string
-	Logs          []string
-	CPUPercent    float64
-	MemoryPercent float64
-	MemoryUsage   string
-	MemoryLimit   string
-	MemoryBytes   uint64
-	MemoryMax     uint64
-	CPUHistory    []float64
-	MemHistory    []float64
-	State         string
-	UpdatedAt     time.Time
 }
 
 type ContainerMetrics struct {

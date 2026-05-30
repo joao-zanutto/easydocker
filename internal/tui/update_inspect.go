@@ -30,7 +30,7 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	m.viewer.EmptyMsg = "No inspect data available."
 	m.viewer.Breadcrumb = ""
 	m.viewer.ContainerName = resourceName
-	m.viewer.Styles = viewer.ViewStyles{
+	m.viewer.Styles = viewer.Styles{
 		Breadcrumb:   m.styles.Breadcrumb,
 		FollowOn:     m.styles.FollowOn,
 		FollowOff:    m.styles.FollowOff,
@@ -46,7 +46,7 @@ func (m *model) loadInspectCmd(resourceType core.ResourceType, resourceID, resou
 	return func() tea.Msg {
 		data, err := svc.InspectResource(resourceType, resourceID)
 		return inspectResultMsg{
-			resourceType: int(resourceType),
+			resourceType: resourceType,
 			resourceID:   resourceID,
 			resourceName: resourceName,
 			data:         data,

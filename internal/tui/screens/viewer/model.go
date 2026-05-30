@@ -22,7 +22,7 @@ type Model struct {
 	ResourceType  core.ResourceType
 	Width         int
 	Height        int
-	Styles        ViewStyles
+	Styles        Styles
 	Spinner       spinner.Model
 
 	HistoryLoad               bool
@@ -111,12 +111,26 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	if key.Matches(msg, keys.Back) {
-		return m, func() tea.Msg { return TransitionMsg{BackToBrowse: true, ForceTab: shared.TabContainers} }
+		return m, func() tea.Msg { return TransitionMsg{BackToBrowse: true} }
 	}
 
 	if key.Matches(msg, keys.ToggleWrap) {
+		logList := FilterLines(m.Data, m.Filter.Query)
+		currentStart, _ := VisibleContentRange(&m.State, logList)
+
 		m.SetWrapLines(!m.WrapLines)
 		m.SyncFromData(m.visibleWidth(), m.visibleRows())
+
+		if m.WrapLines {
+			w := m.visibleWidth()
+			row := 0
+			for i := 0; i < currentStart && i < len(logList); i++ {
+				row += WrappedRowCount(SanitizeLine(logList[i]), w)
+			}
+			m.Viewport.SetYOffset(row)
+		} else {
+			m.Viewport.SetYOffset(currentStart)
+		}
 		return m, nil
 	}
 
@@ -254,7 +268,7 @@ func (m *Model) applyHistoryWithMerge(data []string) {
 
 func (m *Model) applyPollWithMerge(data []string) {
 	previousLen := len(m.Data)
-	merged, _ := MergePolledLogs(m.Data, data, 0)
+	merged, _ := MergePolledLogs(m.Data, data)
 	if m.HistoryLoad {
 		m.HistoryAppendedDuringLoad += max(0, len(merged)-previousLen)
 	}
@@ -270,6 +284,5 @@ func (m Model) spinnerTickCmd() tea.Cmd {
 
 type TransitionMsg struct {
 	BackToBrowse bool
-	ForceTab     shared.Tab
 	LaunchShell  bool
 }
