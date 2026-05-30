@@ -6,12 +6,10 @@ import (
 	"testing"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
 
-	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -26,28 +24,11 @@ func unwrapModel(m tea.Model) *model {
 	}
 }
 
-func testViewerModel() viewer.Model {
-	vm := viewer.NewModel()
-	vm.Vp = viewer.NewViewport()
-	return vm
-}
-
 func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
-	m := model{
-		width:  120,
-		height: 30,
-		styles: defaultStyles(),
-		browse: browse.Model{
-			ActiveTab: tabContainers,
-			ShowAll:   true,
-			Filter:    browse.NewFilterState(),
-			Snapshot: core.Snapshot{
-				Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
-			},
-		},
-		viewer:  testViewerModel(),
-		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
-	}
+	m := newTestModel().
+		withSize(120, 30).
+		withContainers(core.ContainerRow{FullID: "ctr-1", Name: "api", State: "running"}).
+		build()
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	current := unwrapModel(updated)
@@ -90,22 +71,10 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 }
 
 func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
-	m := model{
-		width:  100,
-		height: 28,
-		screen: shared.Main,
-		styles: defaultStyles(),
-		browse: browse.Model{
-			ActiveTab: tabContainers,
-			ShowAll:   true,
-			Filter:    browse.NewFilterState(),
-			Snapshot: core.Snapshot{
-				Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", Image: "nginx", Status: "Up"}},
-			},
-		},
-		viewer:  testViewerModel(),
-		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
-	}
+	m := newTestModel().
+		withSize(100, 28).
+		withContainers(core.ContainerRow{FullID: "ctr-1", Name: "api", State: "running", Image: "nginx", Status: "Up"}).
+		build()
 	m = m.syncBrowseData()
 	m.dataDirty = false
 
@@ -126,16 +95,8 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 }
 
 func TestIntegration_UpdateResultFlow(t *testing.T) {
-	m := model{
-		loading:      true,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		browse: browse.Model{
-			Filter: browse.NewFilterState(),
-		},
-		viewer:  testViewerModel(),
-		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
-	}
+	m := newTestModel().
+		build()
 
 	updated, cmd := m.Update(containersResultMsg{containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}})
 	current := unwrapModel(updated)
@@ -166,33 +127,21 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 }
 
 func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
-	m := model{
-		width:        120,
-		height:       30,
-		loading:      false,
-		loadingStage: shared.StageIdle,
-		styles:       defaultStyles(),
-		browse: browse.Model{
-			ActiveTab: tabContainers,
-			ShowAll:   true,
-			Filter:    browse.NewFilterState(),
-			Snapshot: core.Snapshot{
-				Containers: []core.ContainerRow{{
-					FullID:           "ctr-1",
-					Name:             "api",
-					State:            "running",
-					CPUPercent:       12.5,
-					MemoryPercent:    10,
-					MemoryUsage:      "10 MiB",
-					MemoryLimit:      "100 MiB",
-					MemoryUsageBytes: 10,
-					MemoryLimitBytes: 100,
-				}},
-			},
-		},
-		viewer:  testViewerModel(),
-		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
-	}
+	m := newTestModel().
+		withSize(120, 30).
+		withLoading(false, shared.StageIdle).
+		withContainers(core.ContainerRow{
+			FullID:           "ctr-1",
+			Name:             "api",
+			State:            "running",
+			CPUPercent:       12.5,
+			MemoryPercent:    10,
+			MemoryUsage:      "10 MiB",
+			MemoryLimit:      "100 MiB",
+			MemoryUsageBytes: 10,
+			MemoryLimitBytes: 100,
+		}).
+		build()
 
 	updated, _ := m.Update(containersResultMsg{containers: []core.ContainerRow{{
 		FullID:      "ctr-1",
@@ -211,23 +160,11 @@ func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 }
 
 func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
-	m := model{
-		width:        120,
-		height:       30,
-		loading:      true,
-		loadingStage: shared.StageMetrics,
-		styles:       defaultStyles(),
-		browse: browse.Model{
-			ActiveTab: tabContainers,
-			ShowAll:   true,
-			Filter:    browse.NewFilterState(),
-			Snapshot: core.Snapshot{
-				Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"}},
-			},
-		},
-		viewer:  testViewerModel(),
-		spinner: spinner.New(spinner.WithSpinner(spinner.Line)),
-	}
+	m := newTestModel().
+		withSize(120, 30).
+		withLoading(true, shared.StageMetrics).
+		withContainers(core.ContainerRow{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"}).
+		build()
 
 	before := m.View().Content
 	if !strings.Contains(before, "loading metrics") {
