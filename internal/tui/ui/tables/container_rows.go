@@ -194,9 +194,12 @@ func ansiBold(value string) string {
 	if value == "" {
 		return ""
 	}
-	return lipgloss.NewStyle().Bold(true).Render(value)
+	return "\x1b[1m" + value + "\x1b[22m"
 }
 
 func colorStateLabel(label, state string) string {
-	return lipgloss.NewStyle().Foreground(theme.ContainerStateColor(state)).Render(label)
+	s := lipgloss.NewStyle().Foreground(theme.ContainerStateColor(state)).Render(label)
+	s = strings.TrimSuffix(s, "\x1b[0m")
+	s = strings.TrimSuffix(s, "\x1b[m")
+	return s + "\x1b[39m"
 }
