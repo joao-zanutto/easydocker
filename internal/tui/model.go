@@ -58,7 +58,7 @@ type inspectResultMsg struct {
 }
 
 type model struct {
-	service *core.Service
+	service core.ServiceInterface
 	err     error
 
 	width  int
@@ -81,7 +81,7 @@ type model struct {
 	help   menu.HelpState
 }
 
-func New(service *core.Service) tea.Model {
+func New(service core.ServiceInterface) tea.Model {
 	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
 	containerSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
 

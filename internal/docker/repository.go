@@ -16,10 +16,10 @@ import (
 )
 
 type Repository struct {
-	clientOnce sync.Once
-	client     *client.Client
-	clientErr  error
-	now        func() time.Time
+	clientMu  sync.Mutex
+	client    *client.Client
+	clientErr error
+	now       func() time.Time
 }
 
 func NewRepository() *Repository {
@@ -81,36 +81,24 @@ func (r *Repository) LoadSupportingResources(ctx context.Context) (core.Snapshot
 	})
 }
 
-func (r *Repository) InspectContainer(ctx context.Context, containerID string) ([]string, error) {
-	return r.inspectResource(ctx, "container", func(ctx context.Context, id string, cli *client.Client) (any, error) {
-		return cli.ContainerInspect(ctx, id)
-	}, containerID)
-}
-
-func (r *Repository) InspectImage(ctx context.Context, imageRef string) ([]string, error) {
-	return r.inspectResource(ctx, "image", func(ctx context.Context, id string, cli *client.Client) (any, error) {
-		data, _, err := cli.ImageInspectWithRaw(ctx, id)
-		return data, err
-	}, imageRef)
-}
-
-func (r *Repository) InspectNetwork(ctx context.Context, networkID string) ([]string, error) {
-	return r.inspectResource(ctx, "network", func(ctx context.Context, id string, cli *client.Client) (any, error) {
-		return cli.NetworkInspect(ctx, id, network.InspectOptions{})
-	}, networkID)
-}
-
-func (r *Repository) InspectVolume(ctx context.Context, volumeName string) ([]string, error) {
-	return r.inspectResource(ctx, "volume", func(ctx context.Context, id string, cli *client.Client) (any, error) {
-		return cli.VolumeInspect(ctx, id)
-	}, volumeName)
-}
-
-func (r *Repository) inspectResource(ctx context.Context, resourceType string, inspectFn func(context.Context, string, *client.Client) (any, error), id string) ([]string, error) {
+func (r *Repository) InspectResource(ctx context.Context, resourceType core.ResourceType, id string) ([]string, error) {
 	return withClientResult(r, func(cli *client.Client) ([]string, error) {
-		result, err := inspectFn(ctx, id, cli)
+		var result any
+		var err error
+		switch resourceType {
+		case core.ResourceContainer:
+			result, _, err = cli.ContainerInspectWithRaw(ctx, id, false)
+		case core.ResourceImage:
+			result, _, err = cli.ImageInspectWithRaw(ctx, id)
+		case core.ResourceNetwork:
+			result, err = cli.NetworkInspect(ctx, id, network.InspectOptions{})
+		case core.ResourceVolume:
+			result, err = cli.VolumeInspect(ctx, id)
+		default:
+			return nil, nil
+		}
 		if err != nil {
-			return nil, wrapDockerError("inspect "+resourceType, err)
+			return nil, wrapDockerError("inspect resource", err)
 		}
 		return toInspectResult(result)
 	})
@@ -119,17 +107,25 @@ func (r *Repository) inspectResource(ctx context.Context, resourceType string, i
 func toInspectResult(data any) ([]string, error) {
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("marshal json: %w", err)
+		return nil, fmt.Errorf("repository.marshal json: %w", err)
 	}
 	lines := strings.Split(string(jsonData), "\n")
 	return lines, nil
 }
 
 func (r *Repository) dockerClient() (*client.Client, error) {
-	r.clientOnce.Do(func() {
-		r.client, r.clientErr = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	})
-	return r.client, r.clientErr
+	r.clientMu.Lock()
+	defer r.clientMu.Unlock()
+	if r.client != nil {
+		return r.client, nil
+	}
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		r.clientErr = err
+		return nil, err
+	}
+	r.client = cli
+	return cli, nil
 }
 
 func withClientResult[T any](r *Repository, fn func(*client.Client) (T, error)) (T, error) {
@@ -141,6 +137,6 @@ func withClientResult[T any](r *Repository, fn func(*client.Client) (T, error)) 
 	return fn(cli)
 }
 
-func wrapDockerError(prefix string, err error) error {
-	return fmt.Errorf("%s: %w", prefix, err)
+func wrapDockerError(operation string, err error) error {
+	return fmt.Errorf("repository.%s: %w", operation, err)
 }

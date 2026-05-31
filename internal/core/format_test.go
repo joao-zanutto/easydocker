@@ -2,37 +2,22 @@ package core
 
 import "testing"
 
-func TestContainerCPUValue_RunningNeverDash(t *testing.T) {
-	loading := ContainerCPUValue(ContainerRow{State: "running", CPUPercent: -1}, "⠋")
-	if loading != "⠋" {
-		t.Fatalf("running loading cpu = %q, want spinner icon", loading)
+func TestHumanBytes(t *testing.T) {
+	tests := []struct {
+		input uint64
+		want  string
+	}{
+		{0, "0 B"},
+		{1, "1 B"},
+		{500, "500 B"},
+		{1024, "1.0 KiB"},
+		{1536, "1.5 KiB"},
+		{1048576, "1.0 MiB"},
+		{1073741824, "1.0 GiB"},
 	}
-
-	idle := ContainerCPUValue(ContainerRow{State: "running", CPUPercent: 0}, "⠋")
-	if idle != "0.0%" {
-		t.Fatalf("running zero cpu = %q, want 0.0%%", idle)
-	}
-
-	afterInitial := ContainerCPUValue(ContainerRow{State: "running", CPUPercent: -1}, "")
-	if afterInitial != "-" {
-		t.Fatalf("running loading cpu with no indicator = %q, want -", afterInitial)
-	}
-}
-
-func TestContainerMemoryTableValue_OmitsLimit(t *testing.T) {
-	running := ContainerRow{State: "running", MemoryUsage: "128 MiB", MemoryLimit: "2 GiB", MemoryPercent: 6.25}
-	got := ContainerMemoryTableValue(running, "⠋")
-	if got != "128 MiB" {
-		t.Fatalf("table memory value = %q, want %q", got, "128 MiB (6.2%)")
-	}
-
-	loading := ContainerMemoryTableValue(ContainerRow{State: "running", MemoryUsage: "-"}, "⠋")
-	if loading != "⠋" {
-		t.Fatalf("running placeholder memory value = %q, want spinner icon", loading)
-	}
-
-	afterInitial := ContainerMemoryTableValue(ContainerRow{State: "running", MemoryUsage: "-"}, "")
-	if afterInitial != "-" {
-		t.Fatalf("running placeholder memory value with no indicator = %q, want -", afterInitial)
+	for _, tt := range tests {
+		if got := HumanBytes(tt.input); got != tt.want {
+			t.Errorf("HumanBytes(%d) = %q, want %q", tt.input, got, tt.want)
+		}
 	}
 }

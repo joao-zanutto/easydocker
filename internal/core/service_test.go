@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -32,7 +33,7 @@ func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 	repo.EXPECT().LoadContainerMetrics(gomock.Any(), rows).Return(metrics, float64(99.9), uint64(12345), nil)
 
 	svc := NewService(repo)
-	snapshot, err := svc.LoadSnapshot()
+	snapshot, err := svc.LoadSnapshot(context.Background())
 	if err != nil {
 		t.Fatalf("LoadSnapshot() error = %v, want nil", err)
 	}
@@ -68,7 +69,7 @@ func TestServiceLoadSnapshot_FailsOnContainerError(t *testing.T) {
 	repo.EXPECT().LoadSupportingResources(gomock.Any()).Return(Snapshot{}, nil).AnyTimes()
 
 	svc := NewService(repo)
-	_, err := svc.LoadSnapshot()
+	_, err := svc.LoadSnapshot(context.Background())
 	if err == nil {
 		t.Fatalf("LoadSnapshot() error = nil, want non-nil")
 	}
@@ -82,7 +83,7 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenResourcesFail(t *testing.T) {
 	repo.EXPECT().LoadSupportingResources(gomock.Any()).Return(Snapshot{}, errors.New("resource error"))
 
 	svc := NewService(repo)
-	snapshot, err := svc.LoadSnapshot()
+	snapshot, err := svc.LoadSnapshot(context.Background())
 	if err != nil {
 		t.Fatalf("LoadSnapshot() error = %v, want nil (partial tolerance)", err)
 	}
@@ -107,7 +108,7 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenMetricsFail(t *testing.T) {
 	repo.EXPECT().LoadContainerMetrics(gomock.Any(), rows).Return(nil, float64(0), uint64(0), errors.New("metrics error"))
 
 	svc := NewService(repo)
-	snapshot, err := svc.LoadSnapshot()
+	snapshot, err := svc.LoadSnapshot(context.Background())
 	if err != nil {
 		t.Fatalf("LoadSnapshot() error = %v, want nil (partial tolerance)", err)
 	}

@@ -74,19 +74,18 @@ func SortVolumes(rows []VolumeRow) {
 }
 
 func containerStateRank(container ContainerRow) int {
-	switch container.State {
-	case StateRunning:
-		if container.Healthy {
-			return 0
-		}
+	switch {
+	case container.State == StateRunning && container.Healthy:
+		return 0
+	case container.State == StateRunning:
 		return 1
-	case StateCreated:
+	case container.State == StateCreated:
 		return 2
-	case StateRestarting, StatePaused:
+	case container.State == StateRestarting || container.State == StatePaused:
 		return 3
-	case StateExited:
+	case container.State == StateExited:
 		return 4
-	case StateDead:
+	case container.State == StateDead:
 		return 5
 	default:
 		return 6

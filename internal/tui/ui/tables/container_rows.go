@@ -132,14 +132,14 @@ func BuildContainerSpec(width, cursor int, items []ContainerListRow, includeScop
 
 // ContainerTableRow builds a single row for the containers table.
 func ContainerTableRow(container core.ContainerRow, stateWidth int, loadingIndicator, treePrefix string) []string {
-	state := core.ContainerStateText(container)
+	state := util.ContainerStateText(container)
 	if stateWidth > 0 && util.StripANSI(util.TruncateWithEllipsis(state, stateWidth)) == "…" {
 		state = "●"
 	}
-	state = colorStateLabel(state, string(container.State))
+	state = colorStateLabel(state, container.State)
 	name := container.Name
-	cpu := core.ContainerCPUValue(container, loadingIndicator)
-	mem := core.ContainerMemoryTableValue(container, loadingIndicator)
+	cpu := util.ContainerCPUValue(container, loadingIndicator)
+	mem := util.ContainerMemoryTableValue(container, loadingIndicator)
 	if treePrefix != "" {
 		name = treePrefix + name
 		cpu = childMetricGuidePrefix(treePrefix) + cpu
@@ -197,8 +197,10 @@ func ansiBold(value string) string {
 	return "\x1b[1m" + value + "\x1b[22m"
 }
 
-func colorStateLabel(label, state string) string {
+func colorStateLabel(label string, state core.ContainerState) string {
 	s := lipgloss.NewStyle().Foreground(theme.ContainerStateColor(state)).Render(label)
+	// Strip full SGR reset to avoid killing parent background, then
+	// reset only foreground so the parent can keep its background color.
 	s = strings.TrimSuffix(s, "\x1b[0m")
 	s = strings.TrimSuffix(s, "\x1b[m")
 	return s + "\x1b[39m"

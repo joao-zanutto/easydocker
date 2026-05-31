@@ -15,7 +15,7 @@ import (
 )
 
 func mapContainerRow(item types.Container) core.ContainerRow {
-	memoryUsage := "-"
+	memoryUsage := core.MetricsNA
 	cpuPercent := float64(0)
 	if core.ContainerState(item.State) == core.StateRunning {
 		cpuPercent = -1
@@ -38,7 +38,7 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 		CPUPercent:             cpuPercent,
 		Healthy:                strings.Contains(strings.ToLower(item.Status), "healthy"),
 		MemoryUsage:            memoryUsage,
-		MemoryLimit:            "-",
+		MemoryLimit:            core.MetricsNA,
 	}
 }
 
@@ -73,7 +73,10 @@ func mapVolumeRow(item *volume.Volume) core.VolumeRow {
 		refCount = item.UsageData.RefCount
 		size = item.UsageData.Size
 	}
-	createdAt, _ := time.Parse(time.RFC3339Nano, item.CreatedAt)
+	createdAt, parseErr := time.Parse(time.RFC3339Nano, item.CreatedAt)
+	if parseErr != nil {
+		createdAt = time.Time{}
+	}
 	return core.VolumeRow{
 		Name:       item.Name,
 		Driver:     item.Driver,

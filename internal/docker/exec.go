@@ -45,12 +45,12 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 		execResp, err = cli.ContainerExecCreate(ctx, containerID, shellExecOptionsFallback())
 	}
 	if err != nil {
-		return fmt.Errorf("create exec: %w", err)
+		return fmt.Errorf("repository.create exec: %w", err)
 	}
 
 	resp, err := cli.ContainerExecAttach(ctx, execResp.ID, container.ExecStartOptions{Tty: true})
 	if err != nil {
-		return fmt.Errorf("attach exec: %w", err)
+		return fmt.Errorf("repository.attach exec: %w", err)
 	}
 	defer resp.Close()
 

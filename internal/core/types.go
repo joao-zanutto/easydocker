@@ -4,6 +4,23 @@ import (
 	"time"
 )
 
+type ContainerState string
+
+const (
+	StateRunning    ContainerState = "running"
+	StateExited     ContainerState = "exited"
+	StatePaused     ContainerState = "paused"
+	StateCreated    ContainerState = "created"
+	StateRemoving   ContainerState = "removing"
+	StateDead       ContainerState = "dead"
+	StateRestarting ContainerState = "restarting"
+)
+
+const (
+	MetricsLoading = "loading"
+	MetricsNA      = "-"
+)
+
 type ResourceType int
 
 const (
@@ -11,18 +28,6 @@ const (
 	ResourceImage
 	ResourceNetwork
 	ResourceVolume
-)
-
-type ContainerState string
-
-const (
-	StateRunning   ContainerState = "running"
-	StateExited    ContainerState = "exited"
-	StatePaused    ContainerState = "paused"
-	StateCreated   ContainerState = "created"
-	StateRemoving  ContainerState = "removing"
-	StateDead      ContainerState = "dead"
-	StateRestarting ContainerState = "restarting"
 )
 
 func (r ResourceType) String() string {
@@ -39,11 +44,6 @@ func (r ResourceType) String() string {
 		return "Unknown"
 	}
 }
-
-const (
-	MetricsLoading = "loading"
-	MetricsNA      = "-"
-)
 
 type Snapshot struct {
 	Containers      []ContainerRow

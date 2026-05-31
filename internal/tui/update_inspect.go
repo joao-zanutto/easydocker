@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"context"
+
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
@@ -31,12 +33,12 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	m.viewer.Breadcrumb = ""
 	m.viewer.ContainerName = resourceName
 	m.viewer.Styles = viewer.Styles{
-		Breadcrumb:   m.styles.Breadcrumb,
-		FollowOn:     m.styles.FollowOn,
-		FollowOff:    m.styles.FollowOff,
-		Muted:        m.styles.Muted,
-		Divider:      m.styles.Divider,
-		SubpageFrame: m.styles.SubpageFrame,
+		Breadcrumb:   m.styles.Viewer.Breadcrumb,
+		FollowOn:     m.styles.Viewer.FollowOn,
+		FollowOff:    m.styles.Viewer.FollowOff,
+		Muted:        m.styles.Browse.Muted,
+		Divider:      m.styles.Browse.Divider,
+		SubpageFrame: m.styles.Viewer.SubpageFrame,
 	}
 	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
 }
@@ -44,7 +46,7 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 func (m *model) loadInspectCmd(resourceType core.ResourceType, resourceID, resourceName string) tea.Cmd {
 	svc := m.service
 	return func() tea.Msg {
-		data, err := svc.InspectResource(resourceType, resourceID)
+		data, err := svc.InspectResource(context.Background(), resourceType, resourceID)
 		return inspectResultMsg{
 			resourceType: resourceType,
 			resourceID:   resourceID,

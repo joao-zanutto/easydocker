@@ -60,19 +60,19 @@ func (r *Repository) loadSupportingResourcesData(ctx context.Context, cli *clien
 	imagesRes := <-imagesCh
 	if imagesRes.err != nil {
 		cancel()
-		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("list images: %w", imagesRes.err)
+		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("repository.list images: %w", imagesRes.err)
 	}
 
 	networksRes := <-networksCh
 	if networksRes.err != nil {
 		cancel()
-		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("list networks: %w", networksRes.err)
+		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("repository.list networks: %w", networksRes.err)
 	}
 
 	volumesRes := <-volumesCh
 	if volumesRes.err != nil {
 		cancel()
-		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("list volumes: %w", volumesRes.err)
+		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("repository.list volumes: %w", volumesRes.err)
 	}
 
 	infoRes := <-infoCh
