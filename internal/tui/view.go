@@ -17,7 +17,10 @@ import (
 )
 
 func (m model) View() tea.View {
-	m = m.syncBrowseData()
+	if m.dataDirty {
+		m = m.syncBrowseData()
+		m.dataDirty = false
+	}
 	content := "Loading EasyDocker..."
 	if m.width > 0 && m.height > 0 {
 		header := m.renderHeader()
@@ -79,7 +82,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 	m.viewer.Height = totalHeight
 	m.viewer.ContainerName = container.Name
 	m.viewer.Breadcrumb = "Containers / " + container.Name + " / Logs"
-	m.viewer.ContentType = viewer.ContentTypeLogs
+	m.viewer.Vp.ContentType = viewer.ContentTypeLogs
 	m.viewer.ResourceType = core.ResourceContainer
 	m.viewer.LoadingMsg = "Loading logs..."
 	m.viewer.EmptyMsg = "No logs found for this container."
@@ -96,14 +99,14 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 
 func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	resourceLabel := util.ResourceLabel(shared.TabToResourceType(m.browse.ActiveTab))
-	containerName := m.viewer.ResourceName
+	containerName := m.viewer.Inspect.ResourceName
 	breadcrumb := resourceLabel + " / " + containerName + " / Inspect"
 
 	m.viewer.Width = totalWidth
 	m.viewer.Height = totalHeight
 	m.viewer.ContainerName = containerName
 	m.viewer.Breadcrumb = breadcrumb
-	m.viewer.ContentType = viewer.ContentTypeInspect
+	m.viewer.Vp.ContentType = viewer.ContentTypeInspect
 	m.viewer.ResourceType = shared.TabToResourceType(m.browse.ActiveTab)
 	m.viewer.LoadingMsg = "Loading inspect..."
 	m.viewer.EmptyMsg = "No inspect data available."
@@ -122,14 +125,7 @@ func (m model) metricsLoadingIndicator() string {
 	if !m.shouldAnimateMetricsLoadingIndicator() {
 		return ""
 	}
-	return strings.TrimSpace(m.metricsSpinner.View())
-}
-
-func (m model) containerMetricsLoadingIndicator() string {
-	if !m.shouldAnimateMetricsLoadingIndicator() {
-		return ""
-	}
-	return strings.TrimSpace(m.containerSpinner.View())
+	return strings.TrimSpace(m.spinner.View())
 }
 
 func (m model) renderHeader() string {

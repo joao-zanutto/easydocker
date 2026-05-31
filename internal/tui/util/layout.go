@@ -88,18 +88,35 @@ func ComputeFrameLayout(outerWidth, outerHeight int, frame lipgloss.Style) Frame
 	}
 }
 
+var framedCache struct {
+	content string
+	width   int
+	height  int
+	result  string
+}
+
 // RenderFramedContent wraps content in a frame with calculated dimensions.
 func RenderFramedContent(frame lipgloss.Style, layout FrameLayout, content string) string {
+	if framedCache.content == content && framedCache.width == layout.OuterWidth && framedCache.height == layout.OuterHeight {
+		return framedCache.result
+	}
+
 	innerWidth := max(1, layout.OuterWidth-frame.GetHorizontalFrameSize())
 	clampedLines := make([]string, 0)
 	for _, line := range strings.Split(content, "\n") {
 		clampedLines = append(clampedLines, ClampSingleLine(line, innerWidth))
 	}
 	content = strings.Join(clampedLines, "\n")
-	return frame.
+	result := frame.
 		Width(layout.OuterWidth).
 		Height(layout.ContentHeight).
 		MaxWidth(layout.OuterWidth).
 		MaxHeight(layout.OuterHeight).
 		Render(content)
+
+	framedCache.content = content
+	framedCache.width = layout.OuterWidth
+	framedCache.height = layout.OuterHeight
+	framedCache.result = result
+	return result
 }

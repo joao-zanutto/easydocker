@@ -1,9 +1,7 @@
 package viewer
 
 import (
-	"easydocker/internal/tui/ui/components"
-
-	"charm.land/bubbles/v2/viewport"
+	"charm.land/lipgloss/v2"
 )
 
 type Transition struct {
@@ -40,24 +38,18 @@ const (
 	ContentTypeInspect
 )
 
-type State struct {
-	ContainerID  string
-	Data         []string
-	Filter       components.FilterState
-	WrapLines    bool
-	InitialLoad  bool
-	Follow       bool
-	Viewport     viewport.Model
-	ContentType  ContentType
-	ResourceName string
+type Styles struct {
+	Breadcrumb   lipgloss.Style
+	FollowOn     lipgloss.Style
+	FollowOff    lipgloss.Style
+	Muted        lipgloss.Style
+	Divider      lipgloss.Style
+	SubpageFrame lipgloss.Style
 }
 
-func NewState() State {
-	vp := viewport.New(viewport.WithWidth(1), viewport.WithHeight(1))
-	vp.SetHorizontalStep(8)
-	vp.SetContent("")
-
-	filterState := components.NewFilterState()
-
-	return State{Follow: true, Viewport: vp, Filter: filterState}
+type TransitionMsg struct {
+	BackToBrowse bool
+	LaunchShell  bool
 }
+
+

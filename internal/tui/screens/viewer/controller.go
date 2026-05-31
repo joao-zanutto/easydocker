@@ -7,38 +7,38 @@ import (
 
 type Controller struct{}
 
-func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Transition {
+func (Controller) HandleKey(vp *Viewport, msg tea.KeyPressMsg, keys KeyMap) Transition {
 	switch {
 	case key.Matches(msg, keys.Right):
-		return handleHorizontalScroll(state, true)
+		return handleHorizontalScroll(vp, true)
 	case key.Matches(msg, keys.Left):
-		return handleHorizontalScroll(state, false)
+		return handleHorizontalScroll(vp, false)
 	case key.Matches(msg, keys.Up):
-		return handleVerticalScroll(state, -1, false)
+		return handleVerticalScroll(vp, -1, false)
 	case key.Matches(msg, keys.Down):
-		return handleVerticalScroll(state, 1, false)
+		return handleVerticalScroll(vp, 1, false)
 	case key.Matches(msg, keys.PageUp):
-		return handleVerticalScroll(state, -1, true)
+		return handleVerticalScroll(vp, -1, true)
 	case key.Matches(msg, keys.PageDown):
-		return handleVerticalScroll(state, 1, true)
+		return handleVerticalScroll(vp, 1, true)
 	case key.Matches(msg, keys.Home):
-		return handleHome(state)
+		return handleHome(vp)
 	case key.Matches(msg, keys.End):
-		return handleEnd(state)
+		return handleEnd(vp)
 	case key.Matches(msg, keys.ToggleWrap):
-		state.SetWrapLines(!state.WrapLines)
+		vp.SetWrapLines(!vp.WrapLines)
 		return Transition{}
 	case key.Matches(msg, keys.ToggleFollow):
-		state.SetFollow(!state.Follow)
+		vp.SetFollow(!vp.Follow)
 		return Transition{}
 	case key.Matches(msg, keys.OpenFilter):
-		state.Filter.Active = !state.Filter.Active
-		if state.Filter.Active {
-			state.Filter.Input.Focus()
+		vp.Filter.Active = !vp.Filter.Active
+		if vp.Filter.Active {
+			vp.Filter.Input.Focus()
 		} else {
-			state.Filter.Input.Blur()
-			state.Filter.Query = ""
-			state.Filter.Input.SetValue("")
+			vp.Filter.Input.Blur()
+			vp.Filter.Query = ""
+			vp.Filter.Input.SetValue("")
 		}
 		return Transition{}
 	case key.Matches(msg, keys.OpenShell):
@@ -48,49 +48,49 @@ func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Tran
 	}
 }
 
-func handleHorizontalScroll(state *State, right bool) Transition {
-	if state.WrapLines {
+func handleHorizontalScroll(vp *Viewport, right bool) Transition {
+	if vp.WrapLines {
 		return Transition{}
 	}
-	state.SetFollow(false)
+	vp.SetFollow(false)
 	step := 8
 	if right {
-		state.Viewport.ScrollRight(step)
+		vp.ScrollRight(step)
 	} else {
-		state.Viewport.ScrollLeft(step)
+		vp.ScrollLeft(step)
 	}
 	return Transition{}
 }
 
-func handleVerticalScroll(state *State, direction int, isPage bool) Transition {
-	state.SetFollow(false)
+func handleVerticalScroll(vp *Viewport, direction int, isPage bool) Transition {
+	vp.SetFollow(false)
 	if isPage {
 		if direction > 0 {
-			state.Viewport.PageDown()
+			vp.PageDown()
 		} else {
-			state.Viewport.PageUp()
+			vp.PageUp()
 		}
 	} else {
 		if direction > 0 {
-			state.Viewport.ScrollDown(1)
+			vp.ScrollDown(1)
 		} else {
-			state.Viewport.ScrollUp(1)
+			vp.ScrollUp(1)
 		}
 	}
-	if direction > 0 && state.Viewport.AtBottom() {
-		state.SetFollow(true)
+	if direction > 0 && vp.AtBottom() {
+		vp.SetFollow(true)
 	}
 	return Transition{}
 }
 
-func handleHome(state *State) Transition {
-	state.SetFollow(false)
-	state.Viewport.SetXOffset(0)
-	state.Viewport.GotoTop()
+func handleHome(vp *Viewport) Transition {
+	vp.SetFollow(false)
+	vp.SetXOffset(0)
+	vp.GotoTop()
 	return Transition{}
 }
 
-func handleEnd(state *State) Transition {
-	state.SetFollow(true)
+func handleEnd(vp *Viewport) Transition {
+	vp.SetFollow(true)
 	return Transition{}
 }

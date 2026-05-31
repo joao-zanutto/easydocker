@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
@@ -52,11 +54,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case *model:
 		m = *v
 	}
-	m = m.syncBrowseData()
+
 	return m, cmd
 }
 
 func (m *model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+	if time.Since(m.lastResizeTime) <= 50*time.Millisecond {
+		return m, nil
+	}
+	m.lastResizeTime = time.Now()
+	m.dataDirty = true
 	m.width = msg.Width
 	m.height = msg.Height
 	var cmd tea.Cmd
@@ -71,7 +78,7 @@ func (m *model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) 
 	return m, cmd
 }
 
-func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if msg.String() == "ctrl+c" {
 		return m, tea.Quit
 	}
@@ -87,6 +94,7 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.screen == shared.Main {
 		var cmd tea.Cmd
 		m.browse, cmd = m.browse.Update(msg)
+		m.dataDirty = true
 		return m, cmd
 	}
 
@@ -99,7 +107,8 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) handleBrowseTransition(msg browse.TransitionMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleBrowseTransition(msg browse.TransitionMsg) (tea.Model, tea.Cmd) {
+	m.dataDirty = true
 	if msg.OpenMenu {
 		m.menu.Active = true
 		m.menu.Cursor = 0
@@ -121,9 +130,9 @@ func (m model) handleBrowseTransition(msg browse.TransitionMsg) (tea.Model, tea.
 	return m, nil
 }
 
-func (m model) handleViewerTransition(msg viewer.TransitionMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleViewerTransition(msg viewer.TransitionMsg) (tea.Model, tea.Cmd) {
 	if msg.BackToBrowse {
-		m.screen = m.previousScreen
+		m.screen = m.popScreen()
 		return m, nil
 	}
 	if msg.LaunchShell {
@@ -134,7 +143,7 @@ func (m model) handleViewerTransition(msg viewer.TransitionMsg) (tea.Model, tea.
 	return m, nil
 }
 
-func (m model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	keys := menu.NewKeyMap()
 	m.help.Commands = m.buildHelpCommands()
 	transition := menu.Controller{}.HandleKey(&m.menu, &m.help, msg, keys)
@@ -144,7 +153,7 @@ func (m model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	keys := menu.NewKeyMap()
 	helpHeight := m.height * 9 / 10
 	bodyHeight := menu.HelpBodyHeight(helpHeight, m.styles.Menu.HelpFrame)
@@ -157,48 +166,23 @@ func (m model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{tickCmd()}
 	if m.shouldReloadSnapshotOnTick() {
 		cmds = append(cmds, loadDockerCmd(m.service))
 	}
 	if m.shouldLoadHistoryOnTick() {
-		tail := len(m.viewer.Data) + TailStep
-		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.SessionID, tail, viewer.SourceHistory))
+		tail := len(m.viewer.Vp.Data) + TailStep
+		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.Logs.SessionID, tail, viewer.SourceHistory))
 	} else if m.shouldPollLogsOnTick() {
 		tail := m.logsPollTail()
-		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.SessionID, tail, viewer.SourcePoll))
+		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.Logs.SessionID, tail, viewer.SourcePoll))
 	}
 	return m, tea.Batch(cmds...)
 }
 
-func (m model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
-	cmds := make([]tea.Cmd, 0, 3)
-
-	if m.shouldAnimateMetricsLoadingIndicator() {
-		var cmd tea.Cmd
-		m.metricsSpinner, cmd = m.metricsSpinner.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-
-		m.containerSpinner, cmd = m.containerSpinner.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	if m.shouldAnimateLogsLoadingIndicator() {
-		var cmd tea.Cmd
-		m.viewer.Spinner, cmd = m.viewer.Spinner.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	if len(cmds) == 0 {
-		return m, nil
-	}
-
-	return m, tea.Batch(cmds...)
+func (m *model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.spinner, cmd = m.spinner.Update(msg)
+	return m, cmd
 }

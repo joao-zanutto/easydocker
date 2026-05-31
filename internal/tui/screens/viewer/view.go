@@ -11,17 +11,8 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type Styles struct {
-	Breadcrumb   lipgloss.Style
-	FollowOn     lipgloss.Style
-	FollowOff    lipgloss.Style
-	Muted        lipgloss.Style
-	Divider      lipgloss.Style
-	SubpageFrame lipgloss.Style
-}
-
 type ViewModel struct {
-	State            *State
+	Vp               *Viewport
 	ContainerName    string
 	Breadcrumb       string
 	LineCount        *LineCountInfo
@@ -33,8 +24,9 @@ type ViewModel struct {
 	Styles           Styles
 	ContentType      ContentType
 	ResourceType     core.ResourceType
-	HistoryLoad      bool
+	Logs             LogsViewer
 }
+
 
 
 func RenderContent(vm ViewModel) string {
@@ -55,10 +47,10 @@ func RenderContent(vm ViewModel) string {
 	} else {
 		breadcrumb = util.ClampSingleLine(breadcrumb, layout.ContentWidth)
 	}
-	contentHeight := VisibleRowsForContent(layout.ContentHeight, vm.State.Filter.Active)
+	contentHeight := VisibleRowsForContent(layout.ContentHeight, vm.Vp.Filter.Active)
 
-	if vm.State.Filter.Active {
-		filterInput := vm.State.Filter.Input
+	if vm.Vp.Filter.Active {
+		filterInput := vm.Vp.Filter.Input
 		filterInput.SetWidth(components.DynamicInputWidth(filterInput.Prompt, layout.ContentWidth))
 		filterHeader := components.RenderFilterHeader(filterInput.View(), layout.ContentWidth, vm.Styles.Divider)
 		header := renderHeader(headerVM, breadcrumb)
@@ -82,12 +74,12 @@ func VisibleRowsForContent(contentHeight int, filterActive bool) int {
 
 func renderHeader(vm ViewModel, breadcrumb string) string {
 	wrap := "off"
-	if vm.State.WrapLines {
+	if vm.Vp.WrapLines {
 		wrap = "on"
 	}
 	left := vm.Styles.Breadcrumb.Render(breadcrumb)
 	wrapText := vm.Styles.FollowOff.Render(wrap)
-	if vm.State.WrapLines {
+	if vm.Vp.WrapLines {
 		wrapText = vm.Styles.FollowOn.Render(wrap)
 	}
 
@@ -96,7 +88,7 @@ func renderHeader(vm ViewModel, breadcrumb string) string {
 	if vm.ContentType == ContentTypeLogs {
 		followLabel := "follow:off"
 		followStyle := vm.Styles.FollowOff
-		if vm.State.Follow {
+		if vm.Vp.Follow {
 			followLabel = "follow:on"
 			followStyle = vm.Styles.FollowOn
 		}
@@ -114,7 +106,7 @@ func renderHeader(vm ViewModel, breadcrumb string) string {
 
 func renderPanel(vm ViewModel, width, height int) string {
 	contentWidth := max(1, width)
-	if vm.State.InitialLoad {
+	if vm.Vp.InitialLoad {
 		loadingMsg := vm.LoadingMessage
 		if loadingMsg == "" {
 			loadingMsg = "Loading..."
@@ -122,21 +114,21 @@ func renderPanel(vm ViewModel, width, height int) string {
 		return strings.Join(util.ClipAndPadLines([]string{renderLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator, loadingMsg)}, height, ""), "\n")
 	}
 
-	filtered := FilterLines(vm.State.Data, vm.State.Filter.Query)
+	filtered := FilterLines(vm.Vp.Data, vm.Vp.Filter.Query)
 	if len(filtered) == 0 {
 		empty := vm.EmptyMessage
 		if empty == "" {
 			empty = "No content available."
 		}
-		if strings.TrimSpace(vm.State.Filter.Query) != "" {
+		if strings.TrimSpace(vm.Vp.Filter.Query) != "" {
 			empty = "No lines match current filter."
 		}
 		return strings.Join(util.ClipAndPadLines([]string{util.ClampSingleLine(vm.Styles.Muted.Render(empty), contentWidth)}, height, ""), "\n")
 	}
 
-	lines := strings.Split(vm.State.Viewport.View(), "\n")
-	lines = renderHorizontalScrollIndicators(vm.State, lines, filtered, contentWidth, vm.Styles.Muted.Reverse(true))
-	if vm.ContentType == ContentTypeLogs && vm.HistoryLoad {
+	lines := strings.Split(vm.Vp.View(), "\n")
+	lines = renderHorizontalScrollIndicators(vm.Vp, lines, filtered, contentWidth, vm.Styles.Muted.Reverse(true))
+	if vm.ContentType == ContentTypeLogs && vm.Logs.HistoryLoad {
 		msg := vm.LoadingMessage
 		if msg == "" {
 			msg = "Loading more..."
@@ -158,18 +150,18 @@ func renderLoadingLine(style lipgloss.Style, width int, indicator string, messag
 	return util.ClampSingleLine(style.Render(prefix+message), width)
 }
 
-func renderHorizontalScrollIndicators(state *State, lines, renderLines []string, width int, indicatorStyle lipgloss.Style) []string {
-	if state.WrapLines || width <= 0 || len(lines) == 0 || len(renderLines) == 0 {
+func renderHorizontalScrollIndicators(vp *Viewport, lines, renderLines []string, width int, indicatorStyle lipgloss.Style) []string {
+	if vp.WrapLines || width <= 0 || len(lines) == 0 || len(renderLines) == 0 {
 		return lines
 	}
 
-	start, end := ViewportRange(state, len(renderLines))
+	start, end := ViewportRange(vp, len(renderLines))
 	visible := renderLines[start:end]
 	if len(visible) == 0 {
 		return lines
 	}
 
-	xOffset := max(0, state.Viewport.XOffset())
+	xOffset := max(0, vp.XOffset())
 	anyCanScrollLeft := xOffset > 0
 	out := append([]string(nil), lines...)
 	for i := 0; i < len(out) && i < len(visible); i++ {

@@ -142,21 +142,23 @@ type ContainerMetrics struct {
 }
 
 func ApplyMetricsToContainers(rows []ContainerRow, metricsByID map[string]ContainerMetrics) []ContainerRow {
-	updated := make([]ContainerRow, len(rows))
-	copy(updated, rows)
-	for index, row := range updated {
-		metrics, ok := metricsByID[row.FullID]
+	idx := make(map[string]int, len(rows))
+	for i, row := range rows {
+		idx[row.FullID] = i
+	}
+	for id, metrics := range metricsByID {
+		i, ok := idx[id]
 		if !ok {
 			continue
 		}
-		updated[index].CPUPercent = metrics.CPUPercent
-		updated[index].MemoryPercent = metrics.MemoryPercent
-		updated[index].MemoryUsage = metrics.MemoryUsage
-		updated[index].MemoryLimit = metrics.MemoryLimit
-		updated[index].MemoryUsageBytes = metrics.MemoryUsageBytes
-		updated[index].MemoryLimitBytes = metrics.MemoryLimitBytes
+		rows[i].CPUPercent = metrics.CPUPercent
+		rows[i].MemoryPercent = metrics.MemoryPercent
+		rows[i].MemoryUsage = metrics.MemoryUsage
+		rows[i].MemoryLimit = metrics.MemoryLimit
+		rows[i].MemoryUsageBytes = metrics.MemoryUsageBytes
+		rows[i].MemoryLimitBytes = metrics.MemoryLimitBytes
 	}
-	return updated
+	return rows
 }
 
 func PreserveRunningContainerMetrics(currentRows, previousRows []ContainerRow) []ContainerRow {
@@ -169,9 +171,8 @@ func PreserveRunningContainerMetrics(currentRows, previousRows []ContainerRow) [
 		previousByID[row.FullID] = row
 	}
 
-	merged := make([]ContainerRow, len(currentRows))
-	copy(merged, currentRows)
-	for index, row := range merged {
+	for index := range currentRows {
+		row := &currentRows[index]
 		if row.State != StateRunning {
 			continue
 		}
@@ -182,13 +183,13 @@ func PreserveRunningContainerMetrics(currentRows, previousRows []ContainerRow) [
 		if !ok || previous.MemoryUsage == MetricsNA || previous.MemoryUsage == MetricsLoading {
 			continue
 		}
-		merged[index].CPUPercent = previous.CPUPercent
-		merged[index].MemoryPercent = previous.MemoryPercent
-		merged[index].MemoryUsage = previous.MemoryUsage
-		merged[index].MemoryLimit = previous.MemoryLimit
-		merged[index].MemoryUsageBytes = previous.MemoryUsageBytes
-		merged[index].MemoryLimitBytes = previous.MemoryLimitBytes
+		row.CPUPercent = previous.CPUPercent
+		row.MemoryPercent = previous.MemoryPercent
+		row.MemoryUsage = previous.MemoryUsage
+		row.MemoryLimit = previous.MemoryLimit
+		row.MemoryUsageBytes = previous.MemoryUsageBytes
+		row.MemoryLimitBytes = previous.MemoryLimitBytes
 	}
 
-	return merged
+	return currentRows
 }

@@ -33,3 +33,16 @@ func Fail(err error) Transition {
 func Finish(err error) (Transition, bool) {
 	return Transition{Loading: false, Stage: StageIdle, Err: err}, err == nil
 }
+
+func (s Stage) Next() Stage {
+	switch s {
+	case StageContainers:
+		return StageResources
+	case StageResources:
+		return StageMetrics
+	case StageMetrics:
+		return StageIdle
+	default:
+		return StageIdle
+	}
+}
