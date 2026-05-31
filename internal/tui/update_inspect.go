@@ -14,7 +14,7 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	m.previousScreen = m.screen
-	m.screen = shared.Inspect
+	m.screen = shared.InspectViewer
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.viewer.Follow = false

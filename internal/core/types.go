@@ -1,7 +1,6 @@
 package core
 
 import (
-	"strings"
 	"time"
 )
 
@@ -12,6 +11,38 @@ const (
 	ResourceImage
 	ResourceNetwork
 	ResourceVolume
+)
+
+type ContainerState string
+
+const (
+	StateRunning   ContainerState = "running"
+	StateExited    ContainerState = "exited"
+	StatePaused    ContainerState = "paused"
+	StateCreated   ContainerState = "created"
+	StateRemoving  ContainerState = "removing"
+	StateDead      ContainerState = "dead"
+	StateRestarting ContainerState = "restarting"
+)
+
+func (r ResourceType) String() string {
+	switch r {
+	case ResourceContainer:
+		return "Containers"
+	case ResourceImage:
+		return "Images"
+	case ResourceNetwork:
+		return "Networks"
+	case ResourceVolume:
+		return "Volumes"
+	default:
+		return "Unknown"
+	}
+}
+
+const (
+	MetricsLoading = "loading"
+	MetricsNA      = "-"
 )
 
 type Snapshot struct {
@@ -35,7 +66,7 @@ type ContainerRow struct {
 	ComposeWorkingDir      string
 	ComposeConfigFiles     string
 	Image                  string
-	State                  string
+	State                  ContainerState
 	Status                 string
 	Ports                  string
 	Command                string
@@ -98,7 +129,7 @@ type VolumeRow struct {
 	Size       string
 	RefCount   int64
 	Created    string
-	CreatedAt  string
+	CreatedAt  time.Time
 }
 
 type ContainerMetrics struct {
@@ -141,14 +172,14 @@ func PreserveRunningContainerMetrics(currentRows, previousRows []ContainerRow) [
 	merged := make([]ContainerRow, len(currentRows))
 	copy(merged, currentRows)
 	for index, row := range merged {
-		if !strings.EqualFold(row.State, "running") {
+		if row.State != StateRunning {
 			continue
 		}
-		if row.CPUPercent >= 0 && row.MemoryUsage != "-" && row.MemoryUsage != "loading" {
+		if row.CPUPercent >= 0 && row.MemoryUsage != MetricsNA && row.MemoryUsage != MetricsLoading {
 			continue
 		}
 		previous, ok := previousByID[row.FullID]
-		if !ok || previous.MemoryUsage == "-" || previous.MemoryUsage == "loading" {
+		if !ok || previous.MemoryUsage == MetricsNA || previous.MemoryUsage == MetricsLoading {
 			continue
 		}
 		merged[index].CPUPercent = previous.CPUPercent

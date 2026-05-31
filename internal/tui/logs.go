@@ -15,7 +15,7 @@ const (
 
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	m.previousScreen = m.screen
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.viewer.ContainerID = container.FullID

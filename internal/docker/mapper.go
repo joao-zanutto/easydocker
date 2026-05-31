@@ -17,7 +17,7 @@ import (
 func mapContainerRow(item types.Container) core.ContainerRow {
 	memoryUsage := "-"
 	cpuPercent := float64(0)
-	if strings.EqualFold(item.State, "running") {
+	if core.ContainerState(item.State) == core.StateRunning {
 		cpuPercent = -1
 	}
 
@@ -30,7 +30,7 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 		ComposeWorkingDir:      strings.TrimSpace(item.Labels["com.docker.compose.project.working_dir"]),
 		ComposeConfigFiles:     strings.TrimSpace(item.Labels["com.docker.compose.project.config_files"]),
 		Image:                  item.Image,
-		State:                  item.State,
+		State:                  core.ContainerState(item.State),
 		Status:                 item.Status,
 		Ports:                  formatPorts(item.Ports),
 		Command:                cleanCommand(item.Command),
@@ -73,6 +73,7 @@ func mapVolumeRow(item *volume.Volume) core.VolumeRow {
 		refCount = item.UsageData.RefCount
 		size = item.UsageData.Size
 	}
+	createdAt, _ := time.Parse(time.RFC3339Nano, item.CreatedAt)
 	return core.VolumeRow{
 		Name:       item.Name,
 		Driver:     item.Driver,
@@ -81,7 +82,7 @@ func mapVolumeRow(item *volume.Volume) core.VolumeRow {
 		Size:       humanBytesUnknown(size),
 		RefCount:   refCount,
 		Created:    humanTimestamp(item.CreatedAt),
-		CreatedAt:  item.CreatedAt,
+		CreatedAt:  createdAt,
 	}
 }
 

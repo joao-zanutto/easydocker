@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,7 +21,7 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 
 	runningRows := make([]core.ContainerRow, 0, len(rows))
 	for _, row := range rows {
-		if strings.EqualFold(row.State, "running") {
+		if row.State == core.StateRunning {
 			runningRows = append(runningRows, row)
 		}
 	}

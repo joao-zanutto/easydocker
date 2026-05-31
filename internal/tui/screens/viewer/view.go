@@ -36,7 +36,7 @@ type ViewModel struct {
 	HistoryLoad      bool
 }
 
-const filterHeaderHeight = 2
+const filterHeaderHeight = components.FilterHeaderHeight
 
 func RenderContent(vm ViewModel) string {
 	if vm.Width == 0 || vm.Height == 0 {

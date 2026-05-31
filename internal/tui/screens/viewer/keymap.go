@@ -41,7 +41,7 @@ func NewKeyMap() KeyMap {
 	}
 }
 
-func (k KeyMap) ShortHelp(resourceType core.ResourceType, contentType ContentType, containerState string) []key.Binding {
+func (k KeyMap) ShortHelp(resourceType core.ResourceType, contentType ContentType, containerState core.ContainerState) []key.Binding {
 	bindings := []key.Binding{
 		k.ToggleWrap, k.Back,
 	}

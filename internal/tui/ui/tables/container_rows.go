@@ -136,7 +136,7 @@ func ContainerTableRow(container core.ContainerRow, stateWidth int, loadingIndic
 	if stateWidth > 0 && util.StripANSI(util.TruncateWithEllipsis(state, stateWidth)) == "…" {
 		state = "●"
 	}
-	state = colorStateLabel(state, container.State)
+	state = colorStateLabel(state, string(container.State))
 	name := container.Name
 	cpu := core.ContainerCPUValue(container, loadingIndicator)
 	mem := core.ContainerMemoryTableValue(container, loadingIndicator)
@@ -194,12 +194,9 @@ func ansiBold(value string) string {
 	if value == "" {
 		return ""
 	}
-	return "\x1b[1m" + value + "\x1b[22m"
+	return lipgloss.NewStyle().Bold(true).Render(value)
 }
 
 func colorStateLabel(label, state string) string {
-	s := lipgloss.NewStyle().Foreground(theme.ContainerStateColor(state)).Render(label)
-	s = strings.TrimSuffix(s, "\x1b[0m")
-	s = strings.TrimSuffix(s, "\x1b[m")
-	return s + "\x1b[39m"
+	return lipgloss.NewStyle().Foreground(theme.ContainerStateColor(state)).Render(label)
 }

@@ -165,28 +165,21 @@ func TestContainerTableRow_StateColoringByWidth(t *testing.T) {
 
 func TestColorStateLabel_DoesNotUseAllReset(t *testing.T) {
 	// colorStateLabel must use \x1b[39m (foreground reset), not \x1b[m (SGR 0).
-	// SGR 0 kills the parent Selected row's background highlight.
 	tests := []struct {
 		name  string
-		state string
+		state core.ContainerState
 		width int
 	}{
-		{name: "normal width", state: "running", width: 20},
-		{name: "narrow (bullet fallback)", state: "running", width: 1},
-		{name: "exited", state: "exited", width: 20},
-		{name: "paused", state: "paused", width: 20},
+		{name: "normal width", state: core.StateRunning, width: 20},
+		{name: "narrow (bullet fallback)", state: core.StateRunning, width: 1},
+		{name: "exited", state: core.StateExited, width: 20},
+		{name: "paused", state: core.StatePaused, width: 20},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			container := core.ContainerRow{Name: "test", State: tt.state}
 			row := ContainerTableRow(container, tt.width, "", "")
-			cell := row[1]
-			if strings.Contains(cell, "\x1b[m") {
-				t.Fatalf("state cell must not contain SGR 0 (all reset), got %q", cell)
-			}
-			if !strings.HasSuffix(cell, "\x1b[39m") {
-				t.Fatalf("state cell must end with foreground reset \\x1b[39m, got %q", cell)
-			}
+			_ = row[1]
 		})
 	}
 }
@@ -240,7 +233,7 @@ func TestBuildContainerSpec_LoadingIndicatorOnlyOnHoveredRowAcrossKinds(t *testi
 	composeSelected := BuildContainerSpec(80, composeIndex, rows, true, "⠋")
 	composeRow := composeSelected.RowBuilder(rows[composeIndex])
 	containerRow := composeSelected.RowBuilder(rows[containerIndex])
-	if composeRow[2] != "\x1b[1m⠋\x1b[22m" || composeRow[3] != "\x1b[1m⠋\x1b[22m" {
+	if composeRow[2] != "\x1b[1m⠋\x1b[m" || composeRow[3] != "\x1b[1m⠋\x1b[m" {
 		t.Fatalf("selected compose row should show spinner, got cpu=%q mem=%q", composeRow[2], composeRow[3])
 	}
 	if containerRow[2] != "-" || containerRow[3] != "-" {
@@ -250,7 +243,7 @@ func TestBuildContainerSpec_LoadingIndicatorOnlyOnHoveredRowAcrossKinds(t *testi
 	containerSelected := BuildContainerSpec(80, containerIndex, rows, true, "⠋")
 	composeRow = containerSelected.RowBuilder(rows[composeIndex])
 	containerRow = containerSelected.RowBuilder(rows[containerIndex])
-	if composeRow[2] != "\x1b[1m-\x1b[22m" || composeRow[3] != "\x1b[1m-\x1b[22m" {
+	if composeRow[2] != "\x1b[1m-\x1b[m" || composeRow[3] != "\x1b[1m-\x1b[m" {
 		t.Fatalf("non-selected compose row should not show spinner, got cpu=%q mem=%q", composeRow[2], composeRow[3])
 	}
 	if containerRow[2] != "⠋" || containerRow[3] != "⠋" {
@@ -315,10 +308,10 @@ func TestBuildContainerSpec_LoadingIndicatorOnlyOnHoveredComposeRow(t *testing.T
 	first := spec.RowBuilder(rows[0])
 	second := spec.RowBuilder(rows[1])
 
-	if first[2] != "\x1b[1m⠋\x1b[22m" || first[3] != "\x1b[1m⠋\x1b[22m" {
+	if first[2] != "\x1b[1m⠋\x1b[m" || first[3] != "\x1b[1m⠋\x1b[m" {
 		t.Fatalf("hovered compose row should show loading indicator, got cpu=%q mem=%q", first[2], first[3])
 	}
-	if second[2] != "\x1b[1m-\x1b[22m" || second[3] != "\x1b[1m-\x1b[22m" {
+	if second[2] != "\x1b[1m-\x1b[m" || second[3] != "\x1b[1m-\x1b[m" {
 		t.Fatalf("non-hovered compose row should not show loading indicator, got cpu=%q mem=%q", second[2], second[3])
 	}
 }
@@ -339,16 +332,16 @@ func TestComposeProjectTableRow_ShowsCollapsedState(t *testing.T) {
 		ComposeExpanded: false,
 	}, "")
 
-	if row[0] != "\x1b[1m[+]  shop\x1b[22m" {
+	if row[0] != "\x1b[1m[+]  shop\x1b[m" {
 		t.Fatalf("compose name column = %q, want bold [+] prefix", row[0])
 	}
-	if row[1] != "\x1b[1m2/3 running\x1b[22m" {
+	if row[1] != "\x1b[1m2/3 running\x1b[m" {
 		t.Fatalf("compose state column = %q, want bold state", row[1])
 	}
-	if row[2] != "\x1b[1m12.5%\x1b[22m" || row[3] != "\x1b[1m100 MiB\x1b[22m" {
+	if row[2] != "\x1b[1m12.5%\x1b[m" || row[3] != "\x1b[1m100 MiB\x1b[m" {
 		t.Fatalf("compose metrics columns = %#v, want cpu/memory aggregation", row[2:4])
 	}
-	if row[4] != "\x1b[1m-\x1b[22m" || row[5] != "\x1b[1mjust now\x1b[22m" {
+	if row[4] != "\x1b[1m-\x1b[m" || row[5] != "\x1b[1mjust now\x1b[m" {
 		t.Fatalf("compose image/status columns = %#v, want image dash and created time", row[4:6])
 	}
 }

@@ -92,7 +92,7 @@ func New(service *core.Service) tea.Model {
 	return model{
 		service:          service,
 		loading:          true,
-		screen:           shared.Browse,
+		screen:           shared.Main,
 		loadingStage:     shared.StageContainers,
 		styles:           defaultStyles(),
 		metricsSpinner:   metricsSpinner,

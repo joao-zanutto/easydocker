@@ -64,7 +64,7 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 		updated, _ = current.Update(msg)
 		current = unwrapModel(updated)
 	}
-	if current.screen != shared.Logs {
+	if current.screen != shared.LogViewer {
 		t.Fatalf("screen = %v, want logs", current.screen)
 	}
 	if current.viewer.ContainerID != "ctr-1" {
@@ -80,7 +80,7 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 			current = unwrapModel(updated)
 		}
 	}
-	if current.screen != shared.Browse {
+	if current.screen != shared.Main {
 		t.Fatalf("screen = %v, want browse", current.screen)
 	}
 	if current.browse.ActiveTab != tabContainers {
@@ -92,7 +92,7 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 	m := model{
 		width:  100,
 		height: 28,
-		screen: shared.Browse,
+		screen: shared.Main,
 		styles: defaultStyles(),
 		browse: browse.Model{
 			ActiveTab: tabContainers,
@@ -115,7 +115,7 @@ func TestIntegration_ViewRendersBrowseAndLogsModes(t *testing.T) {
 		t.Fatalf("browse view missing header")
 	}
 
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.viewer.ContainerID = "ctr-1"
 	m.viewer.Data = []string{"line-1", "line-2"}
 	m.viewer.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
@@ -258,7 +258,7 @@ func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
 	m := unwrapModel(New(nil))
 	m.width = 100
 	m.height = 30
-	m.screen = shared.Browse
+	m.screen = shared.Main
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	current := unwrapModel(updated)
@@ -290,7 +290,7 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 	m.height = 24
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -327,7 +327,7 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 	m.height = 24
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -363,7 +363,7 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 	m := unwrapModel(New(nil))
 	m.viewer.Viewport.SetXOffset(24)
-	m.screen = shared.Browse
+	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
 
@@ -383,7 +383,7 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 
 	current.viewer.Viewport.SetXOffset(32)
 	current.browse.ActiveTab = tabContainers
-	current.screen = shared.Browse
+	current.screen = shared.Main
 	current.browse.Snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
 
 	updated, cmd = current.handleInspectTransition()
@@ -405,7 +405,7 @@ func TestIntegration_FilterPromptIcon(t *testing.T) {
 
 func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 	m := unwrapModel(New(nil))
-	m.screen = shared.Browse
+	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
 	m.browse.ContainerCursor = 0
@@ -435,7 +435,7 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 
 func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 	m := unwrapModel(New(nil))
-	m.screen = shared.Browse
+	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
@@ -465,7 +465,7 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 
 func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 	m := unwrapModel(New(nil))
-	m.screen = shared.Browse
+	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
@@ -477,7 +477,7 @@ func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 	if cmd != nil {
 		t.Fatalf("enter on compose project row should not open logs command")
 	}
-	if after.screen != shared.Browse {
+	if after.screen != shared.Main {
 		t.Fatalf("screen = %v, want browse", after.screen)
 	}
 	if got := after.browse.ItemCountForTab(tabContainers); got != 2 {
@@ -489,7 +489,7 @@ func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.
 	m := unwrapModel(New(nil))
 	m.width = 120
 	m.height = 34
-	m.screen = shared.Browse
+	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
@@ -512,7 +512,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 	m := unwrapModel(New(nil))
 	m.width = 120
 	m.height = 34
-	m.screen = shared.Browse
+	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
@@ -534,7 +534,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 
 func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
 	m := unwrapModel(New(nil))
-	m.screen = shared.Browse
+	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
 	m.browse.Filter.Query = "redis"
@@ -560,7 +560,7 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 	m.height = 34
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -608,7 +608,7 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 	m.height = 34
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -644,7 +644,7 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 	m.height = 34
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -680,7 +680,7 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 	m.height = 34
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.browse.ActiveTab = tabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
@@ -722,7 +722,7 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 
 func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 	m := unwrapModel(New(nil))
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.viewer.ContainerID = "ctr-1"
 	m.viewer.Data = make([]string, 220)
 	for i := range m.viewer.Data {
@@ -765,7 +765,7 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 		t.Fatalf("should poll when not at top and no load is active")
 	}
 
-	m.screen = shared.Browse
+	m.screen = shared.Main
 	if m.shouldPollLogsOnTick() {
 		t.Fatalf("should not poll outside logs screen")
 	}
@@ -773,7 +773,7 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 
 func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 	m := unwrapModel(New(nil))
-	m.screen = shared.Logs
+	m.screen = shared.LogViewer
 	m.viewer.ContainerID = "ctr-1"
 	m.viewer.Data = make([]string, 220)
 	for i := range m.viewer.Data {

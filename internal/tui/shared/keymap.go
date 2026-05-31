@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"easydocker/internal/core"
+
 	"charm.land/bubbles/v2/key"
 )
 
@@ -83,7 +85,6 @@ func SlashBinding(help string) key.Binding {
 	return ActionBinding("/", help)
 }
 
-func CanOpenShell(state string) bool {
-	// Only running containers support shell execution
-	return state == "running"
+func CanOpenShell(state core.ContainerState) bool {
+	return state == core.StateRunning
 }

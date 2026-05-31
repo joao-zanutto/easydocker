@@ -22,7 +22,7 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		}
 		project.Containers = append(project.Containers, container)
 		project.ContainerCount++
-		if strings.EqualFold(container.State, "running") {
+		if container.State == StateRunning {
 			project.RunningCount++
 		}
 		if container.Healthy {

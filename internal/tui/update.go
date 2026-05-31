@@ -61,7 +61,7 @@ func (m *model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) 
 	m.height = msg.Height
 	var cmd tea.Cmd
 	m.browse, cmd = m.browse.Update(msg)
-	if m.screen == shared.Logs || m.screen == shared.Inspect {
+	if m.screen == shared.LogViewer || m.screen == shared.InspectViewer {
 		var vcmd tea.Cmd
 		m.viewer, vcmd = m.viewer.Update(msg)
 		if vcmd != nil {
@@ -84,13 +84,13 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleMenuKey(msg)
 	}
 
-	if m.screen == shared.Browse {
+	if m.screen == shared.Main {
 		var cmd tea.Cmd
 		m.browse, cmd = m.browse.Update(msg)
 		return m, cmd
 	}
 
-	if m.screen == shared.Logs || m.screen == shared.Inspect {
+	if m.screen == shared.LogViewer || m.screen == shared.InspectViewer {
 		var cmd tea.Cmd
 		m.viewer, cmd = m.viewer.Update(msg)
 		return m, cmd

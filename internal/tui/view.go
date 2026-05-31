@@ -54,7 +54,7 @@ func (m model) renderMain(height int) string {
 	totalWidth := max(1, m.width)
 	totalHeight := max(1, height)
 
-	if m.screen == shared.Logs && m.browse.ActiveTab == tabContainers {
+	if m.screen == shared.LogViewer && m.browse.ActiveTab == tabContainers {
 		container, ok := m.selectedLogsContainer()
 		if !ok {
 			return m.styles.ErrorText.Render("Selected container is no longer available.")
@@ -62,7 +62,7 @@ func (m model) renderMain(height int) string {
 		return m.renderLogsContent(container, totalWidth, totalHeight)
 	}
 
-	if m.screen == shared.Inspect {
+	if m.screen == shared.InspectViewer {
 		return m.renderInspectContent(totalWidth, totalHeight)
 	}
 
@@ -204,15 +204,15 @@ func (m model) renderContainerState(container core.ContainerRow) string {
 	return m.stateStyle(container.State).Render(core.ContainerStateText(container))
 }
 
-func (m model) stateStyle(state string) lipgloss.Style {
-	switch strings.ToLower(state) {
-	case "running":
+func (m model) stateStyle(state core.ContainerState) lipgloss.Style {
+	switch state {
+	case core.StateRunning:
 		return m.styles.StateRun
-	case "paused", "restarting", "created":
+	case core.StatePaused, core.StateRestarting, core.StateCreated:
 		return m.styles.StateWarn
-	case "exited", "stopped":
+	case core.StateExited:
 		return m.styles.StateStop
-	case "dead":
+	case core.StateDead:
 		return m.styles.StateDead
 	default:
 		return m.styles.StateOther

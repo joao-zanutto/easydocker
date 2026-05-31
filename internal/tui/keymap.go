@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
@@ -14,10 +15,10 @@ import (
 )
 
 func (m model) footerKeyMap() help.KeyMap {
-	if m.screen == shared.Logs || m.screen == shared.Inspect {
+	if m.screen == shared.LogViewer || m.screen == shared.InspectViewer {
 		viewerKeys := viewer.NewKeyMap()
 		contentType := viewer.ContentTypeLogs
-		if m.screen == shared.Inspect {
+		if m.screen == shared.InspectViewer {
 			contentType = viewer.ContentTypeInspect
 		}
 		if m.viewer.Filter.Active {
@@ -27,7 +28,7 @@ func (m model) footerKeyMap() help.KeyMap {
 			}
 			return footerKeyMap{bindings: bindings}
 		}
-		containerState := ""
+		var containerState core.ContainerState
 		if m.browse.ActiveTab == tabContainers {
 			if c, ok := m.selectedContainer(); ok {
 				containerState = c.State
