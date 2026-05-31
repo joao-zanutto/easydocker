@@ -136,7 +136,7 @@ func ContainerTableRow(container core.ContainerRow, stateWidth int, loadingIndic
 	if stateWidth > 0 && util.StripANSI(util.TruncateWithEllipsis(state, stateWidth)) == "…" {
 		state = "●"
 	}
-	state = colorStateLabel(state, container.State)
+	state = colorStateLabel(state, string(container.State))
 	name := container.Name
 	cpu := core.ContainerCPUValue(container, loadingIndicator)
 	mem := core.ContainerMemoryTableValue(container, loadingIndicator)

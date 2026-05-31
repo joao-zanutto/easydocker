@@ -20,55 +20,44 @@ func HumanBytes(size uint64) string {
 
 func ContainerCPUValue(container ContainerRow, loadingIndicator string) string {
 	if container.CPUPercent < 0 {
-		if strings.EqualFold(container.State, "running") {
+		if container.State == StateRunning {
 			return metricsLoadingValue(loadingIndicator)
 		}
-		return "-"
+		return MetricsNA
 	}
 	if container.CPUPercent < 0.05 {
-		if strings.EqualFold(container.State, "running") {
+		if container.State == StateRunning {
 			return "0.0%"
 		}
-		return "-"
+		return MetricsNA
 	}
 	return fmt.Sprintf("%.1f%%", container.CPUPercent)
 }
 
 func ContainerMemoryTableValue(container ContainerRow, loadingIndicator string) string {
-	if container.MemoryUsage == "-" || strings.EqualFold(container.MemoryUsage, "loading") {
-		if strings.EqualFold(container.State, "running") {
+	if container.MemoryUsage == MetricsNA || container.MemoryUsage == MetricsLoading {
+		if container.State == StateRunning {
 			return metricsLoadingValue(loadingIndicator)
 		}
-		return "-"
+		return MetricsNA
 	}
 	return container.MemoryUsage
 }
 
 func metricsLoadingValue(loadingIndicator string) string {
 	if strings.TrimSpace(loadingIndicator) == "" {
-		return "-"
+		return MetricsNA
 	}
 	return loadingIndicator
 }
 
 func ResourceLabel(rt ResourceType) string {
-	switch rt {
-	case ResourceContainer:
-		return "Containers"
-	case ResourceImage:
-		return "Images"
-	case ResourceNetwork:
-		return "Networks"
-	case ResourceVolume:
-		return "Volumes"
-	default:
-		return "Containers"
-	}
+	return rt.String()
 }
 
 func ContainerStateText(container ContainerRow) string {
-	if container.Healthy && container.State == "running" {
+	if container.Healthy && container.State == StateRunning {
 		return "● healthy"
 	}
-	return "● " + container.State
+	return "● " + string(container.State)
 }

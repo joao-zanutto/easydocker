@@ -62,7 +62,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
-		m.SyncFromData(m.visibleWidth(), m.visibleRows())
+		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
@@ -119,10 +119,10 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		currentStart, _ := VisibleContentRange(&m.State, logList)
 
 		m.SetWrapLines(!m.WrapLines)
-		m.SyncFromData(m.visibleWidth(), m.visibleRows())
+		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 
 		if m.WrapLines {
-			w := m.visibleWidth()
+			w := m.VisibleWidth()
 			row := 0
 			for i := 0; i < currentStart && i < len(logList); i++ {
 				row += WrappedRowCount(SanitizeLine(logList[i]), w)
@@ -141,7 +141,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 
 	if key.Matches(msg, keys.OpenFilter) {
 		m.OpenFilter()
-		m.SyncFromData(m.visibleWidth(), m.visibleRows())
+		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
 	}
 
@@ -150,7 +150,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	transition := Controller{}.HandleKey(&m.State, msg, keys)
-	m.SyncFromData(m.visibleWidth(), m.visibleRows())
+	m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 
 	if transition.LaunchShell {
 		return m, func() tea.Msg { return TransitionMsg{LaunchShell: true} }
@@ -162,17 +162,17 @@ func (m Model) handleFilterKey(msg tea.KeyPressMsg, keys KeyMap) (Model, tea.Cmd
 	switch {
 	case key.Matches(msg, keys.Back):
 		m.CloseFilter(true)
-		m.SyncFromData(m.visibleWidth(), m.visibleRows())
+		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
 	case msg.String() == "enter":
 		m.CloseFilter(false)
-		m.SyncFromData(m.visibleWidth(), m.visibleRows())
+		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
 	default:
 		var cmd tea.Cmd
 		m.Filter.Input, cmd = m.Filter.Input.Update(msg)
 		m.Filter.Query = m.Filter.Input.Value()
-		m.SyncFromData(m.visibleWidth(), m.visibleRows())
+		m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, cmd
 	}
 }
@@ -199,16 +199,8 @@ func (m Model) handleContentMsg(msg ContentMsg) (Model, tea.Cmd) {
 	default:
 		m.applyPollWithMerge(msg.Data)
 	}
-	m.SyncFromData(m.visibleWidth(), m.visibleRows())
+	m.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 	return m, nil
-}
-
-func (m Model) visibleWidth() int {
-	return max(1, m.Width-m.Styles.SubpageFrame.GetHorizontalFrameSize())
-}
-
-func (m Model) visibleRows() int {
-	return VisibleRowsForContent(m.Height, m.Filter.Active)
 }
 
 func (m Model) loadingIndicator() string {

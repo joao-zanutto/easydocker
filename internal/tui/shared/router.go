@@ -4,7 +4,7 @@ package shared
 type Screen int
 
 const (
-	Browse Screen = iota
-	Logs
-	Inspect
+	Main Screen = iota
+	LogViewer
+	InspectViewer
 )

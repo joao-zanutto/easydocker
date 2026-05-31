@@ -14,18 +14,7 @@ const (
 )
 
 func (t Tab) String() string {
-	switch t {
-	case TabContainers:
-		return "Containers"
-	case TabImages:
-		return "Images"
-	case TabNetworks:
-		return "Networks"
-	case TabVolumes:
-		return "Volumes"
-	default:
-		return "Unknown"
-	}
+	return TabToResourceType(t).String()
 }
 
 func TabToResourceType(tab Tab) core.ResourceType {

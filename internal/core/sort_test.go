@@ -17,7 +17,7 @@ func TestContainerStateRank(t *testing.T) {
 		{name: "restarting", container: ContainerRow{State: "restarting"}, want: 3},
 		{name: "paused", container: ContainerRow{State: "paused"}, want: 3},
 		{name: "exited", container: ContainerRow{State: "exited"}, want: 4},
-		{name: "stopped", container: ContainerRow{State: "stopped"}, want: 4},
+		{name: "stopped", container: ContainerRow{State: ContainerState("stopped")}, want: 6},
 		{name: "dead", container: ContainerRow{State: "dead"}, want: 5},
 		{name: "unknown", container: ContainerRow{State: "whatever"}, want: 6},
 	}
@@ -96,9 +96,9 @@ func TestSortNetworks_CreatedDescThenNameAsc(t *testing.T) {
 
 func TestSortVolumes_CreatedDescThenNameAsc(t *testing.T) {
 	rows := []VolumeRow{
-		{Name: "z", CreatedAt: "2024-01-01T00:00:00Z"},
-		{Name: "a", CreatedAt: "2024-01-01T00:00:00Z"},
-		{Name: "n", CreatedAt: "2025-01-01T00:00:00Z"},
+		{Name: "z", CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{Name: "a", CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{Name: "n", CreatedAt: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 	}
 
 	SortVolumes(rows)

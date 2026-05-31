@@ -93,7 +93,7 @@ func (m model) findContainerIndexByID(id string) (int, bool) {
 }
 
 func (m *model) reconcileLogsSelection() error {
-	if m.screen != shared.Logs {
+	if m.screen != shared.LogViewer {
 		return nil
 	}
 	if _, ok := m.findContainerIndexByID(m.viewer.ContainerID); ok {

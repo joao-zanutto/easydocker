@@ -14,14 +14,13 @@ func TestFilterContainersByScope_ShowAllReturnsOriginalSlice(t *testing.T) {
 	}
 }
 
-func TestFilterContainersByScope_RunningOnlyCaseInsensitive(t *testing.T) {
+func TestFilterContainersByScope_RunningOnly(t *testing.T) {
 	containers := []ContainerRow{
-		{Name: "run-1", State: "running"},
-		{Name: "run-2", State: "RUNNING"},
-		{Name: "stopped", State: "exited"},
-		{Name: "other", State: "created"},
+		{Name: "run-1", State: StateRunning},
+		{Name: "run-2", State: StateRunning},
+		{Name: "stopped", State: StateExited},
+		{Name: "other", State: StateCreated},
 	}
-
 	got := FilterContainersByScope(containers, false)
 	if len(got) != 2 {
 		t.Fatalf("FilterContainersByScope(..., false) len = %d, want 2", len(got))

@@ -165,16 +165,15 @@ func TestContainerTableRow_StateColoringByWidth(t *testing.T) {
 
 func TestColorStateLabel_DoesNotUseAllReset(t *testing.T) {
 	// colorStateLabel must use \x1b[39m (foreground reset), not \x1b[m (SGR 0).
-	// SGR 0 kills the parent Selected row's background highlight.
 	tests := []struct {
 		name  string
-		state string
+		state core.ContainerState
 		width int
 	}{
-		{name: "normal width", state: "running", width: 20},
-		{name: "narrow (bullet fallback)", state: "running", width: 1},
-		{name: "exited", state: "exited", width: 20},
-		{name: "paused", state: "paused", width: 20},
+		{name: "normal width", state: core.StateRunning, width: 20},
+		{name: "narrow (bullet fallback)", state: core.StateRunning, width: 1},
+		{name: "exited", state: core.StateExited, width: 20},
+		{name: "paused", state: core.StatePaused, width: 20},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
