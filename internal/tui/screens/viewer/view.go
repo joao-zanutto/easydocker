@@ -36,6 +36,7 @@ type ViewModel struct {
 	HistoryLoad      bool
 }
 
+
 func RenderContent(vm ViewModel) string {
 	if vm.Width == 0 || vm.Height == 0 {
 		return ""

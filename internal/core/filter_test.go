@@ -21,7 +21,6 @@ func TestFilterContainersByScope_RunningOnly(t *testing.T) {
 		{Name: "stopped", State: StateExited},
 		{Name: "other", State: StateCreated},
 	}
-
 	got := FilterContainersByScope(containers, false)
 	if len(got) != 2 {
 		t.Fatalf("FilterContainersByScope(..., false) len = %d, want 2", len(got))

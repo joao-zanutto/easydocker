@@ -161,7 +161,7 @@ func childMetricGuidePrefix(treePrefix string) string {
 	if strings.HasPrefix(treePrefix, "└") {
 		guide = "└─ "
 	}
-	return lipgloss.NewStyle().Faint(true).Render(guide)
+	return "\x1b[2m" + guide + "\x1b[22m"
 }
 
 func ComposeProjectTableRow(item ContainerListRow, loadingIndicator string) []string {
@@ -194,7 +194,7 @@ func ansiBold(value string) string {
 	if value == "" {
 		return ""
 	}
-	return lipgloss.NewStyle().Bold(true).Render(value)
+	return "\x1b[1m" + value + "\x1b[22m"
 }
 
 func colorStateLabel(label string, state core.ContainerState) string {
