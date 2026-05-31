@@ -98,7 +98,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 }
 
 func (m model) renderInspectContent(totalWidth, totalHeight int) string {
-	resourceLabel := core.ResourceLabel(shared.TabToResourceType(m.browse.ActiveTab))
+	resourceLabel := util.ResourceLabel(shared.TabToResourceType(m.browse.ActiveTab))
 	containerName := m.viewer.Inspect.ResourceName
 	breadcrumb := resourceLabel + " / " + containerName + " / Inspect"
 

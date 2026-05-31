@@ -4,10 +4,6 @@ import (
 	"easydocker/internal/tui/shared"
 )
 
-func (m model) shouldAnimateLogsLoadingIndicator() bool {
-	return (m.screen == shared.LogViewer || m.screen == shared.InspectViewer) && (m.viewer.InitialLoad || m.viewer.HistoryLoad)
-}
-
 func (m model) shouldAnimateMetricsLoadingIndicator() bool {
 	return !m.metricsLoaded && m.loadingStage != shared.StageIdle
 }
