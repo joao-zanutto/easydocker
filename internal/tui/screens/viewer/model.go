@@ -200,7 +200,7 @@ func (m Model) VisibleWidth() int {
 }
 
 func (m Model) VisibleRows() int {
-	return VisibleRowsForContent(m.Height, m.Vp.Filter.Active)
+	return VisibleRowsForContent(m.Height)
 }
 
 func (m *Model) applyHistoryWithMerge(data []string) {

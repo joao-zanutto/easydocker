@@ -45,6 +45,8 @@ type Styles struct {
 	Muted        lipgloss.Style
 	Divider      lipgloss.Style
 	SubpageFrame lipgloss.Style
+	Key          lipgloss.Style
+	KeyText      lipgloss.Style
 }
 
 type TransitionMsg struct {

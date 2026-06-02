@@ -43,6 +43,8 @@ type HeaderStyles struct {
 	TitleMeta lipgloss.Style
 	Badge     lipgloss.Style
 	ErrorText lipgloss.Style
+	Key       lipgloss.Style
+	KeyText   lipgloss.Style
 	Tab       lipgloss.Style
 	ActiveTab lipgloss.Style
 }
@@ -60,6 +62,9 @@ type HeaderInput struct {
 	LoadingStageText string
 	ActiveTab        shared.Tab
 	ShowAll          bool
+	HideScope        bool
+	HideScopeKey     bool
+	DimTabs          bool
 	Err              error
 	Tabs             []TabSpec
 	Styles           HeaderStyles
@@ -91,46 +96,102 @@ func RenderHeaderTabs(specs []TabSpec, maxWidth int, renderTab func(tab shared.T
 	return renderHeaderTabsVariant(specs, tabLabelIconOnly, renderTab)
 }
 
-func RenderScopeBadge(showAll bool, maxWidth int, renderBadge func(string) string) string {
-	scope := "running"
+func ScopeLabel(showAll bool) string {
 	if showAll {
-		scope = "all"
+		return "all"
 	}
-	labels := []string{"container scope: " + scope, "scope: " + scope, scope}
-	for _, label := range labels {
-		badge := renderBadge(label)
-		if util.DisplayWidth(badge) <= max(1, maxWidth) {
-			return badge
-		}
-	}
-	return renderBadge(scope)
+	return "running"
 }
 
 func RenderHeader(input HeaderInput) string {
 	innerWidth := max(1, input.Width-input.Styles.Header.GetHorizontalFrameSize())
-	totalsText := input.TotalsText
-	if input.LoadingStageText != "" {
-		totalsText += " " + input.LoadingStageText
-	}
-	tabs := RenderHeaderTabs(input.Tabs, max(1, innerWidth-6), input.RenderTab)
-	tabsText := strings.Join(tabs, " ")
-	tabsWidth := util.DisplayWidth(tabsText)
-	leftAvail := max(1, innerWidth-tabsWidth-1)
-	firstLeft := input.Styles.Title.Render(util.ConstrainLine(input.Title, max(1, leftAvail-input.Styles.Title.GetHorizontalFrameSize())))
-	firstLine := renderEdgeAlignedLine(firstLeft, tabsText, innerWidth)
 
-	secondRight := ""
-	if input.ActiveTab == 0 {
-		secondRight = RenderScopeBadge(input.ShowAll, max(1, innerWidth/3), func(label string) string {
-			return input.Styles.Badge.Render(label)
-		})
+	tabs := RenderHeaderTabs(input.Tabs, max(1, innerWidth-6), input.RenderTab)
+	if !input.HideScope && input.ActiveTab == shared.TabContainers {
+		scope := ScopeLabel(input.ShowAll)
+		scopeRendered := input.Styles.Badge.Render(fmt.Sprintf("scope:%s", scope))
+		var prefix string
+		if input.HideScopeKey {
+			prefix = scopeRendered
+		} else {
+			keyRendered := input.Styles.Key.Render("a")
+			toggleRendered := input.Styles.KeyText.Render(" toggle")
+			prefix = keyRendered + toggleRendered + scopeRendered
+		}
+		for i, tab := range input.Tabs {
+			if tab.Tab == shared.TabContainers {
+				tabs[i] = prefix + " " + tabs[i]
+				break
+			}
+		}
 	}
-	secondLine := renderPinnedHeaderLine(input.Styles.TitleMeta, totalsText, secondRight, innerWidth)
-	line := lipgloss.JoinVertical(lipgloss.Left, firstLine, secondLine)
+	tabsText := strings.Join(tabs, " │ ")
+	tabsWidth := util.DisplayWidth(tabsText)
+
+	leftAvail := max(1, innerWidth-tabsWidth-1)
+	titleRendered := input.Styles.Title.Render(input.Title)
+	titleWidth := util.DisplayWidth(titleRendered)
+
+	var left string
+	if input.TotalsText != "" || input.LoadingStageText != "" {
+		metaAvail := max(1, leftAvail-titleWidth)
+		metaContentWidth := max(1, metaAvail-input.Styles.TitleMeta.GetHorizontalFrameSize())
+
+		metaText := " " + input.TotalsText
+		if input.LoadingStageText != "" {
+			stageText := " " + input.LoadingStageText
+			combined := metaText + stageText
+			if util.DisplayWidth(metaText)+util.DisplayWidth(stageText) > metaContentWidth+5 {
+				metaText = stageText
+			} else {
+				metaText = combined
+			}
+		}
+		metaRendered := input.Styles.TitleMeta.Render(util.ConstrainLine(metaText, metaContentWidth))
+		left = titleRendered + metaRendered
+	} else {
+		titleContentWidth := max(1, leftAvail-input.Styles.Title.GetHorizontalFrameSize())
+		left = input.Styles.Title.Render(util.ConstrainLine(input.Title, titleContentWidth))
+	}
+	line := renderEdgeAlignedLine(left, tabsText, innerWidth)
+
+	if input.DimTabs && tabsWidth > 0 {
+		dimStart := max(0, innerWidth-tabsWidth)
+		line = dimLineRight(line, dimStart, innerWidth)
+	}
+
 	if input.Err != nil {
 		line = lipgloss.JoinVertical(lipgloss.Left, line, util.ConstrainLine(input.Styles.ErrorText.Render(input.Err.Error()), innerWidth))
 	}
 	return input.Styles.Header.Render(line)
+}
+
+func dimLineRight(line string, dimStart, fullWidth int) string {
+	if fullWidth <= 0 || dimStart >= fullWidth {
+		return line
+	}
+	bgLayer := lipgloss.NewLayer(line)
+	comp := lipgloss.NewCompositor(bgLayer)
+	bounds := comp.Bounds()
+	if bounds.Dx() <= 0 || bounds.Dy() <= 0 {
+		return line
+	}
+	canvas := lipgloss.NewCanvas(bounds.Dx(), bounds.Dy()).Compose(comp)
+	fg := lipgloss.Color("244")
+	bg := lipgloss.Color("233")
+	for y := 0; y < bounds.Dy(); y++ {
+		for x := dimStart; x < bounds.Dx(); x++ {
+			cell := canvas.CellAt(x, y)
+			if cell == nil || cell.IsZero() {
+				continue
+			}
+			cell = cell.Clone()
+			cell.Style.Fg = fg
+			cell.Style.Bg = bg
+			canvas.SetCell(x, y, cell)
+		}
+	}
+	return canvas.Render()
 }
 
 func RenderFooter(input FooterInput) string {
@@ -158,13 +219,17 @@ func RenderTotalsLabel(snapshot core.Snapshot, loadingStage shared.Stage, metric
 		if strings.TrimSpace(indicator) == "" {
 			indicator = "-"
 		}
-		return fmt.Sprintf("CPU %s  MEM %s", indicator, indicator)
+		return fmt.Sprintf("\x1b[1mCPU\x1b[22m %6s  \x1b[1mMEM\x1b[22m %6s", indicator, indicator)
 	}
+	return fmt.Sprintf("\x1b[1mCPU\x1b[22m %6s  \x1b[1mMEM\x1b[22m %s", renderPercent(snapshot.TotalCPU), memTotal(snapshot))
+}
+
+func memTotal(snapshot core.Snapshot) string {
 	mem := core.HumanBytes(snapshot.TotalMem)
 	if snapshot.TotalLimit > 0 {
-		return fmt.Sprintf("CPU %s  MEM %s", renderPercent(snapshot.TotalCPU), formatMemoryUsage(mem, (float64(snapshot.TotalMem)/float64(snapshot.TotalLimit))*100, core.HumanBytes(snapshot.TotalLimit)))
+		return formatMemoryUsage(mem, (float64(snapshot.TotalMem)/float64(snapshot.TotalLimit))*100, core.HumanBytes(snapshot.TotalLimit))
 	}
-	return fmt.Sprintf("CPU %s  MEM %s", renderPercent(snapshot.TotalCPU), mem)
+	return mem
 }
 
 func RenderLoadingStageLabel(loadingStage shared.Stage, metricsLoaded bool) string {
@@ -198,22 +263,6 @@ func renderEdgeAlignedLine(left, right string, width int) string {
 	return util.ClampSingleLine(left+strings.Repeat(" ", width-leftWidth-rightWidth)+right, width)
 }
 
-func renderPinnedHeaderLine(leftStyle lipgloss.Style, leftText, right string, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	if strings.TrimSpace(right) == "" {
-		contentWidth := max(1, width-leftStyle.GetHorizontalFrameSize())
-		return util.ClampSingleLine(leftStyle.Render(util.ConstrainLine(leftText, contentWidth)), width)
-	}
-	rightWidth := util.DisplayWidth(right)
-	leftTotalWidth := max(1, width-rightWidth-1)
-	leftContentWidth := max(1, leftTotalWidth-leftStyle.GetHorizontalFrameSize())
-	left := leftStyle.Render(util.ConstrainLine(leftText, leftContentWidth))
-	leftWidth := util.DisplayWidth(left)
-	spacing := max(1, width-leftWidth-rightWidth)
-	return util.ClampSingleLine(left+strings.Repeat(" ", spacing)+right, width)
-}
 
 func renderHeaderTabsVariant(specs []TabSpec, variant tabLabelVariant, renderTab func(tab shared.Tab, label string) string) []string {
 	tabs := make([]string, 0, len(specs))
@@ -241,7 +290,7 @@ func joinedDisplayWidth(parts []string) int {
 	for i, part := range parts {
 		total += util.DisplayWidth(part)
 		if i > 0 {
-			total++
+			total += 3
 		}
 	}
 	return total

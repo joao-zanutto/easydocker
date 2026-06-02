@@ -161,19 +161,19 @@ func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 
 func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 	m := newTestModel().
-		withSize(120, 30).
+		withSize(200, 30).
 		withLoading(true, shared.StageMetrics).
 		withContainers(core.ContainerRow{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"}).
 		build()
 
 	before := m.View().Content
-	if !strings.Contains(before, "loading metrics") {
+	if !strings.Contains(before, "loading") {
 		t.Fatalf("expected pre-initial metrics view to include loading stage indicator, got %q", before)
 	}
 
 	m.metricsLoaded = true
 	after := m.View().Content
-	if strings.Contains(after, "loading metrics") {
+	if strings.Contains(after, "loading") {
 		t.Fatalf("expected post-initial metrics view to avoid loading indicator, got %q", after)
 	}
 }
@@ -599,8 +599,8 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 		t.Fatalf("slash should activate logs filter mode")
 	}
 	afterRows := after.viewer.VisibleRows()
-	if afterRows >= beforeRows {
-		t.Fatalf("expected fewer visible rows after opening filter, before=%d after=%d", beforeRows, afterRows)
+	if afterRows != beforeRows {
+		t.Fatalf("expected same visible rows after opening filter (filter replaces breadcrumbs, same overhead), before=%d after=%d", beforeRows, afterRows)
 	}
 }
 

@@ -42,15 +42,7 @@ func NewKeyMap() KeyMap {
 }
 
 func (k KeyMap) ShortHelp(resourceType core.ResourceType, contentType ContentType, containerState core.ContainerState) []key.Binding {
-	bindings := []key.Binding{
-		k.ToggleWrap, k.Back,
-	}
-
-	bindings = append(bindings, k.OpenFilter)
-
-	if contentType == ContentTypeLogs {
-		bindings = append(bindings, k.ToggleFollow)
-	}
+	bindings := []key.Binding{}
 
 	if resourceType == core.ResourceContainer && shared.CanOpenShell(containerState) {
 		bindings = append(bindings, k.OpenShell)

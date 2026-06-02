@@ -81,7 +81,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 	m.viewer.Width = totalWidth
 	m.viewer.Height = totalHeight
 	m.viewer.ContainerName = container.Name
-	m.viewer.Breadcrumb = "Containers / " + container.Name + " / Logs"
+	m.viewer.Breadcrumb = "Containers > " + container.Name + " > Logs"
 	m.viewer.Vp.ContentType = viewer.ContentTypeLogs
 	m.viewer.ResourceType = core.ResourceContainer
 	m.viewer.LoadingMsg = "Loading logs..."
@@ -93,6 +93,8 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 		Muted:        m.styles.Browse.Muted,
 		Divider:      m.styles.Browse.Divider,
 		SubpageFrame: m.styles.Viewer.SubpageFrame,
+		Key:          m.styles.Chrome.Key,
+		KeyText:      m.styles.Chrome.KeyText,
 	}
 	return m.viewer.View()
 }
@@ -100,7 +102,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	resourceLabel := util.ResourceLabel(shared.TabToResourceType(m.browse.ActiveTab))
 	containerName := m.viewer.Inspect.ResourceName
-	breadcrumb := resourceLabel + " / " + containerName + " / Inspect"
+	breadcrumb := resourceLabel + " > " + containerName + " > Inspect"
 
 	m.viewer.Width = totalWidth
 	m.viewer.Height = totalHeight
@@ -117,6 +119,8 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 		Muted:        m.styles.Browse.Muted,
 		Divider:      m.styles.Browse.Divider,
 		SubpageFrame: m.styles.Viewer.SubpageFrame,
+		Key:          m.styles.Chrome.Key,
+		KeyText:      m.styles.Chrome.KeyText,
 	}
 	return m.viewer.View()
 }
@@ -129,6 +133,7 @@ func (m model) metricsLoadingIndicator() string {
 }
 
 func (m model) renderHeader() string {
+	isViewer := m.screen == shared.LogViewer || m.screen == shared.InspectViewer
 	return chrome.RenderHeader(chrome.HeaderInput{
 		Width:            m.width,
 		Title:            "EasyDocker",
@@ -136,6 +141,9 @@ func (m model) renderHeader() string {
 		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, m.metricsLoaded),
 		ActiveTab:        m.browse.ActiveTab,
 		ShowAll:          m.browse.ShowAll,
+		HideScope:   isViewer,
+		HideScopeKey: m.browse.Filter.Active,
+		DimTabs:          isViewer,
 		Err:              m.err,
 		Tabs: []chrome.TabSpec{
 			{Tab: tabContainers, Icon: "🐳", Name: "Containers", Count: len(m.filteredContainers())},
@@ -149,6 +157,8 @@ func (m model) renderHeader() string {
 			TitleMeta: m.styles.Chrome.TitleMeta,
 			Badge:     m.styles.Chrome.Badge,
 			ErrorText: m.styles.Chrome.ErrorText,
+			Key:       m.styles.Chrome.Key,
+			KeyText:   m.styles.Chrome.KeyText,
 		},
 		RenderTab: m.renderChromeTab,
 	})
@@ -167,6 +177,14 @@ func (m model) renderFooter() string {
 }
 
 func (m model) renderChromeTab(tab shared.Tab, label string) string {
+	parts := strings.SplitN(label, " ", 2)
+	if len(parts) == 2 {
+		text := m.styles.Tabs.Tab.Render(parts[1])
+		if m.browse.ActiveTab == tab {
+			text = m.styles.Tabs.ActiveTab.Render(parts[1])
+		}
+		return parts[0] + " " + text
+	}
 	if m.browse.ActiveTab == tab {
 		return m.styles.Tabs.ActiveTab.Render(label)
 	}
@@ -216,18 +234,36 @@ func (m model) stateStyle(state core.ContainerState) lipgloss.Style {
 }
 
 func (m model) renderResourceList(width, height int) string {
+	var filterHint string
+	if m.browse.Filter.Query != "" {
+		filterHint = m.styles.Chrome.KeyText.Render(" 🔍 " + m.browse.Filter.Query)
+	} else {
+		filterHint = m.styles.Chrome.KeyText.Render(" ") + m.styles.Chrome.Key.Inline(true).Render(" / ") + m.styles.Chrome.KeyText.Render(" filter")
+	}
 	switch m.browse.ActiveTab {
 	case tabContainers:
 		spec := tables.BuildContainerSpec(width, m.browse.ContainerCursor, m.browse.Data.ContainerListRows, m.browse.ActiveTab == tabContainers, m.browse.Data.MetricsLoadingIndicator)
+		if !m.browse.Filter.Active && len(spec.Columns) > 0 {
+			spec.Columns[0].Header += filterHint
+		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
 		spec := tables.BuildImageSpec(width, m.browse.ImageCursor, m.browse.Data.FilteredImages)
+		if !m.browse.Filter.Active && len(spec.Columns) > 0 {
+			spec.Columns[0].Header += filterHint
+		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabNetworks:
 		spec := tables.BuildNetworkSpec(width, m.browse.NetworkCursor, m.browse.Data.FilteredNetworks)
+		if !m.browse.Filter.Active && len(spec.Columns) > 0 {
+			spec.Columns[0].Header += filterHint
+		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	default:
 		spec := tables.BuildVolumeSpec(width, m.browse.VolumeCursor, m.browse.Data.FilteredVolumes)
+		if !m.browse.Filter.Active && len(spec.Columns) > 0 {
+			spec.Columns[0].Header += filterHint
+		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	}
 }

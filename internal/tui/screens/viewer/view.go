@@ -41,59 +41,68 @@ func RenderContent(vm ViewModel) string {
 		resourceLabel := util.ResourceLabel(vm.ResourceType)
 		contentLabel := getContentLabel(vm.ContentType)
 		breadcrumb = util.ClampSingleLine(
-			fmt.Sprintf("%s / %s / %s", resourceLabel, vm.ContainerName, contentLabel),
+			fmt.Sprintf("%s > %s > %s |", resourceLabel, vm.ContainerName, contentLabel),
 			layout.ContentWidth,
 		)
 	} else {
-		breadcrumb = util.ClampSingleLine(breadcrumb, layout.ContentWidth)
+		breadcrumb = util.ClampSingleLine(breadcrumb + " |", layout.ContentWidth)
 	}
-	contentHeight := VisibleRowsForContent(layout.ContentHeight, vm.Vp.Filter.Active)
+	contentHeight := VisibleRowsForContent(layout.ContentHeight)
 
-	if vm.Vp.Filter.Active {
-		filterInput := vm.Vp.Filter.Input
-		filterInput.SetWidth(components.DynamicInputWidth(filterInput.Prompt, layout.ContentWidth))
-		filterHeader := components.RenderFilterHeader(filterInput.View(), layout.ContentWidth, vm.Styles.Divider)
-		header := renderHeader(headerVM, breadcrumb)
-		panel := renderPanel(vm, layout.ContentWidth, contentHeight)
-		return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(header, filterHeader, panel))
-	}
-
+	header := renderHeader(headerVM, breadcrumb, vm.Vp.Filter)
 	headerDivider := components.RenderTitleDivider(vm.Styles.Divider, layout.ContentWidth)
-	header := renderHeader(headerVM, breadcrumb)
 	panel := renderPanel(vm, layout.ContentWidth, contentHeight)
+
 	return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(header, headerDivider, panel))
 }
 
-func VisibleRowsForContent(contentHeight int, filterActive bool) int {
-	overhead := 2
-	if filterActive {
-		overhead += components.FilterHeaderHeight
-	}
-	return max(1, contentHeight-overhead)
+func VisibleRowsForContent(contentHeight int) int {
+	return max(1, contentHeight-2)
 }
 
-func renderHeader(vm ViewModel, breadcrumb string) string {
-	wrap := "off"
-	if vm.Vp.WrapLines {
-		wrap = "on"
-	}
-	left := vm.Styles.Breadcrumb.Render(breadcrumb)
-	wrapText := vm.Styles.FollowOff.Render(wrap)
-	if vm.Vp.WrapLines {
-		wrapText = vm.Styles.FollowOn.Render(wrap)
+func renderHeader(vm ViewModel, breadcrumb string, filterState components.FilterState) string {
+	var left string
+	if filterState.Active {
+		input := filterState.Input
+		input.SetWidth(components.DynamicInputWidth(input.Prompt, vm.Width))
+		left = input.View()
+	} else {
+		left = vm.Styles.Breadcrumb.Render(breadcrumb)
 	}
 
-	rightParts := []string{vm.Styles.Muted.Render("wrap:"), wrapText}
+	var mid string
+	if !filterState.Active {
+		if filterState.Query != "" {
+			mid = vm.Styles.Muted.Render(" ") + vm.Styles.KeyText.Render("🔍 "+filterState.Query)
+		} else {
+			mid = vm.Styles.Muted.Render(" ") + vm.Styles.Key.Inline(true).Render(" / ") + vm.Styles.KeyText.Render(" filter")
+		}
+	}
+
+	wrapVal := fmt.Sprintf("%-3s", "on")
+	if !vm.Vp.WrapLines {
+		wrapVal = "off"
+	}
+	wrapKey := vm.Styles.Key.Inline(true).Render(" w ")
+	wrapLabel := vm.Styles.Muted.Render(" wrap:")
+	wrapText := vm.Styles.FollowOff.Render(wrapVal)
+	if vm.Vp.WrapLines {
+		wrapText = vm.Styles.FollowOn.Render(wrapVal)
+	}
+	rightParts := []string{wrapKey, wrapLabel, wrapText}
 
 	if vm.ContentType == ContentTypeLogs {
-		followLabel := "follow:off"
-		followStyle := vm.Styles.FollowOff
-		if vm.Vp.Follow {
-			followLabel = "follow:on"
-			followStyle = vm.Styles.FollowOn
+		onVal := fmt.Sprintf("%-3s", "on")
+		if !vm.Vp.Follow {
+			onVal = "off"
 		}
-		followText := followStyle.Render(followLabel)
-		rightParts = append(rightParts, vm.Styles.Muted.Render(" "), followText)
+		followKey := vm.Styles.Key.Inline(true).Render(" f ")
+		followLabel := vm.Styles.Muted.Render(" follow:")
+		followText := vm.Styles.FollowOff.Render(onVal)
+		if vm.Vp.Follow {
+			followText = vm.Styles.FollowOn.Render(onVal)
+		}
+		rightParts = append(rightParts, vm.Styles.Muted.Render(" "), followKey, followLabel, followText)
 	}
 
 	if vm.LineCount != nil {
@@ -101,7 +110,7 @@ func renderHeader(vm ViewModel, breadcrumb string) string {
 	}
 
 	right := lipgloss.JoinHorizontal(lipgloss.Left, rightParts...)
-	return renderRightPriorityLine(left, right, vm.Width)
+	return renderThreePartLine(left, mid, right, vm.Width)
 }
 
 func renderPanel(vm ViewModel, width, height int) string {
@@ -196,7 +205,7 @@ func applyScrollIndicator(line string, width int, canScrollLeft, canScrollRight 
 	return prefix + right
 }
 
-func renderRightPriorityLine(left, right string, width int) string {
+func renderThreePartLine(left, mid, right string, width int) string {
 	if width <= 0 {
 		return ""
 	}
@@ -205,11 +214,21 @@ func renderRightPriorityLine(left, right string, width int) string {
 	if rightWidth >= width {
 		return right
 	}
-	leftWidth := max(1, width-rightWidth-1)
+	midRight := mid
+	if mid != "" {
+		midRight += " "
+	}
+	midRight += right
+	midRight = util.ClampSingleLine(midRight, width)
+	midRightWidth := util.DisplayWidth(midRight)
+	if midRightWidth >= width {
+		return midRight
+	}
+	leftWidth := max(1, width-midRightWidth-1)
 	left = util.ClampSingleLine(left, leftWidth)
 	leftRenderedWidth := util.DisplayWidth(left)
-	spacing := max(0, width-leftRenderedWidth-rightWidth)
-	return left + strings.Repeat(" ", spacing) + right
+	spacing := max(0, width-leftRenderedWidth-midRightWidth)
+	return left + strings.Repeat(" ", spacing) + midRight
 }
 
 func getContentLabel(ct ContentType) string {
