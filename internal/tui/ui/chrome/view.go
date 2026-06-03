@@ -115,8 +115,7 @@ func RenderHeader(input HeaderInput) string {
 			prefix = scopeRendered
 		} else {
 			keyRendered := input.Styles.Key.Render("a")
-			toggleRendered := input.Styles.KeyText.Render(" toggle")
-			prefix = keyRendered + toggleRendered + scopeRendered
+			prefix = keyRendered + scopeRendered
 		}
 		for i, tab := range input.Tabs {
 			if tab.Tab == shared.TabContainers {
@@ -262,7 +261,6 @@ func renderEdgeAlignedLine(left, right string, width int) string {
 	}
 	return util.ClampSingleLine(left+strings.Repeat(" ", width-leftWidth-rightWidth)+right, width)
 }
-
 
 func renderHeaderTabsVariant(specs []TabSpec, variant tabLabelVariant, renderTab func(tab shared.Tab, label string) string) []string {
 	tabs := make([]string, 0, len(specs))

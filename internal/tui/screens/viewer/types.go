@@ -53,5 +53,3 @@ type TransitionMsg struct {
 	BackToBrowse bool
 	LaunchShell  bool
 }
-
-

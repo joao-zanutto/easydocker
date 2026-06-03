@@ -50,33 +50,6 @@ func TestListHeight(t *testing.T) {
 	}
 }
 
-func TestListHeightForContent_FilterShrinksTableFromTop(t *testing.T) {
-	height := 20
-	base := ListHeight(height)
-	withFilter := ListHeightForContent(height, true)
-
-	if withFilter != base-FilterHeaderHeight {
-		t.Fatalf("ListHeightForContent(%d, true) = %d, want %d", height, withFilter, base-FilterHeaderHeight)
-	}
-}
-
-func TestRenderFilterHeader_InputAndDivider(t *testing.T) {
-	header := RenderFilterHeader("> abc", 24, lipgloss.NewStyle())
-	lines := strings.Split(header, "\n")
-	if len(lines) != 2 {
-		t.Fatalf("filter header lines = %d, want 2", len(lines))
-	}
-	if util.DisplayWidth(lines[0]) != 24 {
-		t.Fatalf("input line width = %d, want 24 (%q)", util.DisplayWidth(lines[0]), lines[0])
-	}
-	if util.DisplayWidth(lines[1]) != 24 {
-		t.Fatalf("divider line width = %d, want 24 (%q)", util.DisplayWidth(lines[1]), lines[1])
-	}
-	if strings.Contains(lines[0], "┌") || strings.Contains(lines[0], "┐") || strings.Contains(lines[0], "└") || strings.Contains(lines[0], "┘") {
-		t.Fatalf("input line should not render a box: %q", lines[0])
-	}
-}
-
 func TestRenderContent_FilterKeepsDividerAnchored(t *testing.T) {
 	vm := ViewModel{
 		Loading: false,
@@ -93,12 +66,12 @@ func TestRenderContent_FilterKeepsDividerAnchored(t *testing.T) {
 		},
 	}
 
-	baseList := strings.Join(util.ClipAndPadLines([]string{"row"}, ListHeightForContent(vm.Height, false), ""), "\n")
+	baseList := strings.Join(util.ClipAndPadLines([]string{"row"}, ListHeightForContent(vm.Height), ""), "\n")
 	withoutFilter := RenderContent(vm, baseList, fakeProvider{})
 
 	vm.Filter.Active = true
 	vm.Filter.Input.SetValue("abc")
-	filterList := strings.Join(util.ClipAndPadLines([]string{"row"}, ListHeightForContent(vm.Height, true), ""), "\n")
+	filterList := strings.Join(util.ClipAndPadLines([]string{"row"}, ListHeightForContent(vm.Height), ""), "\n")
 	withFilter := RenderContent(vm, filterList, fakeProvider{})
 
 	withoutDetails := lineIndex(withoutFilter, "Details")
@@ -112,8 +85,8 @@ func TestRenderContent_FilterKeepsDividerAnchored(t *testing.T) {
 	if strings.Contains(withFilter, "┌") || strings.Contains(withFilter, "└") {
 		t.Fatalf("rendered output should not include boxed filter borders")
 	}
-	if countLinesContaining(withFilter, "─") < 2 {
-		t.Fatalf("expected divider above table and between table/details")
+	if countLinesContaining(withFilter, "─") != 1 {
+		t.Fatalf("expected single divider between table and details, got %d", countLinesContaining(withFilter, "─"))
 	}
 }
 

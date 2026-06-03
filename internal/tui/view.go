@@ -9,6 +9,7 @@ import (
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/chrome"
+	"easydocker/internal/tui/ui/components"
 	"easydocker/internal/tui/ui/tables"
 	"easydocker/internal/tui/util"
 
@@ -141,8 +142,8 @@ func (m model) renderHeader() string {
 		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, m.metricsLoaded),
 		ActiveTab:        m.browse.ActiveTab,
 		ShowAll:          m.browse.ShowAll,
-		HideScope:   isViewer,
-		HideScopeKey: m.browse.Filter.Active,
+		HideScope:        isViewer,
+		HideScopeKey:     m.browse.Filter.Active,
 		DimTabs:          isViewer,
 		Err:              m.err,
 		Tabs: []chrome.TabSpec{
@@ -234,38 +235,52 @@ func (m model) stateStyle(state core.ContainerState) lipgloss.Style {
 }
 
 func (m model) renderResourceList(width, height int) string {
+	hasFilter := m.browse.Filter.Active || m.browse.Filter.Query != ""
+
 	var filterHint string
-	if m.browse.Filter.Query != "" {
-		filterHint = m.styles.Chrome.KeyText.Render(" 🔍 " + m.browse.Filter.Query)
-	} else {
+	if !hasFilter {
 		filterHint = m.styles.Chrome.KeyText.Render(" ") + m.styles.Chrome.Key.Inline(true).Render(" / ") + m.styles.Chrome.KeyText.Render(" filter")
 	}
+
 	switch m.browse.ActiveTab {
 	case tabContainers:
 		spec := tables.BuildContainerSpec(width, m.browse.ContainerCursor, m.browse.Data.ContainerListRows, m.browse.ActiveTab == tabContainers, m.browse.Data.MetricsLoadingIndicator)
-		if !m.browse.Filter.Active && len(spec.Columns) > 0 {
+		applyFilterToHeader(m, &spec)
+		if !hasFilter && len(spec.Columns) > 0 {
 			spec.Columns[0].Header += filterHint
 		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
 		spec := tables.BuildImageSpec(width, m.browse.ImageCursor, m.browse.Data.FilteredImages)
-		if !m.browse.Filter.Active && len(spec.Columns) > 0 {
+		applyFilterToHeader(m, &spec)
+		if !hasFilter && len(spec.Columns) > 0 {
 			spec.Columns[0].Header += filterHint
 		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabNetworks:
 		spec := tables.BuildNetworkSpec(width, m.browse.NetworkCursor, m.browse.Data.FilteredNetworks)
-		if !m.browse.Filter.Active && len(spec.Columns) > 0 {
+		applyFilterToHeader(m, &spec)
+		if !hasFilter && len(spec.Columns) > 0 {
 			spec.Columns[0].Header += filterHint
 		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	default:
 		spec := tables.BuildVolumeSpec(width, m.browse.VolumeCursor, m.browse.Data.FilteredVolumes)
-		if !m.browse.Filter.Active && len(spec.Columns) > 0 {
+		applyFilterToHeader(m, &spec)
+		if !hasFilter && len(spec.Columns) > 0 {
 			spec.Columns[0].Header += filterHint
 		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	}
+}
+
+func applyFilterToHeader[T any](m model, spec *tables.Spec[T]) {
+	if (!m.browse.Filter.Active && m.browse.Filter.Query == "") || len(spec.Columns) == 0 {
+		return
+	}
+	input := m.browse.Filter.Input
+	input.SetWidth(components.DynamicInputWidth(input.Prompt, spec.Columns[0].MinWidth))
+	spec.Columns[0].Header = components.PadVisibleWidth(input.View(), spec.Columns[0].MinWidth)
 }
 
 func renderResourceTableFromSpec[T any](m model, width, height int, spec tables.Spec[T]) string {

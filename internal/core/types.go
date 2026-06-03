@@ -58,26 +58,26 @@ type Snapshot struct {
 }
 
 type ContainerRow struct {
-	ID                     string
-	FullID                 string
-	Name                   string
-	ComposeProject         string
-	ComposeService         string
-	ComposeWorkingDir      string
-	ComposeConfigFiles     string
-	Image                  string
-	State                  ContainerState
-	Status                 string
-	Ports                  string
-	Command                string
-	CreatedUnix            int64
-	CPUPercent             float64
-	MemoryPercent          float64
-	MemoryUsage            string
-	MemoryLimit            string
-	MemoryUsageBytes       uint64
-	MemoryLimitBytes       uint64
-	Healthy                bool
+	ID                 string
+	FullID             string
+	Name               string
+	ComposeProject     string
+	ComposeService     string
+	ComposeWorkingDir  string
+	ComposeConfigFiles string
+	Image              string
+	State              ContainerState
+	Status             string
+	Ports              string
+	Command            string
+	CreatedUnix        int64
+	CPUPercent         float64
+	MemoryPercent      float64
+	MemoryUsage        string
+	MemoryLimit        string
+	MemoryUsageBytes   uint64
+	MemoryLimitBytes   uint64
+	Healthy            bool
 }
 
 type ComposeProject struct {

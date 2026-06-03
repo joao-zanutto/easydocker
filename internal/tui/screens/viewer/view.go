@@ -27,8 +27,6 @@ type ViewModel struct {
 	Logs             LogsViewer
 }
 
-
-
 func RenderContent(vm ViewModel) string {
 	if vm.Width == 0 || vm.Height == 0 {
 		return ""
@@ -45,7 +43,7 @@ func RenderContent(vm ViewModel) string {
 			layout.ContentWidth,
 		)
 	} else {
-		breadcrumb = util.ClampSingleLine(breadcrumb + " |", layout.ContentWidth)
+		breadcrumb = util.ClampSingleLine(breadcrumb+" |", layout.ContentWidth)
 	}
 	contentHeight := VisibleRowsForContent(layout.ContentHeight)
 
@@ -84,6 +82,9 @@ func renderHeader(vm ViewModel, breadcrumb string, filterState components.Filter
 		wrapVal = "off"
 	}
 	wrapKey := vm.Styles.Key.Inline(true).Render(" w ")
+	if filterState.Active {
+		wrapKey = vm.Styles.Muted.Render("   ")
+	}
 	wrapLabel := vm.Styles.Muted.Render(" wrap:")
 	wrapText := vm.Styles.FollowOff.Render(wrapVal)
 	if vm.Vp.WrapLines {
@@ -97,6 +98,9 @@ func renderHeader(vm ViewModel, breadcrumb string, filterState components.Filter
 			onVal = "off"
 		}
 		followKey := vm.Styles.Key.Inline(true).Render(" f ")
+		if filterState.Active {
+			followKey = vm.Styles.Muted.Render("   ")
+		}
 		followLabel := vm.Styles.Muted.Render(" follow:")
 		followText := vm.Styles.FollowOff.Render(onVal)
 		if vm.Vp.Follow {
@@ -214,21 +218,18 @@ func renderThreePartLine(left, mid, right string, width int) string {
 	if rightWidth >= width {
 		return right
 	}
-	midRight := mid
-	if mid != "" {
-		midRight += " "
+	leftMid := left + mid
+	leftMax := max(1, width-rightWidth-1)
+	if util.DisplayWidth(leftMid) > leftMax {
+		midWidth := util.DisplayWidth(mid)
+		left = util.ClampSingleLine(left, max(0, leftMax-midWidth))
+		leftRendered := util.DisplayWidth(left)
+		mid = util.ClampSingleLine(mid, max(0, leftMax-leftRendered))
+		leftMid = left + mid
 	}
-	midRight += right
-	midRight = util.ClampSingleLine(midRight, width)
-	midRightWidth := util.DisplayWidth(midRight)
-	if midRightWidth >= width {
-		return midRight
-	}
-	leftWidth := max(1, width-midRightWidth-1)
-	left = util.ClampSingleLine(left, leftWidth)
-	leftRenderedWidth := util.DisplayWidth(left)
-	spacing := max(0, width-leftRenderedWidth-midRightWidth)
-	return left + strings.Repeat(" ", spacing) + midRight
+	leftMidWidth := util.DisplayWidth(leftMid)
+	spacing := max(0, width-leftMidWidth-rightWidth)
+	return leftMid + strings.Repeat(" ", spacing) + right
 }
 
 func getContentLabel(ct ContentType) string {

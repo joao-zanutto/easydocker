@@ -123,4 +123,3 @@ func isControlOnlyLogLine(line string) bool {
 	}, plain)
 	return strings.TrimSpace(visible) == ""
 }
-
