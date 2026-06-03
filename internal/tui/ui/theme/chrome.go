@@ -12,5 +12,5 @@ func applyChromeStyles(s *Set) {
 	s.Chrome.Key = lipgloss.NewStyle().Bold(true).Foreground(TextPrimary).Background(SteelBlue).Padding(0, 1)
 	s.Chrome.KeyText = lipgloss.NewStyle().Foreground(TextDim)
 	s.Tabs.Tab = lipgloss.NewStyle().Foreground(TextSecondary).Padding(0, 1)
-	s.Tabs.ActiveTab = lipgloss.NewStyle().Bold(true).Foreground(TextPrimary).Background(NewBlue).Padding(0, 1)
+	s.Tabs.ActiveTab = lipgloss.NewStyle().Bold(true).Foreground(TextPrimary).Background(SelectorPurple).Padding(0, 1)
 }
