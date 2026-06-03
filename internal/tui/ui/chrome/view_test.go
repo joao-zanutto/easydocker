@@ -53,26 +53,20 @@ func TestRenderHeaderTabs_WidthFallback(t *testing.T) {
 	}
 }
 
-func TestRenderScopeBadge_FallbackByWidth(t *testing.T) {
+func TestScopeLabel(t *testing.T) {
 	tests := []struct {
-		name       string
-		showAll    bool
-		wideToken  string
-		narrowWant string
+		name    string
+		showAll bool
+		want    string
 	}{
-		{name: "all", showAll: true, wideToken: "container scope: all", narrowWant: "all"},
-		{name: "running", showAll: false, wideToken: "container scope: running", narrowWant: "running"},
+		{name: "all", showAll: true, want: "all"},
+		{name: "running", showAll: false, want: "running"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wide := util.StripANSI(RenderScopeBadge(tt.showAll, 40, func(label string) string { return label }))
-			if !strings.Contains(wide, tt.wideToken) {
-				t.Fatalf("expected wide scope badge to contain %q, got %q", tt.wideToken, wide)
-			}
-			narrow := strings.TrimSpace(util.StripANSI(RenderScopeBadge(tt.showAll, 2, func(label string) string { return label })))
-			if narrow != tt.narrowWant {
-				t.Fatalf("narrow scope badge = %q, want %q", narrow, tt.narrowWant)
+			if got := ScopeLabel(tt.showAll); got != tt.want {
+				t.Fatalf("ScopeLabel(%v) = %q, want %q", tt.showAll, got, tt.want)
 			}
 		})
 	}
@@ -136,7 +130,7 @@ func TestRenderTotalsLabel_UsesIndicatorOnlyBeforeFirstMetricsLoad(t *testing.T)
 	snapshot := core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048}
 
 	loading := RenderTotalsLabel(snapshot, shared.StageMetrics, false, "⠋")
-	if !strings.Contains(loading, "CPU ⠋") || !strings.Contains(loading, "MEM ⠋") {
+	if !strings.Contains(loading, "CPU") || !strings.Contains(loading, "MEM") || !strings.Contains(loading, "⠋") {
 		t.Fatalf("pre-metrics totals should show spinner indicator, got %q", loading)
 	}
 

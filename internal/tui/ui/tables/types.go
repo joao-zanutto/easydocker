@@ -9,6 +9,7 @@ type ColumnDef struct {
 
 // Spec defines table data and rendering properties for a resource type.
 type Spec[T any] struct {
+	HideHeader   bool
 	EmptyMessage string
 	Cursor       int
 	Items        []T

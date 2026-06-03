@@ -23,8 +23,8 @@ func (m model) footerKeyMap() help.KeyMap {
 		}
 		if m.viewer.Vp.Filter.Active {
 			bindings := []key.Binding{
-				shared.EscBinding("clear/exit filter"),
-				shared.EnterBinding("apply/close filter"),
+				shared.EscBinding("clear filter"),
+				shared.EnterBinding("apply filter"),
 			}
 			return footerKeyMap{bindings: bindings}
 		}
@@ -41,18 +41,14 @@ func (m model) footerKeyMap() help.KeyMap {
 
 	if m.browse.Filter.Active {
 		bindings := []key.Binding{
-			shared.EscBinding("clear/exit filter"),
-			shared.EnterBinding("apply/close filter"),
+			shared.EscBinding("clear filter"),
+			shared.EnterBinding("apply filter"),
 		}
 		return footerKeyMap{bindings: bindings}
 	}
 
-	bindings := []key.Binding{
-		browseKeys.OpenFilter,
-		browseKeys.OpenMenu,
-	}
+	bindings := []key.Binding{}
 	if m.browse.ActiveTab == tabContainers {
-		bindings = append(bindings, browseKeys.ToggleScope)
 		if row, ok := m.selectedContainerListRow(); ok && row.Kind == tables.RowComposeProject {
 			action := "expand"
 			if row.ComposeExpanded {

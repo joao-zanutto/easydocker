@@ -39,6 +39,8 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 		Muted:        m.styles.Browse.Muted,
 		Divider:      m.styles.Browse.Divider,
 		SubpageFrame: m.styles.Viewer.SubpageFrame,
+		Key:          m.styles.Chrome.Key,
+		KeyText:      m.styles.Chrome.KeyText,
 	}
 	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
 }

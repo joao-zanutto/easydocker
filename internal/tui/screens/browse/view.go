@@ -54,7 +54,7 @@ func RenderContent(vm ViewModel, list string, detailProvider DetailProvider) str
 		return util.ConstrainLine(vm.Styles.Muted.Render("Loading Docker resources..."), vm.Width)
 	}
 
-	filterHeight, listHeight, detailHeight := ContentHeightsFromFilter(vm.Height, vm.Filter.Active)
+	listHeight, detailHeight := ContentHeightsFromFilter(vm.Height)
 	listLines := util.ClipAndPadLines(
 		util.ConstrainLines(strings.Split(list, "\n"), vm.Width),
 		listHeight,
@@ -64,13 +64,7 @@ func RenderContent(vm ViewModel, list string, detailProvider DetailProvider) str
 	detail := RenderDetail(vm.ActiveTab, vm.Selections, vm.MetricsLoadingIndicator, detailProvider, vm.Styles.Section, vm.Styles.Muted, vm.Width, detailHeight)
 	divider := vm.Styles.Divider.Render(strings.Repeat("─", max(1, vm.Width)))
 
-	var parts []string
-	if filterHeight > 0 {
-		filterInputView := vm.Filter.Input
-		filterInputView.SetWidth(dynamicInputWidth(filterInputView.Prompt, vm.Width))
-		parts = append(parts, RenderFilterHeader(filterInputView.View(), vm.Width, vm.Styles.Divider))
-	}
-	parts = append(parts, listBlock, divider, detail)
+	parts := []string{listBlock, divider, detail}
 	return util.JoinSections(parts...)
 }
 
@@ -96,39 +90,25 @@ func ListHeight(height int) int {
 	return listHeight
 }
 
-func ListHeightForContent(height int, filterActive bool) int {
-	_, listHeight, _ := ContentHeightsFromFilter(height, filterActive)
+func ListHeightForContent(height int) int {
+	listHeight, _ := ContentHeightsFromFilter(height)
 	return listHeight
 }
 
-func ContentHeightsFromFilter(height int, filterActive bool) (int, int, int) {
+func ContentHeightsFromFilter(height int) (int, int) {
 	totalHeight := max(1, height)
-	filterHeight := 0
-	if filterActive {
-		filterHeight = FilterHeaderHeight
-		// Keep room for list + divider + detail.
-		maxFilterHeight := max(0, totalHeight-3)
-		if filterHeight > maxFilterHeight {
-			filterHeight = maxFilterHeight
-		}
-	}
-
 	listHeight := ListHeight(totalHeight)
-	if filterHeight > 0 {
-		// Shrink table from the top to preserve divider/bottom anchoring.
-		listHeight = max(1, listHeight-filterHeight)
-	}
 
-	detailHeight := totalHeight - filterHeight - listHeight - 1
+	detailHeight := totalHeight - listHeight - 1
 	for detailHeight < 1 && listHeight > 1 {
 		listHeight--
-		detailHeight = totalHeight - filterHeight - listHeight - 1
+		detailHeight = totalHeight - listHeight - 1
 	}
 	if detailHeight < 1 {
 		detailHeight = 1
 	}
 
-	return filterHeight, listHeight, detailHeight
+	return listHeight, detailHeight
 }
 
 func RenderDetail(activeTab shared.Tab, selections SelectionSet, loadingIndicator string, provider DetailProvider, sectionStyle, mutedStyle lipgloss.Style, width, height int) string {
@@ -266,8 +246,4 @@ func composeProjectNetworks(networkField string) []string {
 
 func RenderFilterHeader(input string, width int, dividerStyle lipgloss.Style) string {
 	return components.RenderFilterInputOnly(input, width, dividerStyle)
-}
-
-func dynamicInputWidth(prompt string, lineWidth int) int {
-	return components.DynamicInputWidth(prompt, lineWidth)
 }

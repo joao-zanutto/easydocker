@@ -17,10 +17,11 @@ type tableColumn struct {
 }
 
 type tableModel struct {
-	cols   []tableColumn
-	rows   []tableRow
-	cursor int
-	styles Styles
+	cols       []tableColumn
+	rows       []tableRow
+	cursor     int
+	styles     Styles
+	hideHeader bool
 
 	viewport viewport.Model
 }
@@ -53,8 +54,13 @@ func withRows(rows []tableRow) tableOption {
 
 func withHeight(h int) tableOption {
 	return func(m *tableModel) {
-		headerHeight := lipgloss.Height(m.headersView())
-		m.viewport.SetHeight(max(1, h-headerHeight))
+		m.viewport.SetHeight(max(1, h))
+	}
+}
+
+func withHideHeader(hide bool) tableOption {
+	return func(m *tableModel) {
+		m.hideHeader = hide
 	}
 }
 
@@ -81,12 +87,21 @@ func (m *tableModel) setCursor(n int) {
 }
 
 func (m tableModel) view() string {
-	header := m.styles.Header.Render(m.headersView())
 	body := m.viewport.View()
-	if body == "" {
-		return header
+	var header string
+	if !m.hideHeader && len(m.cols) > 0 {
+		header = m.styles.Header.Render(m.headersView())
 	}
-	return header + "\n" + body
+	if body == "" {
+		if header != "" {
+			return header
+		}
+		return ""
+	}
+	if header != "" {
+		return header + "\n" + body
+	}
+	return body
 }
 
 func (m *tableModel) updateViewport() {

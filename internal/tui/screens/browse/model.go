@@ -88,7 +88,7 @@ func (m Model) View() string {
 		Filter:                  filterCopy,
 	}
 
-	list := m.ListRenderer(m.Width, ListHeightForContent(m.Height, m.Filter.Active))
+	list := m.ListRenderer(m.Width, ListHeightForContent(m.Height))
 	return RenderContent(vm, list, m.DetailProvider)
 }
 

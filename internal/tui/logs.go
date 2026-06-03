@@ -48,6 +48,8 @@ func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 		Muted:        m.styles.Browse.Muted,
 		Divider:      m.styles.Browse.Divider,
 		SubpageFrame: m.styles.Viewer.SubpageFrame,
+		Key:          m.styles.Chrome.Key,
+		KeyText:      m.styles.Chrome.KeyText,
 	}
 	m.err = nil
 	return LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.Logs.SessionID, m.viewer.Logs.TailLines, viewer.SourceInitial)

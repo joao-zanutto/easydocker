@@ -14,4 +14,3 @@ func HumanBytes(size uint64) string {
 	}
 	return fmt.Sprintf("%.1f %ciB", float64(size)/float64(div), "KMGTPE"[exp])
 }
-
