@@ -70,11 +70,12 @@ type model struct {
 	screen      shared.Screen
 	screenStack []shared.Screen
 
-	dataDirty     bool
-	loading       bool
-	loadingStage  shared.Stage
-	metricsLoaded bool
-	spinner       spinner.Model
+	dataDirty         bool
+	loading           bool
+	loadingStage      shared.Stage
+	metricsLoaded     bool
+	snapshotInflight  bool
+	spinner           spinner.Model
 
 	lastResizeTime time.Time
 
@@ -91,6 +92,7 @@ func New(service core.ServiceInterface) tea.Model {
 
 	return model{
 		service:      service,
+		dataDirty:    true,
 		loading:      true,
 		screen:       shared.Main,
 		loadingStage: shared.StageContainers,

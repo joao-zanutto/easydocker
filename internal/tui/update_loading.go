@@ -52,6 +52,7 @@ func (m *model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd
 }
 
 func (m *model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
+	m.snapshotInflight = false
 	m.dataDirty = true
 	if !m.finishLoadingStage(msg.err) {
 		return m, nil
@@ -60,10 +61,28 @@ func (m *model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
 	previousContainers := m.browse.Snapshot.Containers
 	m.browse.Snapshot = msg.snapshot
 	m.browse.Snapshot.Containers = core.PreserveRunningContainerMetrics(m.browse.Snapshot.Containers, previousContainers)
+	recomputeSnapshotTotals(&m.browse.Snapshot)
 	if err := m.reconcileLogsSelection(); err != nil {
 		m.err = err
 	}
 	return m, nil
+}
+
+func recomputeSnapshotTotals(snapshot *core.Snapshot) {
+	var totalCPU float64
+	var totalMem uint64
+	for i := range snapshot.Containers {
+		c := &snapshot.Containers[i]
+		if c.State != core.StateRunning {
+			continue
+		}
+		if c.CPUPercent > 0 {
+			totalCPU += c.CPUPercent
+		}
+		totalMem += c.MemoryUsageBytes
+	}
+	snapshot.TotalCPU = totalCPU
+	snapshot.TotalMem = totalMem
 }
 
 func (m *model) handleViewerContentMsg(msg viewer.ContentMsg) (tea.Model, tea.Cmd) {

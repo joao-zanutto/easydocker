@@ -398,6 +398,7 @@ func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
 	}
+	*m = m.syncBrowseData()
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	after := unwrapModel(updated)
@@ -729,5 +730,29 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 	}
 	if current.viewer.Logs.HistoryLoad {
 		t.Fatalf("tick handling should not mark history loading without result handling")
+	}
+}
+
+func TestPruneComposeExpanded_RemovesAbsentProjects(t *testing.T) {
+	expanded := map[string]bool{"shop": true, "api": true, "stale": true}
+	active := map[string]struct{}{"shop": {}, "api": {}}
+	pruneComposeExpanded(expanded, active)
+	if len(expanded) != 2 {
+		t.Fatalf("expected 2 entries after prune, got %d", len(expanded))
+	}
+	if expanded["stale"] {
+		t.Fatalf("stale project should have been pruned")
+	}
+	if !expanded["shop"] || !expanded["api"] {
+		t.Fatalf("active projects should be preserved")
+	}
+}
+
+func TestPruneComposeExpanded_EmptyMapIsNoOp(t *testing.T) {
+	expanded := map[string]bool{}
+	active := map[string]struct{}{"shop": {}}
+	pruneComposeExpanded(expanded, active)
+	if len(expanded) != 0 {
+		t.Fatalf("empty map should remain empty")
 	}
 }
