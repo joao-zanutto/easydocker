@@ -91,6 +91,12 @@ func (vp *Viewport) getSanitizedLines(raw []string) []string {
 	return vp.sanitizedLines
 }
 
+func (vp *Viewport) ClearCache() {
+	vp.rawLines = nil
+	vp.sanitizedLines = nil
+	vp.dataGen = 0
+}
+
 func (vp *Viewport) SyncFromData(visibleWidth, visibleRows int) {
 	vp.InitialLoad = false
 	if vp.Data == nil {

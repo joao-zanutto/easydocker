@@ -13,8 +13,6 @@ import (
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	m = m.syncBrowseData()
-
 	var updated tea.Model
 	var cmd tea.Cmd
 
@@ -22,6 +20,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		updated, cmd = m.handleWindowSizeMsg(msg)
 	case tea.KeyPressMsg:
+		m = m.syncBrowseData()
 		updated, cmd = m.handleKey(msg)
 	case containersResultMsg:
 		updated, cmd = m.handleContainersResultMsg(msg)
@@ -43,6 +42,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		updated, cmd = m.handleSpinnerTickMsg(msg)
 	case browse.TransitionMsg:
+		m = m.syncBrowseData()
 		updated, cmd = m.handleBrowseTransition(msg)
 	case viewer.TransitionMsg:
 		updated, cmd = m.handleViewerTransition(msg)
@@ -133,6 +133,9 @@ func (m *model) handleBrowseTransition(msg browse.TransitionMsg) (tea.Model, tea
 func (m *model) handleViewerTransition(msg viewer.TransitionMsg) (tea.Model, tea.Cmd) {
 	if msg.BackToBrowse {
 		m.screen = m.popScreen()
+		m.dataDirty = true
+		m.viewer.Vp.Data = nil
+		m.viewer.Vp.ClearCache()
 		return m, nil
 	}
 	if msg.LaunchShell {
@@ -168,7 +171,8 @@ func (m *model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 func (m *model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{tickCmd()}
-	if m.shouldReloadSnapshotOnTick() {
+	if m.shouldReloadSnapshotOnTick() && !m.snapshotInflight {
+		m.snapshotInflight = true
 		cmds = append(cmds, loadDockerCmd(m.service))
 	}
 	if m.shouldLoadHistoryOnTick() {
