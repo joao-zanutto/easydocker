@@ -142,6 +142,7 @@ func ContainerTableRow(container core.ContainerRow, stateWidth int, loadingIndic
 	mem := util.ContainerMemoryTableValue(container, loadingIndicator)
 	if treePrefix != "" {
 		name = treePrefix + name
+		state = childMetricGuidePrefix(treePrefix) + state
 		cpu = childMetricGuidePrefix(treePrefix) + cpu
 		mem = childMetricGuidePrefix(treePrefix) + mem
 	}
