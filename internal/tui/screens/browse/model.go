@@ -117,7 +117,7 @@ func (m Model) handleFilterKey(msg tea.KeyPressMsg, keys KeyMap) (Model, tea.Cmd
 		m.Filter.Input.Blur()
 		m.Filter.Query = ""
 		m.Filter.Input.SetValue("")
-		m = m.clampCursors()
+		m = m.ClampCursors()
 		return m, nil
 	case msg.String() == "enter":
 		m.Filter.Active = false
@@ -139,7 +139,7 @@ func (m Model) handleFilterKey(msg tea.KeyPressMsg, keys KeyMap) (Model, tea.Cmd
 		var cmd tea.Cmd
 		m.Filter.Input, cmd = m.Filter.Input.Update(msg)
 		m.Filter.Query = m.Filter.Input.Value()
-		m = m.clampCursors()
+		m = m.ClampCursors()
 		return m, cmd
 	}
 }
@@ -155,7 +155,7 @@ func (m Model) applyTransition(transition Transition) (Model, tea.Cmd) {
 	}
 	if transition.ToggleScope {
 		m.ShowAll = !m.ShowAll
-		m = m.clampCursors()
+		m = m.ClampCursors()
 	}
 	if transition.OpenMenu {
 		return m, func() tea.Msg { return TransitionMsg{OpenMenu: true} }
@@ -198,7 +198,7 @@ func (m Model) moveCursor(delta int) Model {
 	return m
 }
 
-func (m Model) clampCursors() Model {
+func (m Model) ClampCursors() Model {
 	tabs := []shared.Tab{shared.TabContainers, shared.TabImages, shared.TabNetworks, shared.TabVolumes}
 	c := m.cursors()
 	shared.ClampAllCursors(&c, tabs, m.ItemCountForTab)
