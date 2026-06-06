@@ -17,6 +17,7 @@ func (m model) syncBrowseData() model {
 		FilteredVolumes:         m.filteredVolumes(),
 		MetricsLoadingIndicator: m.metricsLoadingIndicator(),
 	}
+	m.browse = m.browse.ClampCursors()
 	m.browse.DetailProvider = m.browseDetailRenderer()
 	return m
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"easydocker/internal/core"
+	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
@@ -730,6 +731,87 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 	}
 	if current.viewer.Logs.HistoryLoad {
 		t.Fatalf("tick handling should not mark history loading without result handling")
+	}
+}
+
+func TestIntegration_FirstEnterOnComposeRow_ExpandsNotLogs(t *testing.T) {
+	m := unwrapModel(New(nil))
+	m.screen = shared.Main
+	m.browse.ActiveTab = tabContainers
+	m.browse.ShowAll = true
+	m.browse.Snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{
+			{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"},
+			{FullID: "ctr-2", Name: "worker", ComposeProject: "shop", State: "running"},
+			{FullID: "ctr-3", Name: "web", State: "running"},
+		},
+	}
+	// Simulate initial state: data loaded but no persistent sync yet
+	m.dataDirty = true
+	m.browse.Data = browse.BrowseData{}
+
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	after := unwrapModel(updated)
+
+	if cmd != nil {
+		t.Fatalf("enter on compose project row should not return a command, got %T", cmd)
+	}
+	if after.screen != shared.Main {
+		t.Fatalf("screen = %v, want Main", after.screen)
+	}
+	if !after.browse.ComposeExpanded["shop"] {
+		t.Fatalf("compose project 'shop' should be expanded after enter")
+	}
+}
+
+func TestIntegration_ComposeExpandThenDownThenEnter(t *testing.T) {
+	m := unwrapModel(New(nil))
+	m.screen = shared.Main
+	m.browse.ActiveTab = tabContainers
+	m.browse.ShowAll = true
+	m.browse.Snapshot = core.Snapshot{
+		Containers: []core.ContainerRow{
+			{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"},
+			{FullID: "ctr-2", Name: "worker", ComposeProject: "shop", State: "running"},
+			{FullID: "ctr-3", Name: "web", State: "running"},
+		},
+	}
+	m.dataDirty = true
+	m.browse.Data = browse.BrowseData{}
+
+	// Step 1: Enter to expand compose project
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	after := unwrapModel(updated)
+	if cmd != nil {
+		t.Fatalf("enter on compose project should not return cmd, got %T", cmd)
+	}
+	if !after.browse.ComposeExpanded["shop"] {
+		t.Fatalf("compose project should be expanded")
+	}
+
+	// Step 2: Down to first child container
+	updated, cmd = after.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	after = unwrapModel(updated)
+	if cmd != nil {
+		t.Fatalf("down should not return cmd, got %T", cmd)
+	}
+
+	// Step 3: Enter on first child should open logs
+	updated, cmd = after.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	after = unwrapModel(updated)
+	if cmd == nil {
+		t.Fatalf("enter on child container should return logs cmd")
+	}
+
+	if msg := cmd(); msg != nil {
+		updated, _ = after.Update(msg)
+		after = unwrapModel(updated)
+	}
+	if after.screen != shared.LogViewer {
+		t.Fatalf("screen = %v, want LogViewer", after.screen)
+	}
+	if after.viewer.ContainerID != "ctr-1" {
+		t.Fatalf("logs container = %q, want ctr-1", after.viewer.ContainerID)
 	}
 }
 
