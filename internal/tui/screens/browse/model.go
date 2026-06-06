@@ -38,8 +38,8 @@ type Model struct {
 
 	Data BrowseData
 
+	RenderedList   string
 	DetailProvider DetailProvider
-	ListRenderer   func(width, height int) string
 }
 
 func NewModel() Model {
@@ -68,7 +68,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	if m.ListRenderer == nil {
+	if m.DetailProvider == nil {
 		return ""
 	}
 
@@ -88,8 +88,7 @@ func (m Model) View() string {
 		Filter:                  filterCopy,
 	}
 
-	list := m.ListRenderer(m.Width, ListHeightForContent(m.Height))
-	return RenderContent(vm, list, m.DetailProvider)
+	return RenderContent(vm, m.RenderedList, m.DetailProvider)
 }
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
