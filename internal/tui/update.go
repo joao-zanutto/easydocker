@@ -20,7 +20,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		updated, cmd = m.handleWindowSizeMsg(msg)
 	case tea.KeyPressMsg:
-		m = m.syncBrowseData()
 		updated, cmd = m.handleKey(msg)
 	case containersResultMsg:
 		updated, cmd = m.handleContainersResultMsg(msg)

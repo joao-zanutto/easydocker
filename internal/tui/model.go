@@ -70,12 +70,12 @@ type model struct {
 	screen      shared.Screen
 	screenStack []shared.Screen
 
-	dataDirty         bool
-	loading           bool
-	loadingStage      shared.Stage
-	metricsLoaded     bool
-	snapshotInflight  bool
-	spinner           spinner.Model
+	dataDirty        bool
+	loading          bool
+	loadingStage     shared.Stage
+	metricsLoaded    bool
+	snapshotInflight bool
+	spinner          spinner.Model
 
 	lastResizeTime time.Time
 

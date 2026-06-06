@@ -18,9 +18,6 @@ func (m model) syncBrowseData() model {
 		MetricsLoadingIndicator: m.metricsLoadingIndicator(),
 	}
 	m.browse.DetailProvider = m.browseDetailRenderer()
-	m.browse.ListRenderer = func(width, h int) string {
-		return m.renderResourceList(width, h)
-	}
 	return m
 }
 

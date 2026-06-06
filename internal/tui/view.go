@@ -74,6 +74,8 @@ func (m model) renderMain(height int) string {
 	m.browse.Width = layout.ContentWidth
 	m.browse.Height = layout.ContentHeight
 
+	m.browse.RenderedList = m.renderResourceList(m.browse.Width, browse.ListHeightForContent(m.browse.Height))
+
 	content := m.browse.View()
 	return util.RenderFramedContent(m.styles.Browse.MainFrame, layout, content)
 }
@@ -192,45 +194,15 @@ func (m model) renderChromeTab(tab shared.Tab, label string) string {
 	return m.styles.Tabs.Tab.Render(label)
 }
 
-func (m model) detailLineWithWidth(label, value string, width int) string {
-	labelText := label + ": "
-	if width <= 0 {
-		return m.styles.Browse.Label.Render(labelText) + m.styles.Browse.Value.Render(value)
-	}
-
-	labelRendered := m.styles.Browse.Label.Render(labelText)
-	labelWidth := util.DisplayWidth(labelRendered)
-	if labelWidth >= width {
-		return util.ConstrainLine(labelRendered, width)
-	}
-
-	valueWidth := max(1, width-labelWidth)
-	return labelRendered + m.styles.Browse.Value.Render(util.ConstrainLine(value, valueWidth))
-}
-
 func (m model) browseDetailRenderer() browse.DetailProvider {
 	return browseDetailRenderer{
-		detailLine:       m.detailLineWithWidth,
-		containerStateFn: m.renderContainerState,
-	}
-}
-
-func (m model) renderContainerState(container core.ContainerRow) string {
-	return m.stateStyle(container.State).Render(util.ContainerStateText(container))
-}
-
-func (m model) stateStyle(state core.ContainerState) lipgloss.Style {
-	switch state {
-	case core.StateRunning:
-		return m.styles.States.StateRun
-	case core.StatePaused, core.StateRestarting, core.StateCreated:
-		return m.styles.States.StateWarn
-	case core.StateExited:
-		return m.styles.States.StateStop
-	case core.StateDead:
-		return m.styles.States.StateDead
-	default:
-		return m.styles.States.StateOther
+		labelStyle:      m.styles.Browse.Label,
+		valueStyle:      m.styles.Browse.Value,
+		stateRunStyle:   m.styles.States.StateRun,
+		stateWarnStyle:  m.styles.States.StateWarn,
+		stateStopStyle:  m.styles.States.StateStop,
+		stateDeadStyle:  m.styles.States.StateDead,
+		stateOtherStyle: m.styles.States.StateOther,
 	}
 }
 
@@ -292,14 +264,44 @@ func renderResourceTableFromSpec[T any](m model, width, height int, spec tables.
 }
 
 type browseDetailRenderer struct {
-	detailLine       func(label, value string, width int) string
-	containerStateFn func(container core.ContainerRow) string
+	labelStyle      lipgloss.Style
+	valueStyle      lipgloss.Style
+	stateRunStyle   lipgloss.Style
+	stateWarnStyle  lipgloss.Style
+	stateStopStyle  lipgloss.Style
+	stateDeadStyle  lipgloss.Style
+	stateOtherStyle lipgloss.Style
 }
 
 func (r browseDetailRenderer) DetailLine(label, value string, width int) string {
-	return r.detailLine(label, value, width)
+	labelText := label + ": "
+	if width <= 0 {
+		return r.labelStyle.Render(labelText) + r.valueStyle.Render(value)
+	}
+
+	labelRendered := r.labelStyle.Render(labelText)
+	labelWidth := util.DisplayWidth(labelRendered)
+	if labelWidth >= width {
+		return util.ConstrainLine(labelRendered, width)
+	}
+
+	valueWidth := max(1, width-labelWidth)
+	return labelRendered + r.valueStyle.Render(util.ConstrainLine(value, valueWidth))
 }
 
 func (r browseDetailRenderer) RenderContainerState(container core.ContainerRow) string {
-	return r.containerStateFn(container)
+	var stateStyle lipgloss.Style
+	switch container.State {
+	case core.StateRunning:
+		stateStyle = r.stateRunStyle
+	case core.StatePaused, core.StateRestarting, core.StateCreated:
+		stateStyle = r.stateWarnStyle
+	case core.StateExited:
+		stateStyle = r.stateStopStyle
+	case core.StateDead:
+		stateStyle = r.stateDeadStyle
+	default:
+		stateStyle = r.stateOtherStyle
+	}
+	return stateStyle.Render(util.ContainerStateText(container))
 }
