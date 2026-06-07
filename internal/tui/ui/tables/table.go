@@ -12,8 +12,9 @@ import (
 type tableRow []string
 
 type tableColumn struct {
-	Title string
-	Width int
+	Title       string
+	Width       int
+	PinnedRight bool
 }
 
 type tableModel struct {
@@ -129,18 +130,32 @@ func (m *tableModel) updateViewport() {
 }
 
 func (m tableModel) headersView() string {
-	parts := make([]string, 0, len(m.cols))
+	leftParts := make([]string, 0, len(m.cols))
+	rightParts := make([]string, 0, len(m.cols))
 	for _, col := range m.cols {
 		if col.Width <= 0 {
 			continue
 		}
-		parts = append(parts, lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true).Render(util.TruncateWithEllipsis(col.Title, col.Width)))
+		cell := lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true).Render(util.TruncateWithEllipsis(col.Title, col.Width))
+		if col.PinnedRight {
+			rightParts = append(rightParts, cell)
+		} else {
+			leftParts = append(leftParts, cell)
+		}
 	}
-	return joinWithGap(parts, "  ")
+
+	leftLine := joinWithGap(leftParts, "  ")
+	if len(rightParts) == 0 {
+		return leftLine
+	}
+	rightLine := joinWithGap(rightParts, "  ")
+	padding := max(0, m.viewport.Width()-util.DisplayWidth(leftLine)-util.DisplayWidth(rightLine))
+	return leftLine + strings.Repeat(" ", padding) + rightLine
 }
 
 func (m tableModel) renderRow(rowIndex int) string {
-	parts := make([]string, 0, len(m.cols))
+	leftParts := make([]string, 0, len(m.cols))
+	rightParts := make([]string, 0, len(m.cols))
 	for colIndex, col := range m.cols {
 		if col.Width <= 0 {
 			continue
@@ -149,10 +164,24 @@ func (m tableModel) renderRow(rowIndex int) string {
 		if colIndex < len(m.rows[rowIndex]) {
 			value = m.rows[rowIndex][colIndex]
 		}
-		parts = append(parts, lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true).Render(util.TruncateWithEllipsis(value, col.Width)))
+		cell := lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true).Render(util.TruncateWithEllipsis(value, col.Width))
+		if col.PinnedRight {
+			rightParts = append(rightParts, cell)
+		} else {
+			leftParts = append(leftParts, cell)
+		}
 	}
 
-	line := joinWithGap(parts, "  ")
+	leftLine := joinWithGap(leftParts, "  ")
+	if len(rightParts) == 0 {
+		if rowIndex == m.cursor {
+			return m.styles.Selected.Render(leftLine)
+		}
+		return m.styles.Cell.Render(leftLine)
+	}
+	rightLine := joinWithGap(rightParts, "  ")
+	padding := max(0, m.viewport.Width()-util.DisplayWidth(leftLine)-util.DisplayWidth(rightLine))
+	line := leftLine + strings.Repeat(" ", padding) + rightLine
 	if rowIndex == m.cursor {
 		return m.styles.Selected.Render(line)
 	}

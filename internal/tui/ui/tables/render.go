@@ -23,20 +23,88 @@ func DefaultStyles() Styles {
 }
 
 // ResolveColumns computes final column widths based on available space.
+// Left-aligned columns have priority: they grow first when space is abundant
+// and are the last to shrink when space is tight. Pinned-right columns
+// maintain their natural width when possible and shrink first under pressure.
 func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
-	desired := make([]int, 0, len(defs))
-	for _, def := range defs {
-		width := def.MinWidth
-		if def.Desired != nil {
-			width = max(width, def.Desired(tableWidth))
+	firstPinned := len(defs)
+	for i, def := range defs {
+		if def.PinnedRight {
+			firstPinned = i
+			break
 		}
-		desired = append(desired, width)
 	}
 
-	widths := util.AllocateColumns(max(1, tableWidth-((len(defs)-1)*2)), desired)
+	nonPinnedCount := firstPinned
+	pinnedCount := len(defs) - firstPinned
+	gapCount := max(0, nonPinnedCount-1) + max(0, pinnedCount-1)
+	netWidth := max(1, tableWidth-gapCount*2)
+
+	desired := make([]int, len(defs))
+	for i, def := range defs {
+		w := def.MinWidth
+		if def.Desired != nil {
+			w = max(w, def.Desired(tableWidth))
+		}
+		desired[i] = w
+	}
+
+	nonPinnedDesired := make([]int, firstPinned)
+	nonPinnedMin := 0
+	nonPinnedSum := 0
+	for i := 0; i < firstPinned; i++ {
+		nonPinnedDesired[i] = desired[i]
+		nonPinnedMin += defs[i].MinWidth
+		nonPinnedSum += desired[i]
+	}
+
+	pinnedDesired := desired[firstPinned:]
+	pinnedMin := 0
+	pinnedSum := 0
+	for i := firstPinned; i < len(defs); i++ {
+		pinnedMin += defs[i].MinWidth
+		pinnedSum += desired[i]
+	}
+
+	totalMin := nonPinnedMin + pinnedMin
+	totalDesired := nonPinnedSum + pinnedSum
+
+	var nonPinnedWidths, pinnedWidths []int
+
+	switch {
+	case netWidth <= nonPinnedMin:
+		// Extreme squeeze: only enough room for left minimums
+		nonPinnedWidths = util.AllocateColumns(netWidth, nonPinnedDesired)
+		pinnedWidths = util.AllocateColumns(0, pinnedDesired)
+
+	case netWidth <= totalMin:
+		// Tight: give left their mins, right scraps
+		nonPinnedWidths = util.AllocateColumns(nonPinnedMin, nonPinnedDesired)
+		pinnedAvail := netWidth - nonPinnedMin
+		pinnedWidths = util.AllocateColumns(pinnedAvail, pinnedDesired)
+
+	case netWidth <= totalDesired:
+		// Moderate: left gets full desired, right gets leftover
+		nonPinnedWidths = util.AllocateColumns(nonPinnedSum, nonPinnedDesired)
+		pinnedAvail := netWidth - nonPinnedSum
+		pinnedWidths = util.AllocateColumns(pinnedAvail, pinnedDesired)
+
+	default:
+		// Abundant: left gets desired + surplus, right keeps desired
+		nonPinnedWidths = util.AllocateColumns(nonPinnedSum+(netWidth-totalDesired), nonPinnedDesired)
+		pinnedWidths = make([]int, pinnedCount)
+		for i := 0; i < pinnedCount; i++ {
+			pinnedWidths[i] = pinnedDesired[i]
+		}
+	}
+
 	resolved := make([]ColumnDef, 0, len(defs))
-	for index, def := range defs {
-		def.MinWidth = widths[index]
+	for i, def := range defs {
+		if def.PinnedRight {
+			def.MinWidth = pinnedWidths[i-firstPinned]
+		} else {
+			def.MinWidth = nonPinnedWidths[i]
+		}
 		resolved = append(resolved, def)
 	}
 	return resolved
@@ -67,7 +135,7 @@ func RenderOrEmpty(width, height int, emptyMessage string, columns []ColumnDef, 
 		}
 		cols := make([]tableColumn, 0, len(columns))
 		for _, def := range columns {
-			cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth})
+			cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth, PinnedRight: def.PinnedRight})
 		}
 		t := newTable(
 			withColumns(cols),
@@ -89,7 +157,7 @@ func RenderOrEmpty(width, height int, emptyMessage string, columns []ColumnDef, 
 func renderTable(styles Styles, width, height int, defs []ColumnDef, rows []Row, cursor int, hideHeader bool) string {
 	cols := make([]tableColumn, 0, len(defs))
 	for _, def := range defs {
-		cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth})
+		cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth, PinnedRight: def.PinnedRight})
 	}
 	privateRows := make([]tableRow, 0, len(rows))
 	for _, row := range rows {

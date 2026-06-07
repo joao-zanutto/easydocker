@@ -2,39 +2,39 @@ package tables
 
 // ContainerSchema defines column layout for containers table.
 var ContainerSchema = []ColumnDef{
-	{Header: "NAME", MinWidth: 10, Desired: proportionalWidth(10, 6)},
+	{Header: "NAME", MinWidth: 10, Desired: proportionalWidth(24, 3)},
 	{Header: "STATE", MinWidth: 12, Desired: fixedWidth(12)},
-	{Header: "CPU", MinWidth: 8, Desired: fixedWidth(8)},
-	{Header: "MEMORY", MinWidth: 18, Desired: fixedWidth(18)},
-	{Header: "IMAGE", MinWidth: 12, Desired: proportionalWidth(12, 5)},
-	{Header: "STATUS", MinWidth: 8, Desired: proportionalWidth(8, 4)},
+	{Header: "CPU", MinWidth: 9, Desired: fixedWidth(9)},
+	{Header: "MEMORY", MinWidth: 12, Desired: fixedWidth(12)},
+	{Header: "IMAGE", MinWidth: 12, Desired: proportionalWidth(22, 4)},
+	{Header: "STATUS", MinWidth: 24, Desired: fixedWidth(24), PinnedRight: true},
 }
 
 // ImageSchema defines column layout for images table.
 var ImageSchema = []ColumnDef{
-	{Header: "REPOSITORY", MinWidth: 18, Desired: proportionalWidth(18, 4)},
+	{Header: "REPOSITORY", MinWidth: 18, Desired: proportionalWidth(24, 2)},
 	{Header: "TAGS", MinWidth: 16, Desired: proportionalWidth(16, 4)},
-	{Header: "SIZE", MinWidth: 10, Desired: fixedWidth(10)},
-	{Header: "CREATED", MinWidth: 12, Desired: fixedWidth(12)},
-	{Header: "IMAGE ID", MinWidth: 12, Desired: proportionalWidth(12, 5)},
+	{Header: "SIZE", MinWidth: 10, Desired: fixedWidth(10), PinnedRight: true},
+	{Header: "CREATED", MinWidth: 9, Desired: fixedWidth(9), PinnedRight: true},
+	{Header: "IMAGE ID", MinWidth: 16, Desired: fixedWidth(16), PinnedRight: true},
 }
 
 // NetworkSchema defines column layout for networks table.
 var NetworkSchema = []ColumnDef{
 	{Header: "NAME", MinWidth: 18, Desired: proportionalWidth(18, 4)},
-	{Header: "DRIVER", MinWidth: 10, Desired: proportionalWidth(10, 6)},
-	{Header: "SCOPE", MinWidth: 10, Desired: fixedWidth(10)},
-	{Header: "ENDPOINTS", MinWidth: 10, Desired: fixedWidth(10)},
-	{Header: "META", MinWidth: 18, Desired: proportionalWidth(18, 4)},
+	{Header: "DRIVER", MinWidth: 8, Desired: fixedWidth(8), PinnedRight: true},
+	{Header: "SCOPE", MinWidth: 6, Desired: fixedWidth(6), PinnedRight: true},
+	{Header: "ENDPOINTS", MinWidth: 9, Desired: fixedWidth(9), PinnedRight: true},
+	{Header: "META", MinWidth: 24, Desired: fixedWidth(24), PinnedRight: true},
 }
 
 // VolumeSchema defines column layout for volumes table.
 var VolumeSchema = []ColumnDef{
 	{Header: "NAME", MinWidth: 18, Desired: proportionalWidth(18, 4)},
-	{Header: "DRIVER", MinWidth: 10, Desired: proportionalWidth(10, 6)},
-	{Header: "SCOPE", MinWidth: 10, Desired: fixedWidth(10)},
-	{Header: "SIZE", MinWidth: 10, Desired: fixedWidth(10)},
-	{Header: "REFS", MinWidth: 8, Desired: fixedWidth(8)},
+	{Header: "DRIVER", MinWidth: 7, Desired: fixedWidth(7), PinnedRight: true},
+	{Header: "SCOPE", MinWidth: 6, Desired: fixedWidth(6), PinnedRight: true},
+	{Header: "SIZE", MinWidth: 10, Desired: fixedWidth(10), PinnedRight: true},
+	{Header: "REFS", MinWidth: 8, Desired: fixedWidth(8), PinnedRight: true},
 }
 
 // fixedWidth returns a width function that always returns the same value.
