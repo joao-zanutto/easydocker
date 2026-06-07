@@ -45,6 +45,7 @@ func TestTableColumnSchemas(t *testing.T) {
 			}
 
 			totalWidth := 0
+			firstPinned := len(tt.columns)
 			for i, col := range tt.columns {
 				if col.Header != tt.wantHeader[i] {
 					t.Fatalf("header[%d] = %q, want %q", i, col.Header, tt.wantHeader[i])
@@ -53,8 +54,14 @@ func TestTableColumnSchemas(t *testing.T) {
 					t.Fatalf("minWidth[%d] = %d, want > 0", i, col.MinWidth)
 				}
 				totalWidth += col.MinWidth
+				if col.PinnedRight && i < firstPinned {
+					firstPinned = i
+				}
 			}
-			totalWidth += (len(tt.columns) - 1) * 2
+			nonPinnedCount := firstPinned
+			pinnedCount := len(tt.columns) - firstPinned
+			gapCount := max(0, nonPinnedCount-1) + max(0, pinnedCount-1)
+			totalWidth += gapCount * 2
 			if totalWidth > tableWidth {
 				t.Fatalf("resolved columns width = %d, want <= %d", totalWidth, tableWidth)
 			}
