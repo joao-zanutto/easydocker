@@ -23,9 +23,9 @@ func DefaultStyles() Styles {
 }
 
 // ResolveColumns computes final column widths based on available space.
-// Left-aligned columns have priority: they grow first when space is abundant
-// and are the last to shrink when space is tight. Pinned-right columns
-// maintain their natural width when possible and shrink first under pressure.
+// All columns are guaranteed their MinWidth. Left-aligned columns absorb
+// any deficit first, protecting pinned-right columns from falling below
+// their MinWidth. Surplus space is distributed to left columns first.
 func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 	firstPinned := len(defs)
 	for i, def := range defs {
@@ -66,36 +66,31 @@ func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 		pinnedSum += desired[i]
 	}
 
-	totalMin := nonPinnedMin + pinnedMin
-	totalDesired := nonPinnedSum + pinnedSum
+	remaining := netWidth - pinnedMin - nonPinnedMin
 
 	var nonPinnedWidths, pinnedWidths []int
 
-	switch {
-	case netWidth <= nonPinnedMin:
-		// Extreme squeeze: only enough room for left minimums
-		nonPinnedWidths = util.AllocateColumns(netWidth, nonPinnedDesired)
-		pinnedWidths = util.AllocateColumns(0, pinnedDesired)
+	if remaining >= 0 {
+		// Enough for everyone's minimum. Give to non-pinned up to
+		// desired, then to pinned up to desired, then surplus to
+		// non-pinned.
+		nonPinnedExtra := nonPinnedSum - nonPinnedMin
+		give := min(remaining, nonPinnedExtra)
+		nonPinnedWidths = util.AllocateColumns(nonPinnedMin+give, nonPinnedDesired)
+		remaining -= give
 
-	case netWidth <= totalMin:
-		// Tight: give left their mins, right scraps
-		nonPinnedWidths = util.AllocateColumns(nonPinnedMin, nonPinnedDesired)
-		pinnedAvail := netWidth - nonPinnedMin
-		pinnedWidths = util.AllocateColumns(pinnedAvail, pinnedDesired)
+		pinnedExtra := pinnedSum - pinnedMin
+		give = min(remaining, pinnedExtra)
+		pinnedWidths = util.AllocateColumns(pinnedMin+give, pinnedDesired)
+		remaining -= give
 
-	case netWidth <= totalDesired:
-		// Moderate: left gets full desired, right gets leftover
-		nonPinnedWidths = util.AllocateColumns(nonPinnedSum, nonPinnedDesired)
-		pinnedAvail := netWidth - nonPinnedSum
-		pinnedWidths = util.AllocateColumns(pinnedAvail, pinnedDesired)
-
-	default:
-		// Abundant: left gets desired + surplus, right keeps desired
-		nonPinnedWidths = util.AllocateColumns(nonPinnedSum+(netWidth-totalDesired), nonPinnedDesired)
-		pinnedWidths = make([]int, pinnedCount)
-		for i := 0; i < pinnedCount; i++ {
-			pinnedWidths[i] = pinnedDesired[i]
+		if remaining > 0 {
+			nonPinnedWidths = util.AllocateColumns(nonPinnedMin+nonPinnedExtra+remaining, nonPinnedDesired)
 		}
+	} else {
+		// Deficit: pinned keep their mins, left absorb the shortfall.
+		pinnedWidths = util.AllocateColumns(pinnedMin, pinnedDesired)
+		nonPinnedWidths = util.AllocateColumns(max(1, netWidth-pinnedMin), nonPinnedDesired)
 	}
 
 	resolved := make([]ColumnDef, 0, len(defs))

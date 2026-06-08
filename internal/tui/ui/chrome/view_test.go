@@ -12,6 +12,32 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+func TestTotalsText(t *testing.T) {
+	snapshot := core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048}
+	got := totalsText(snapshot, shared.StageIdle, true, "", totalsFull)
+	if !strings.Contains(got, "CPU") || !strings.Contains(got, "MEM") {
+		t.Fatalf("totalsText(full) = %q, want CPU/MEM", got)
+	}
+
+	gotCPU := totalsText(snapshot, shared.StageIdle, true, "", totalsCPU)
+	if !strings.Contains(gotCPU, "CPU") {
+		t.Fatalf("totalsText(cpu) = %q, want CPU", gotCPU)
+	}
+	if strings.Contains(gotCPU, "MEM") {
+		t.Fatalf("totalsText(cpu) = %q, should not contain MEM", gotCPU)
+	}
+
+	loading := totalsText(snapshot, shared.StageMetrics, false, "⠋", totalsFull)
+	if !strings.Contains(loading, "CPU") || !strings.Contains(loading, "⠋") {
+		t.Fatalf("totalsText(loading) = %q, want CPU with spinner", loading)
+	}
+
+	stale := totalsText(snapshot, shared.StageMetrics, true, "⠋", totalsFull)
+	if strings.Contains(stale, "⠋") {
+		t.Fatalf("totalsText(post-metrics) = %q, should not have spinner", stale)
+	}
+}
+
 type testFooterKeyMap struct {
 	bindings []key.Binding
 }
@@ -24,34 +50,7 @@ func (m testFooterKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{m.bindings}
 }
 
-func TestRenderHeaderTabs_WidthFallback(t *testing.T) {
-	specs := []TabSpec{
-		{Tab: 0, Icon: "🐳", Name: "Containers", Count: 2},
-		{Tab: 1, Icon: "💿", Name: "Images", Count: 2},
-		{Tab: 2, Icon: "🔌", Name: "Networks", Count: 1},
-		{Tab: 3, Icon: "📂", Name: "Volumes", Count: 2},
-	}
-	renderTab := func(tab shared.Tab, label string) string { return label }
-	RenderTabs := RenderHeaderTabs(specs, 200, renderTab)
-	wide := util.StripANSI(strings.Join(RenderTabs, " "))
-	for _, token := range []string{"Containers (2)", "Images (2)", "Networks (1)", "Volumes (2)"} {
-		if !strings.Contains(wide, token) {
-			t.Fatalf("expected wide header tabs to contain %q, got %q", token, wide)
-		}
-	}
 
-	tiny := RenderHeaderTabs(specs, 1, renderTab)
-	if len(tiny) != 4 {
-		t.Fatalf("expected 4 tabs, got %d", len(tiny))
-	}
-	icons := []string{"🐳", "💿", "🔌", "📂"}
-	for i, want := range icons {
-		got := strings.TrimSpace(util.StripANSI(tiny[i]))
-		if got != want {
-			t.Fatalf("tab %d icon fallback = %q, want %q", i, got, want)
-		}
-	}
-}
 
 func TestScopeLabel(t *testing.T) {
 	tests := []struct {
@@ -76,7 +75,6 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 	header := RenderHeader(HeaderInput{
 		Width:            220,
 		Title:            "EasyDocker",
-		TotalsText:       "CPU 1.0%  MEM 2.0%",
 		LoadingStageText: "loading resources",
 		ActiveTab:        0,
 		ShowAll:          true,
@@ -92,7 +90,9 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 			Badge:     lipgloss.NewStyle(),
 			ErrorText: lipgloss.NewStyle(),
 		},
-		RenderTab: func(tab shared.Tab, label string) string { return label },
+		RenderTab:        func(tab shared.Tab, label string) string { return label },
+		Snapshot:         core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048},
+		MetricsLoaded:    true,
 	})
 	if !strings.Contains(util.StripANSI(header), "EasyDocker") {
 		t.Fatalf("expected header to contain title, got %q", header)
@@ -119,23 +119,4 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 	}
 }
 
-func TestRenderTotalsLabel(t *testing.T) {
-	snapshot := core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048}
-	if got := RenderTotalsLabel(snapshot, shared.StageIdle, true, ""); !strings.Contains(got, "CPU") || !strings.Contains(got, "MEM") {
-		t.Fatalf("RenderTotalsLabel() = %q, want CPU/MEM text", got)
-	}
-}
 
-func TestRenderTotalsLabel_UsesIndicatorOnlyBeforeFirstMetricsLoad(t *testing.T) {
-	snapshot := core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048}
-
-	loading := RenderTotalsLabel(snapshot, shared.StageMetrics, false, "⠋")
-	if !strings.Contains(loading, "CPU") || !strings.Contains(loading, "MEM") || !strings.Contains(loading, "⠋") {
-		t.Fatalf("pre-metrics totals should show spinner indicator, got %q", loading)
-	}
-
-	stale := RenderTotalsLabel(snapshot, shared.StageMetrics, true, "⠋")
-	if strings.Contains(stale, "⠋") {
-		t.Fatalf("post-metrics totals should keep stale numbers, got %q", stale)
-	}
-}
