@@ -23,18 +23,16 @@ var ImageSchema = []ColumnDef{
 var NetworkSchema = []ColumnDef{
 	{Header: "NAME", MinWidth: 18, Desired: proportionalWidth(18, 4)},
 	{Header: "DRIVER", MinWidth: 8, Desired: fixedWidth(8), PinnedRight: true},
-	{Header: "SCOPE", MinWidth: 6, Desired: fixedWidth(6), PinnedRight: true},
 	{Header: "ENDPOINTS", MinWidth: 9, Desired: fixedWidth(9), PinnedRight: true},
-	{Header: "META", MinWidth: 24, Desired: fixedWidth(24), PinnedRight: true},
+	{Header: "CREATED", MinWidth: 10, Desired: fixedWidth(10), PinnedRight: true},
 }
 
 // VolumeSchema defines column layout for volumes table.
 var VolumeSchema = []ColumnDef{
-	{Header: "NAME", MinWidth: 18, Desired: proportionalWidth(18, 4)},
-	{Header: "DRIVER", MinWidth: 7, Desired: fixedWidth(7), PinnedRight: true},
-	{Header: "SCOPE", MinWidth: 6, Desired: fixedWidth(6), PinnedRight: true},
+	{Header: "NAME", MinWidth: 18, Desired: proportionalWidth(22, 3)},
+	{Header: "MOUNTPOINT", MinWidth: 14, Desired: proportionalWidth(14, 3)},
 	{Header: "SIZE", MinWidth: 10, Desired: fixedWidth(10), PinnedRight: true},
-	{Header: "REFS", MinWidth: 8, Desired: fixedWidth(8), PinnedRight: true},
+	{Header: "CREATED", MinWidth: 10, Desired: fixedWidth(10), PinnedRight: true},
 }
 
 // fixedWidth returns a width function that always returns the same value.

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/util"
 )
 
 // ImageColumns resolves image columns for a given table width.
@@ -78,9 +77,8 @@ func NetworkTableRow(network core.NetworkRow) []string {
 	return []string{
 		network.Name,
 		network.Driver,
-		network.Scope,
 		fmt.Sprintf("%d", network.Endpoints),
-		fmt.Sprintf("internal:%s attach:%s", network.Internal, network.Attachable),
+		network.Created,
 	}
 }
 
@@ -88,9 +86,8 @@ func NetworkTableRow(network core.NetworkRow) []string {
 func VolumeTableRow(volume core.VolumeRow) []string {
 	return []string{
 		volume.Name,
-		volume.Driver,
-		volume.Scope,
+		volume.Mountpoint,
 		volume.Size,
-		util.RefCountText(volume.RefCount),
+		volume.Created,
 	}
 }

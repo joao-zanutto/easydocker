@@ -29,12 +29,12 @@ func TestTableColumnSchemas(t *testing.T) {
 		{
 			name:       "networks",
 			columns:    NetworkColumns(tableWidth),
-			wantHeader: []string{"NAME", "DRIVER", "SCOPE", "ENDPOINTS", "META"},
+			wantHeader: []string{"NAME", "DRIVER", "ENDPOINTS", "CREATED"},
 		},
 		{
 			name:       "volumes",
 			columns:    VolumeColumns(tableWidth),
-			wantHeader: []string{"NAME", "DRIVER", "SCOPE", "SIZE", "REFS"},
+			wantHeader: []string{"NAME", "MOUNTPOINT", "SIZE", "CREATED"},
 		},
 	}
 

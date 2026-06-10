@@ -50,8 +50,6 @@ func (m testFooterKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{m.bindings}
 }
 
-
-
 func TestScopeLabel(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -90,9 +88,9 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 			Badge:     lipgloss.NewStyle(),
 			ErrorText: lipgloss.NewStyle(),
 		},
-		RenderTab:        func(tab shared.Tab, label string) string { return label },
-		Snapshot:         core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048},
-		MetricsLoaded:    true,
+		RenderTab:     func(tab shared.Tab, label string) string { return label },
+		Snapshot:      core.Snapshot{TotalCPU: 12.3, TotalMem: 1024, TotalLimit: 2048},
+		MetricsLoaded: true,
 	})
 	if !strings.Contains(util.StripANSI(header), "EasyDocker") {
 		t.Fatalf("expected header to contain title, got %q", header)
@@ -118,5 +116,3 @@ func TestRenderHeaderAndFooter(t *testing.T) {
 		}
 	}
 }
-
-

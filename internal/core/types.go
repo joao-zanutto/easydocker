@@ -78,6 +78,7 @@ type ContainerRow struct {
 	MemoryUsageBytes   uint64
 	MemoryLimitBytes   uint64
 	Healthy            bool
+	Networks           []string
 }
 
 type ComposeProject struct {

@@ -21,6 +21,14 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 		cpuPercent = -1
 	}
 
+	var networks []string
+	if item.NetworkSettings != nil {
+		for name := range item.NetworkSettings.Networks {
+			networks = append(networks, name)
+		}
+		sort.Strings(networks)
+	}
+
 	return core.ContainerRow{
 		ID:                 shortID(item.ID),
 		FullID:             item.ID,
@@ -39,6 +47,7 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 		Healthy:            strings.Contains(strings.ToLower(item.Status), "healthy"),
 		MemoryUsage:        memoryUsage,
 		MemoryLimit:        core.MetricsNA,
+		Networks:           networks,
 	}
 }
 

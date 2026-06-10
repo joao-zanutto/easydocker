@@ -30,9 +30,11 @@ func (m *model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea
 	}
 
 	m.browse.Snapshot.Images = msg.snapshot.Images
-	m.browse.Snapshot.Networks = msg.snapshot.Networks
 	m.browse.Snapshot.Volumes = msg.snapshot.Volumes
 	m.browse.Snapshot.TotalLimit = msg.snapshot.TotalLimit
+
+	m.browse.Snapshot.Networks = core.ApplyNetworkEndpointCounts(msg.snapshot.Networks, m.browse.Snapshot.Containers)
+
 	m.loadingStage = m.loadingStage.Next()
 	return m, loadMetricsCmd(m.service, m.browse.Snapshot.Containers)
 }

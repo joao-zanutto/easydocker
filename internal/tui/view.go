@@ -137,7 +137,7 @@ func (m model) metricsLoadingIndicator() string {
 
 func (m model) renderHeader() string {
 	isViewer := m.screen == shared.LogViewer || m.screen == shared.InspectViewer
-	return 	chrome.RenderHeader(chrome.HeaderInput{
+	return chrome.RenderHeader(chrome.HeaderInput{
 		Width:            m.width,
 		Title:            "EasyDocker",
 		LoadingStageText: chrome.RenderLoadingStageLabel(m.loadingStage, m.metricsLoaded),
