@@ -38,6 +38,9 @@ func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 	nonPinnedCount := firstPinned
 	pinnedCount := len(defs) - firstPinned
 	gapCount := max(0, nonPinnedCount-1) + max(0, pinnedCount-1)
+	if nonPinnedCount > 0 && pinnedCount > 0 {
+		gapCount++ // section gap between left and right pinned groups
+	}
 	netWidth := max(1, tableWidth-gapCount*2)
 
 	desired := make([]int, len(defs))
