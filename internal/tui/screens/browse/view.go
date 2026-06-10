@@ -7,7 +7,6 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/shared"
-	"easydocker/internal/tui/ui/components"
 	"easydocker/internal/tui/util"
 
 	"charm.land/lipgloss/v2"
@@ -236,8 +235,4 @@ func composeProjectNetworks(networkField string) []string {
 		networks = append(networks, network)
 	}
 	return networks
-}
-
-func RenderFilterHeader(input string, width int, dividerStyle lipgloss.Style) string {
-	return components.RenderFilterInputOnly(input, width, dividerStyle)
 }
