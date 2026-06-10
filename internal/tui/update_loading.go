@@ -30,11 +30,29 @@ func (m *model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea
 	}
 
 	m.browse.Snapshot.Images = msg.snapshot.Images
-	m.browse.Snapshot.Networks = msg.snapshot.Networks
 	m.browse.Snapshot.Volumes = msg.snapshot.Volumes
 	m.browse.Snapshot.TotalLimit = msg.snapshot.TotalLimit
+
+	networks := msg.snapshot.Networks
+	recomputeNetworkEndpoints(networks, m.browse.Snapshot.Containers)
+	m.browse.Snapshot.Networks = networks
+
 	m.loadingStage = m.loadingStage.Next()
 	return m, loadMetricsCmd(m.service, m.browse.Snapshot.Containers)
+}
+
+func recomputeNetworkEndpoints(networks []core.NetworkRow, containers []core.ContainerRow) {
+	counts := make(map[string]int)
+	for _, c := range containers {
+		for _, net := range c.Networks {
+			counts[net]++
+		}
+	}
+	for i := range networks {
+		if count, ok := counts[networks[i].Name]; ok {
+			networks[i].Endpoints = count
+		}
+	}
 }
 
 func (m *model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd) {

@@ -52,7 +52,7 @@ func (r *Repository) LoadSupportingResources(ctx context.Context) (core.Snapshot
 		snapshot := core.Snapshot{
 			Images:    make([]core.ImageRow, 0, len(images)),
 			Networks:  make([]core.NetworkRow, 0, len(networks)),
-			Volumes:   make([]core.VolumeRow, 0, len(volumes.Volumes)),
+			Volumes:   make([]core.VolumeRow, 0, len(volumes)),
 			Timestamp: r.now(),
 		}
 
@@ -66,7 +66,7 @@ func (r *Repository) LoadSupportingResources(ctx context.Context) (core.Snapshot
 		}
 		core.SortNetworks(snapshot.Networks)
 
-		for _, item := range volumes.Volumes {
+		for _, item := range volumes {
 			snapshot.Volumes = append(snapshot.Volumes, mapVolumeRow(item))
 		}
 		core.SortVolumes(snapshot.Volumes)

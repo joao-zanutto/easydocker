@@ -170,10 +170,7 @@ func networkDetailLines(network core.NetworkRow, provider DetailProvider, width 
 	return []string{
 		provider.DetailLine("Name", network.Name, width),
 		provider.DetailLine("Driver", network.Driver, width),
-		provider.DetailLine("Scope", network.Scope, width),
 		provider.DetailLine("Created", network.Created, width),
-		provider.DetailLine("Internal", network.Internal, width),
-		provider.DetailLine("Attachable", network.Attachable, width),
 		provider.DetailLine("Endpoints", fmt.Sprintf("%d", network.Endpoints), width),
 		provider.DetailLine("ID", network.ID, width),
 	}
@@ -182,11 +179,8 @@ func networkDetailLines(network core.NetworkRow, provider DetailProvider, width 
 func volumeDetailLines(volume core.VolumeRow, provider DetailProvider, width int) []string {
 	return []string{
 		provider.DetailLine("Name", volume.Name, width),
-		provider.DetailLine("Driver", volume.Driver, width),
-		provider.DetailLine("Scope", volume.Scope, width),
 		provider.DetailLine("Created", volume.Created, width),
 		provider.DetailLine("Size", volume.Size, width),
-		provider.DetailLine("References", util.RefCountText(volume.RefCount), width),
 		provider.DetailLine("Mountpoint", volume.Mountpoint, width),
 	}
 }

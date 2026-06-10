@@ -176,6 +176,13 @@ func (s *Service) LoadSnapshot(ctx context.Context) (Snapshot, error) {
 
 	resources.Containers = containers
 
+	networkEndpointCounts := computeNetworkEndpointCounts(containers)
+	for i := range resources.Networks {
+		if count, ok := networkEndpointCounts[resources.Networks[i].Name]; ok {
+			resources.Networks[i].Endpoints = count
+		}
+	}
+
 	if resourcesErr == nil {
 		metricsByID, totalCPU, totalMem, metricsErr := s.LoadContainerMetrics(ctx, containers)
 		if metricsErr == nil {
@@ -194,4 +201,14 @@ func (s *Service) LoadSnapshot(ctx context.Context) (Snapshot, error) {
 
 func (s *Service) InspectResource(ctx context.Context, rt ResourceType, id string) ([]string, error) {
 	return s.repo.InspectResource(ctx, rt, id)
+}
+
+func computeNetworkEndpointCounts(containers []ContainerRow) map[string]int {
+	counts := make(map[string]int)
+	for _, c := range containers {
+		for _, net := range c.Networks {
+			counts[net]++
+		}
+	}
+	return counts
 }

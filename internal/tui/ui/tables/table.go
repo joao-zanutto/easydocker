@@ -149,7 +149,7 @@ func (m tableModel) headersView() string {
 		return leftLine
 	}
 	rightLine := joinWithGap(rightParts, "  ")
-	padding := max(0, m.viewport.Width()-util.DisplayWidth(leftLine)-util.DisplayWidth(rightLine))
+	padding := max(2, m.viewport.Width()-util.DisplayWidth(leftLine)-util.DisplayWidth(rightLine))
 	return leftLine + strings.Repeat(" ", padding) + rightLine
 }
 
@@ -180,7 +180,7 @@ func (m tableModel) renderRow(rowIndex int) string {
 		return m.styles.Cell.Render(leftLine)
 	}
 	rightLine := joinWithGap(rightParts, "  ")
-	padding := max(0, m.viewport.Width()-util.DisplayWidth(leftLine)-util.DisplayWidth(rightLine))
+	padding := max(2, m.viewport.Width()-util.DisplayWidth(leftLine)-util.DisplayWidth(rightLine))
 	line := leftLine + strings.Repeat(" ", padding) + rightLine
 	if rowIndex == m.cursor {
 		return m.styles.Selected.Render(line)

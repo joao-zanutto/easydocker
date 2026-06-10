@@ -19,14 +19,6 @@ func JoinSections(parts ...string) string {
 	return strings.Join(filtered, "\n")
 }
 
-// RefCountText formats a reference count, returning "0" for zero or negative values.
-func RefCountText(ref int64) string {
-	if ref <= 0 {
-		return "0"
-	}
-	return fmt.Sprintf("%d", ref)
-}
-
 func ContainerCPUValue(container core.ContainerRow, loadingIndicator string) string {
 	if container.CPUPercent < 0 {
 		if container.State == core.StateRunning {
