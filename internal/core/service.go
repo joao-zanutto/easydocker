@@ -178,9 +178,7 @@ func (s *Service) LoadSnapshot(ctx context.Context) (Snapshot, error) {
 
 	networkEndpointCounts := computeNetworkEndpointCounts(containers)
 	for i := range resources.Networks {
-		if count, ok := networkEndpointCounts[resources.Networks[i].Name]; ok {
-			resources.Networks[i].Endpoints = count
-		}
+		resources.Networks[i].Endpoints = networkEndpointCounts[resources.Networks[i].Name]
 	}
 
 	if resourcesErr == nil {
