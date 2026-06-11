@@ -89,7 +89,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	if key.Matches(msg, keys.ToggleWrap) {
-		logList := FilterLines(m.Vp.Data, m.Vp.Filter.Query)
+		var logList []string
+		if m.Vp.ContentType == ContentTypeInspect {
+			logList = FilterJSONLines(m.Vp.Data, m.Vp.Filter.Query)
+		} else {
+			logList = FilterLines(m.Vp.Data, m.Vp.Filter.Query)
+		}
 		currentStart, _ := VisibleContentRange(m.Vp, logList)
 		m.Vp.SetWrapLines(!m.Vp.WrapLines)
 		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
@@ -140,6 +145,12 @@ func (m Model) handleFilterKey(msg tea.KeyPressMsg, keys KeyMap) (Model, tea.Cmd
 		m.Vp.CloseFilter(false)
 		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
 		return m, nil
+	case key.Matches(msg, keys.Up), key.Matches(msg, keys.Down),
+		key.Matches(msg, keys.PageUp), key.Matches(msg, keys.PageDown),
+		key.Matches(msg, keys.Home), key.Matches(msg, keys.End):
+		Controller{}.HandleKey(m.Vp, msg, keys)
+		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
+		return m, nil
 	default:
 		var cmd tea.Cmd
 		m.Vp.Filter.Input, cmd = m.Vp.Filter.Input.Update(msg)
@@ -183,7 +194,12 @@ func (m Model) loadingIndicator() string {
 }
 
 func (m Model) lineCountInfo() *LineCountInfo {
-	logList := FilterLines(m.Vp.Data, m.Vp.Filter.Query)
+	var logList []string
+	if m.Vp.ContentType == ContentTypeInspect {
+		logList = FilterJSONLines(m.Vp.Data, m.Vp.Filter.Query)
+	} else {
+		logList = FilterLines(m.Vp.Data, m.Vp.Filter.Query)
+	}
 	start, end := VisibleContentRange(m.Vp, logList)
 	return &LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)}
 }

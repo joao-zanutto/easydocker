@@ -127,7 +127,12 @@ func renderPanel(vm ViewModel, width, height int) string {
 		return strings.Join(util.ClipAndPadLines([]string{renderLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator, loadingMsg)}, height, ""), "\n")
 	}
 
-	filtered := FilterLines(vm.Vp.Data, vm.Vp.Filter.Query)
+	var filtered []string
+	if vm.ContentType == ContentTypeInspect {
+		filtered = FilterJSONLines(vm.Vp.Data, vm.Vp.Filter.Query)
+	} else {
+		filtered = FilterLines(vm.Vp.Data, vm.Vp.Filter.Query)
+	}
 	if len(filtered) == 0 {
 		empty := vm.EmptyMessage
 		if empty == "" {

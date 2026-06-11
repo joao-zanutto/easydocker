@@ -1,6 +1,7 @@
 package viewer
 
 import (
+	"sort"
 	"strings"
 	"unicode"
 
@@ -81,6 +82,75 @@ func FilterLines(lines []string, query string) []string {
 		}
 	}
 	return filtered
+}
+
+func jsonIndentLevel(line string) int {
+	trimmed := strings.TrimLeft(line, " ")
+	return (len(line) - len(trimmed)) / 2
+}
+
+func isJSONCloser(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return trimmed == "}" || trimmed == "}," || trimmed == "]" || trimmed == "],"
+}
+
+func FilterJSONLines(lines []string, query string) []string {
+	if query == "" || strings.TrimSpace(query) == "" {
+		return lines
+	}
+
+	type block struct{ start, end int }
+	blocks := make([]block, 0)
+
+	for i, line := range lines {
+		if !strings.Contains(line, query) {
+			continue
+		}
+
+		matchLevel := jsonIndentLevel(line)
+		end := i + 1
+		for j := i + 1; j < len(lines); j++ {
+			level := jsonIndentLevel(lines[j])
+			if level < matchLevel {
+				end = j
+				break
+			}
+			if level == matchLevel && !isJSONCloser(lines[j]) {
+				end = j
+				break
+			}
+			end = j + 1
+		}
+
+		blocks = append(blocks, block{i, end})
+	}
+
+	if len(blocks) == 0 {
+		return nil
+	}
+
+	sort.Slice(blocks, func(i, j int) bool {
+		return blocks[i].start < blocks[j].start
+	})
+
+	merged := make([]block, 1, len(blocks))
+	merged[0] = blocks[0]
+	for _, b := range blocks[1:] {
+		last := &merged[len(merged)-1]
+		if b.start <= last.end {
+			if b.end > last.end {
+				last.end = b.end
+			}
+		} else {
+			merged = append(merged, b)
+		}
+	}
+
+	result := make([]string, 0, len(lines))
+	for _, b := range merged {
+		result = append(result, lines[b.start:b.end]...)
+	}
+	return result
 }
 
 func WrapLines(lines []string, width int) []string {
@@ -217,7 +287,12 @@ func equalLogSlices(a, b []string) bool {
 func (vp *Viewport) PrepareContentLines(data []string, query string, wrapWidth int, wrapEnabled bool) []string {
 	sanitized := vp.getSanitizedLines(data)
 
-	lines := FilterLines(sanitized, query)
+	var lines []string
+	if vp.ContentType == ContentTypeInspect {
+		lines = FilterJSONLines(sanitized, query)
+	} else {
+		lines = FilterLines(sanitized, query)
+	}
 
 	if wrapEnabled && wrapWidth > 0 {
 		lines = WrapLines(lines, wrapWidth)
