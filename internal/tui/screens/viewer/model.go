@@ -89,12 +89,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	if key.Matches(msg, keys.ToggleWrap) {
-		var logList []string
-		if m.Vp.ContentType == ContentTypeInspect {
-			logList = FilterJSONLines(m.Vp.Data, m.Vp.Filter.Query)
-		} else {
-			logList = FilterLines(m.Vp.Data, m.Vp.Filter.Query)
-		}
+		logList := m.Vp.FilteredLines()
 		currentStart, _ := VisibleContentRange(m.Vp, logList)
 		m.Vp.SetWrapLines(!m.Vp.WrapLines)
 		m.Vp.SyncFromData(m.VisibleWidth(), m.VisibleRows())
@@ -194,12 +189,7 @@ func (m Model) loadingIndicator() string {
 }
 
 func (m Model) lineCountInfo() *LineCountInfo {
-	var logList []string
-	if m.Vp.ContentType == ContentTypeInspect {
-		logList = FilterJSONLines(m.Vp.Data, m.Vp.Filter.Query)
-	} else {
-		logList = FilterLines(m.Vp.Data, m.Vp.Filter.Query)
-	}
+	logList := m.Vp.FilteredLines()
 	start, end := VisibleContentRange(m.Vp, logList)
 	return &LineCountInfo{Total: len(logList), Start: start + 1, End: max(start+1, end)}
 }
