@@ -91,6 +91,14 @@ func (vp *Viewport) getSanitizedLines(raw []string) []string {
 	return vp.sanitizedLines
 }
 
+func (vp *Viewport) FilteredLines() []string {
+	sanitized := vp.getSanitizedLines(vp.Data)
+	if vp.ContentType == ContentTypeInspect {
+		return FilterJSONLines(sanitized, vp.Filter.Query)
+	}
+	return FilterLines(sanitized, vp.Filter.Query)
+}
+
 func (vp *Viewport) ClearCache() {
 	vp.rawLines = nil
 	vp.sanitizedLines = nil

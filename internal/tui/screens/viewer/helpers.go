@@ -285,14 +285,7 @@ func equalLogSlices(a, b []string) bool {
 }
 
 func (vp *Viewport) PrepareContentLines(data []string, query string, wrapWidth int, wrapEnabled bool) []string {
-	sanitized := vp.getSanitizedLines(data)
-
-	var lines []string
-	if vp.ContentType == ContentTypeInspect {
-		lines = FilterJSONLines(sanitized, query)
-	} else {
-		lines = FilterLines(sanitized, query)
-	}
+	lines := vp.FilteredLines()
 
 	if wrapEnabled && wrapWidth > 0 {
 		lines = WrapLines(lines, wrapWidth)
