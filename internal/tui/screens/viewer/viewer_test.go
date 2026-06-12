@@ -117,6 +117,132 @@ func TestFilterLines(t *testing.T) {
 	}
 }
 
+func TestFilterJSONLines(t *testing.T) {
+	inspectJSON := []string{
+		`{`,
+		`  "Id": "abc123",`,
+		`  "Config": {`,
+		`    "Env": [`,
+		`      "PATH=/usr/bin:/bin",`,
+		`      "HOME=/root"`,
+		`    ],`,
+		`    "Cmd": null`,
+		`  },`,
+		`  "Name": "/foo"`,
+		`}`,
+	}
+
+	tests := []struct {
+		name     string
+		lines    []string
+		query    string
+		expected []string
+	}{
+		{
+			name:     "empty query returns all lines",
+			lines:    inspectJSON,
+			query:    "",
+			expected: inspectJSON,
+		},
+		{
+			name:  "key match shows full subtree",
+			lines: inspectJSON,
+			query: "Env",
+			expected: []string{
+				`    "Env": [`,
+				`      "PATH=/usr/bin:/bin",`,
+				`      "HOME=/root"`,
+				`    ],`,
+			},
+		},
+		{
+			name:  "value match shows leaf line",
+			lines: inspectJSON,
+			query: "/root",
+			expected: []string{
+				`      "HOME=/root"`,
+			},
+		},
+		{
+			name:  "inner key match shows parent subtree",
+			lines: inspectJSON,
+			query: "Cmd",
+			expected: []string{
+				`    "Cmd": null`,
+			},
+		},
+		{
+			name:  "top-level key shows full subtree through close",
+			lines: inspectJSON,
+			query: "Config",
+			expected: []string{
+				`  "Config": {`,
+				`    "Env": [`,
+				`      "PATH=/usr/bin:/bin",`,
+				`      "HOME=/root"`,
+				`    ],`,
+				`    "Cmd": null`,
+				`  },`,
+			},
+		},
+		{
+			name:     "no match returns empty",
+			lines:    inspectJSON,
+			query:    "NOSUCHKEY",
+			expected: []string{},
+		},
+		{
+			name:     "empty lines returns empty",
+			lines:    []string{},
+			query:    "foo",
+			expected: []string{},
+		},
+		{
+			name:  "multiple matches merge overlapping blocks",
+			lines: inspectJSON,
+			query: "PATH",
+			expected: []string{
+				`      "PATH=/usr/bin:/bin",`,
+			},
+		},
+		{
+			name:  "nested match includes closing bracket at same level",
+			lines: []string{
+				`{`,
+				`  "A": {`,
+				`    "B": 1`,
+				`  },`,
+				`  "C": 2`,
+				`}`,
+			},
+			query: "A",
+			expected: []string{
+				`  "A": {`,
+				`    "B": 1`,
+				`  },`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FilterJSONLines(tt.lines, tt.query)
+			if len(got) != len(tt.expected) {
+				t.Errorf("FilterJSONLines() returned %d lines, want %d", len(got), len(tt.expected))
+				for i, l := range got {
+					t.Logf("  got[%d] = %q", i, l)
+				}
+				return
+			}
+			for i := range got {
+				if got[i] != tt.expected[i] {
+					t.Errorf("FilterJSONLines()[%d] = %q, want %q", i, got[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
 func TestSanitizeLine(t *testing.T) {
 	tests := []struct {
 		name     string
