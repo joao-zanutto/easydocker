@@ -111,6 +111,6 @@ func (vp *Viewport) SyncFromData(visibleWidth, visibleRows int) {
 		vp.SyncViewport(nil, visibleWidth, visibleRows)
 		return
 	}
-	lines := vp.PrepareContentLines(vp.Data, vp.Filter.Query, visibleWidth, vp.WrapLines)
+	lines := vp.PrepareContentLines(visibleWidth, vp.WrapLines)
 	vp.SyncViewport(lines, visibleWidth, visibleRows)
 }

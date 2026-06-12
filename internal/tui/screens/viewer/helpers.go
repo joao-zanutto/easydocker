@@ -284,7 +284,7 @@ func equalLogSlices(a, b []string) bool {
 	return true
 }
 
-func (vp *Viewport) PrepareContentLines(data []string, query string, wrapWidth int, wrapEnabled bool) []string {
+func (vp *Viewport) PrepareContentLines(wrapWidth int, wrapEnabled bool) []string {
 	lines := vp.FilteredLines()
 
 	if wrapEnabled && wrapWidth > 0 {
