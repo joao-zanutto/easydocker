@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -36,9 +37,6 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		}
 		if project.ConfigFiles == "" {
 			project.ConfigFiles = strings.TrimSpace(container.ComposeConfigFiles)
-		}
-		if project.Network == "" {
-			project.Network = deriveComposeNetwork(projectName)
 		}
 		if service := strings.TrimSpace(container.ComposeService); service != "" {
 			if !containsString(project.Services, service) {
@@ -78,6 +76,7 @@ func enrichComposeProjects(projects map[string]*ComposeProject, order []string) 
 			project.MemoryLimit = "-"
 			project.MemoryPercent = 0
 		}
+		project.Network = deriveComposeNetworks(project.Containers)
 	}
 
 	projectsOut := make([]ComposeProject, 0, len(order))
@@ -105,11 +104,22 @@ func HumanAge(then time.Time) string {
 	}
 }
 
-func deriveComposeNetwork(projectName string) string {
-	if projectName == "" {
+func deriveComposeNetworks(containers []ContainerRow) string {
+	seen := make(map[string]struct{})
+	var networks []string
+	for _, c := range containers {
+		for _, n := range c.Networks {
+			if _, ok := seen[n]; !ok {
+				seen[n] = struct{}{}
+				networks = append(networks, n)
+			}
+		}
+	}
+	if len(networks) == 0 {
 		return "-"
 	}
-	return projectName + "_default"
+	sort.Strings(networks)
+	return strings.Join(networks, ",")
 }
 
 func containsString(values []string, target string) bool {

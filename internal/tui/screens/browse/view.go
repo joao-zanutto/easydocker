@@ -214,11 +214,11 @@ func composeMemoryText(project core.ComposeProject) string {
 func composeProjectNetworkDetailLines(project core.ComposeProject, provider DetailProvider, width int) []string {
 	networks := composeProjectNetworks(project.Network)
 	if len(networks) == 0 {
-		return []string{provider.DetailLine("Networks", "-", width)}
+		return []string{provider.DetailLine("Networks", "", width)}
 	}
 
-	lines := []string{provider.DetailLine("Networks", "- "+networks[0], width)}
-	for _, network := range networks[1:] {
+	lines := []string{provider.DetailLine("Networks", "", width)}
+	for _, network := range networks {
 		lines = append(lines, util.ConstrainLine("  - "+network, width))
 	}
 	return lines
