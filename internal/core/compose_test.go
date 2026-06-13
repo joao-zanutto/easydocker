@@ -20,6 +20,7 @@ func TestAggregateComposeProjects_GroupsSortsAndRollsUpMetrics(t *testing.T) {
 			CPUPercent:         0,
 			MemoryUsageBytes:   0,
 			MemoryLimitBytes:   0,
+			Networks:           []string{"shop_default"},
 		},
 		{
 			FullID:             "c-1",
@@ -35,6 +36,7 @@ func TestAggregateComposeProjects_GroupsSortsAndRollsUpMetrics(t *testing.T) {
 			MemoryPercent:      50,
 			MemoryUsageBytes:   100,
 			MemoryLimitBytes:   200,
+			Networks:           []string{"shop_default", "shop_internal"},
 		},
 		{
 			FullID:             "c-2",
@@ -49,6 +51,7 @@ func TestAggregateComposeProjects_GroupsSortsAndRollsUpMetrics(t *testing.T) {
 			MemoryPercent:      50,
 			MemoryUsageBytes:   50,
 			MemoryLimitBytes:   100,
+			Networks:           []string{"shop_default"},
 		},
 	}
 
@@ -64,8 +67,8 @@ func TestAggregateComposeProjects_GroupsSortsAndRollsUpMetrics(t *testing.T) {
 	if project.ContainerCount != 3 || project.RunningCount != 2 || project.HealthyCount != 1 {
 		t.Fatalf("project counts = %#v, want 3/2/1", project)
 	}
-	if project.Network != "shop_default" {
-		t.Fatalf("project network = %q, want shop_default", project.Network)
+	if project.Network != "shop_default,shop_internal" {
+		t.Fatalf("project network = %q, want shop_default,shop_internal", project.Network)
 	}
 	if project.WorkingDir != "/srv/shop" || project.ConfigFiles != "compose.yaml" {
 		t.Fatalf("project metadata = workingDir %q configFiles %q", project.WorkingDir, project.ConfigFiles)
@@ -108,6 +111,7 @@ func TestAggregateComposeProjects_MemoryPercentSumsComposeContainerPercents(t *t
 			MemoryPercent:    50,
 			MemoryUsageBytes: 10,
 			MemoryLimitBytes: 20,
+			Networks:         []string{"shop_default"},
 		},
 		{
 			FullID:           "c-2",
@@ -118,6 +122,7 @@ func TestAggregateComposeProjects_MemoryPercentSumsComposeContainerPercents(t *t
 			MemoryPercent:    10,
 			MemoryUsageBytes: 90,
 			MemoryLimitBytes: 900,
+			Networks:         []string{"shop_default"},
 		},
 	}
 
