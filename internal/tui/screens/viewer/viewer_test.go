@@ -149,10 +149,14 @@ func TestFilterJSONLines(t *testing.T) {
 			lines: inspectJSON,
 			query: "Env",
 			expected: []string{
+				`{`,
+				`  "Config": {`,
 				`    "Env": [`,
 				`      "PATH=/usr/bin:/bin",`,
 				`      "HOME=/root"`,
 				`    ],`,
+				`  },`,
+				`}`,
 			},
 		},
 		{
@@ -160,7 +164,13 @@ func TestFilterJSONLines(t *testing.T) {
 			lines: inspectJSON,
 			query: "/root",
 			expected: []string{
+				`{`,
+				`  "Config": {`,
+				`    "Env": [`,
 				`      "HOME=/root"`,
+				`    ],`,
+				`  },`,
+				`}`,
 			},
 		},
 		{
@@ -168,7 +178,11 @@ func TestFilterJSONLines(t *testing.T) {
 			lines: inspectJSON,
 			query: "Cmd",
 			expected: []string{
+				`{`,
+				`  "Config": {`,
 				`    "Cmd": null`,
+				`  },`,
+				`}`,
 			},
 		},
 		{
@@ -176,6 +190,7 @@ func TestFilterJSONLines(t *testing.T) {
 			lines: inspectJSON,
 			query: "Config",
 			expected: []string{
+				`{`,
 				`  "Config": {`,
 				`    "Env": [`,
 				`      "PATH=/usr/bin:/bin",`,
@@ -183,6 +198,7 @@ func TestFilterJSONLines(t *testing.T) {
 				`    ],`,
 				`    "Cmd": null`,
 				`  },`,
+				`}`,
 			},
 		},
 		{
@@ -202,7 +218,13 @@ func TestFilterJSONLines(t *testing.T) {
 			lines: inspectJSON,
 			query: "PATH",
 			expected: []string{
+				`{`,
+				`  "Config": {`,
+				`    "Env": [`,
 				`      "PATH=/usr/bin:/bin",`,
+				`    ],`,
+				`  },`,
+				`}`,
 			},
 		},
 		{
@@ -217,9 +239,11 @@ func TestFilterJSONLines(t *testing.T) {
 			},
 			query: "A",
 			expected: []string{
+				`{`,
 				`  "A": {`,
 				`    "B": 1`,
 				`  },`,
+				`}`,
 			},
 		},
 	}
