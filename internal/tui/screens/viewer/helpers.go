@@ -98,6 +98,12 @@ func isJSONKey(line string) bool {
 	return !isJSONCloser(line) && strings.Contains(line, "\": ")
 }
 
+func isBlockOpener(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	trimmed = strings.TrimSuffix(trimmed, ",")
+	return strings.HasSuffix(trimmed, "{") || strings.HasSuffix(trimmed, "[")
+}
+
 func findJSONParent(lines []string, idx int) int {
 	level := jsonIndentLevel(lines[idx])
 	if level <= 0 {
@@ -116,6 +122,9 @@ func findJSONParent(lines []string, idx int) int {
 }
 
 func findJSONCloser(lines []string, idx int) int {
+	if !isBlockOpener(lines[idx]) {
+		return -1
+	}
 	level := jsonIndentLevel(lines[idx])
 	for j := idx + 1; j < len(lines); j++ {
 		if jsonIndentLevel(lines[j]) == level && isJSONCloser(lines[j]) {
