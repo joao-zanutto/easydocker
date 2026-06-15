@@ -162,9 +162,6 @@ func FilterJSONLines(lines []string, query string) []string {
 		}
 
 		path := buildAncestryPath(lines, i)
-		if len(path) == 0 {
-			continue
-		}
 
 		closers := make([]int, len(path))
 		for p, idx := range path {
