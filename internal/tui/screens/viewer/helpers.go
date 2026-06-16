@@ -94,61 +94,112 @@ func isJSONCloser(line string) bool {
 	return trimmed == "}" || trimmed == "}," || trimmed == "]" || trimmed == "],"
 }
 
+func isJSONKey(line string) bool {
+	return !isJSONCloser(line) && strings.Contains(line, "\": ")
+}
+
+func isBlockOpener(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	trimmed = strings.TrimSuffix(trimmed, ",")
+	return strings.HasSuffix(trimmed, "{") || strings.HasSuffix(trimmed, "[")
+}
+
+func findJSONParent(lines []string, idx int) int {
+	level := jsonIndentLevel(lines[idx])
+	if level <= 0 {
+		return -1
+	}
+	if level == 1 {
+		return 0
+	}
+	for k := idx - 1; k >= 0; k-- {
+		l := jsonIndentLevel(lines[k])
+		if l < level && (l == 0 || isJSONKey(lines[k])) {
+			return k
+		}
+	}
+	return 0
+}
+
+func findJSONCloser(lines []string, idx int) int {
+	if !isBlockOpener(lines[idx]) {
+		return -1
+	}
+	level := jsonIndentLevel(lines[idx])
+	for j := idx + 1; j < len(lines); j++ {
+		if jsonIndentLevel(lines[j]) == level && isJSONCloser(lines[j]) {
+			return j
+		}
+	}
+	return -1
+}
+
+func buildAncestryPath(lines []string, matchIdx int) []int {
+	path := []int{matchIdx}
+	for {
+		parent := findJSONParent(lines, path[0])
+		if parent < 0 || parent == path[0] {
+			break
+		}
+		path = append([]int{parent}, path...)
+		if jsonIndentLevel(lines[parent]) == 0 {
+			break
+		}
+	}
+	return path
+}
+
 func FilterJSONLines(lines []string, query string) []string {
 	if query == "" || strings.TrimSpace(query) == "" {
 		return lines
 	}
 
-	type block struct{ start, end int }
-	blocks := make([]block, 0)
+	lineSet := make(map[int]bool)
 
 	for i, line := range lines {
 		if !strings.Contains(line, query) {
 			continue
 		}
 
-		matchLevel := jsonIndentLevel(line)
-		end := i + 1
-		for j := i + 1; j < len(lines); j++ {
-			level := jsonIndentLevel(lines[j])
-			if level < matchLevel {
-				end = j
-				break
-			}
-			if level == matchLevel && !isJSONCloser(lines[j]) {
-				end = j
-				break
-			}
-			end = j + 1
+		path := buildAncestryPath(lines, i)
+
+		closers := make([]int, len(path))
+		for p, idx := range path {
+			closers[p] = findJSONCloser(lines, idx)
 		}
 
-		blocks = append(blocks, block{i, end})
+		for _, idx := range path {
+			lineSet[idx] = true
+		}
+
+		matchIdx := path[len(path)-1]
+		matchCloser := closers[len(closers)-1]
+		if matchCloser > matchIdx+1 {
+			for j := matchIdx + 1; j < matchCloser; j++ {
+				lineSet[j] = true
+			}
+		}
+
+		for p := len(path) - 1; p >= 0; p-- {
+			if closers[p] >= 0 {
+				lineSet[closers[p]] = true
+			}
+		}
 	}
 
-	if len(blocks) == 0 {
+	if len(lineSet) == 0 {
 		return nil
 	}
 
-	sort.Slice(blocks, func(i, j int) bool {
-		return blocks[i].start < blocks[j].start
-	})
-
-	merged := make([]block, 1, len(blocks))
-	merged[0] = blocks[0]
-	for _, b := range blocks[1:] {
-		last := &merged[len(merged)-1]
-		if b.start <= last.end {
-			if b.end > last.end {
-				last.end = b.end
-			}
-		} else {
-			merged = append(merged, b)
-		}
+	indices := make([]int, 0, len(lineSet))
+	for idx := range lineSet {
+		indices = append(indices, idx)
 	}
+	sort.Ints(indices)
 
-	result := make([]string, 0, len(lines))
-	for _, b := range merged {
-		result = append(result, lines[b.start:b.end]...)
+	result := make([]string, len(indices))
+	for i, idx := range indices {
+		result[i] = lines[idx]
 	}
 	return result
 }
