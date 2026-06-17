@@ -729,8 +729,8 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("tick at top should schedule a history load command")
 	}
-	if current.viewer.Logs.HistoryLoad {
-		t.Fatalf("tick handling should not mark history loading without result handling")
+	if !current.viewer.Logs.HistoryLoad {
+		t.Fatalf("tick handling should mark history loading while fetch is in-flight")
 	}
 }
 

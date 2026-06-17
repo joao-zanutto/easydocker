@@ -106,7 +106,9 @@ func (vp *Viewport) ClearCache() {
 }
 
 func (vp *Viewport) SyncFromData(visibleWidth, visibleRows int) {
-	vp.InitialLoad = false
+	if vp.Data != nil {
+		vp.InitialLoad = false
+	}
 	if vp.Data == nil {
 		vp.SyncViewport(nil, visibleWidth, visibleRows)
 		return

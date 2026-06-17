@@ -183,7 +183,7 @@ func (m Model) handleContentMsg(msg ContentMsg) (Model, tea.Cmd) {
 
 func (m Model) loadingIndicator() string {
 	if m.Vp.InitialLoad || m.Logs.HistoryLoad {
-		return ""
+		return "⋯"
 	}
 	return ""
 }

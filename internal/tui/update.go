@@ -179,6 +179,7 @@ func (m *model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, loadDockerCmd(m.service))
 	}
 	if m.shouldLoadHistoryOnTick() {
+		m.viewer.Logs.HistoryLoad = true
 		tail := len(m.viewer.Vp.Data) + TailStep
 		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.Logs.SessionID, tail, viewer.SourceHistory))
 	} else if m.shouldPollLogsOnTick() {
