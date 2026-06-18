@@ -66,6 +66,7 @@ type ContainerRow struct {
 	ComposeWorkingDir  string
 	ComposeConfigFiles string
 	Image              string
+	ImageID            string
 	State              ContainerState
 	Status             string
 	Ports              string

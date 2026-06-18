@@ -29,7 +29,7 @@ func (m *model) handleResourcesResultMsg(msg resourcesResultMsg) (tea.Model, tea
 		return m, nil
 	}
 
-	m.browse.Snapshot.Images = msg.snapshot.Images
+	m.browse.Snapshot.Images = core.ApplyImageContainerCounts(msg.snapshot.Images, m.browse.Snapshot.Containers)
 	m.browse.Snapshot.Volumes = msg.snapshot.Volumes
 	m.browse.Snapshot.TotalLimit = msg.snapshot.TotalLimit
 

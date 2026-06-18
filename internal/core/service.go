@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"io"
+	"strings"
 	"sync"
 	"time"
 )
@@ -176,6 +177,7 @@ func (s *Service) LoadSnapshot(ctx context.Context) (Snapshot, error) {
 
 	resources.Containers = containers
 
+	resources.Images = ApplyImageContainerCounts(resources.Images, containers)
 	resources.Networks = ApplyNetworkEndpointCounts(resources.Networks, containers)
 
 	if resourcesErr == nil {
@@ -196,6 +198,20 @@ func (s *Service) LoadSnapshot(ctx context.Context) (Snapshot, error) {
 
 func (s *Service) InspectResource(ctx context.Context, rt ResourceType, id string) ([]string, error) {
 	return s.repo.InspectResource(ctx, rt, id)
+}
+
+func ApplyImageContainerCounts(images []ImageRow, containers []ContainerRow) []ImageRow {
+	counts := make(map[string]int)
+	for _, c := range containers {
+		imageID := strings.TrimPrefix(c.ImageID, "sha256:")
+		if len(imageID) >= 12 {
+			counts[imageID[:12]]++
+		}
+	}
+	for i := range images {
+		images[i].Containers = int64(counts[images[i].ID])
+	}
+	return images
 }
 
 func ApplyNetworkEndpointCounts(networks []NetworkRow, containers []ContainerRow) []NetworkRow {

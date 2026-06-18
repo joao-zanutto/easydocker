@@ -38,6 +38,7 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 		ComposeWorkingDir:  strings.TrimSpace(item.Labels["com.docker.compose.project.working_dir"]),
 		ComposeConfigFiles: strings.TrimSpace(item.Labels["com.docker.compose.project.config_files"]),
 		Image:              item.Image,
+		ImageID:            item.ImageID,
 		State:              core.ContainerState(item.State),
 		Status:             item.Status,
 		Ports:              formatPorts(item.Ports),
