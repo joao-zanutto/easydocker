@@ -133,3 +133,39 @@ func (m *model) popScreen() shared.Screen {
 	m.screenStack = m.screenStack[:len(m.screenStack)-1]
 	return s
 }
+
+func (m *model) initViewer(
+	screen shared.Screen,
+	contentType viewer.ContentType,
+	resourceType core.ResourceType,
+	containerID, resourceName, loadingMsg, emptyMsg string,
+) {
+	m.pushScreen(m.screen)
+	m.screen = screen
+	m.viewer.Width = m.width
+	m.viewer.Height = max(1, m.height-4)
+	m.viewer.ContainerID = containerID
+	m.viewer.ResourceType = resourceType
+	m.viewer.ContainerName = resourceName
+	m.viewer.LoadingMsg = loadingMsg
+	m.viewer.EmptyMsg = emptyMsg
+	m.viewer.Breadcrumb = ""
+	m.viewer.Vp.InitialLoad = true
+	m.viewer.Vp.Data = nil
+	m.viewer.Vp.SetXOffset(0)
+	m.viewer.Vp.Filter.Active = false
+	m.viewer.Vp.Filter.Query = ""
+	m.viewer.Vp.Filter.Input.SetValue("")
+	m.viewer.Vp.ContentType = contentType
+	m.viewer.Styles = viewer.Styles{
+		Breadcrumb:   m.styles.Viewer.Breadcrumb,
+		FollowOn:     m.styles.Viewer.FollowOn,
+		FollowOff:    m.styles.Viewer.FollowOff,
+		Muted:        m.styles.Browse.Muted,
+		Divider:      m.styles.Browse.Divider,
+		SubpageFrame: m.styles.Viewer.SubpageFrame,
+		Key:          m.styles.Chrome.Key,
+		KeyText:      m.styles.Chrome.KeyText,
+	}
+	m.err = nil
+}

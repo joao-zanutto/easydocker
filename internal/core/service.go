@@ -55,6 +55,7 @@ type ServiceConfig struct {
 	LiveDataMediumTailTimeout   time.Duration
 	LiveDataLargeTailThreshold  int
 	LiveDataLargeTailTimeout    time.Duration
+	ConsecutiveBackoffCap       time.Duration
 }
 
 func DefaultServiceConfig() ServiceConfig {
@@ -64,6 +65,7 @@ func DefaultServiceConfig() ServiceConfig {
 		LiveDataMediumTailTimeout:   20 * time.Second,
 		LiveDataLargeTailThreshold:  2000,
 		LiveDataLargeTailTimeout:    60 * time.Second,
+		ConsecutiveBackoffCap:       30 * time.Second,
 	}
 }
 
@@ -83,6 +85,9 @@ func (c ServiceConfig) normalized() ServiceConfig {
 	}
 	if c.LiveDataLargeTailTimeout <= 0 {
 		c.LiveDataLargeTailTimeout = defaults.LiveDataLargeTailTimeout
+	}
+	if c.ConsecutiveBackoffCap <= 0 {
+		c.ConsecutiveBackoffCap = defaults.ConsecutiveBackoffCap
 	}
 	return c
 }
@@ -165,7 +170,7 @@ func (s *Service) LoadSnapshot(ctx context.Context) (Snapshot, error) {
 	if containersErr != nil {
 		s.mu.Lock()
 		s.consecutiveFailures++
-		backoff := time.Duration(min(1<<s.consecutiveFailures, 30)) * time.Second
+		backoff := time.Duration(min(1<<s.consecutiveFailures, int(s.config.ConsecutiveBackoffCap.Seconds()))) * time.Second
 		s.mu.Unlock()
 		time.Sleep(backoff)
 		return Snapshot{}, containersErr

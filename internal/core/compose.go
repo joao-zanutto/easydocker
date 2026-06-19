@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -39,7 +40,7 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 			project.ConfigFiles = strings.TrimSpace(container.ComposeConfigFiles)
 		}
 		if service := strings.TrimSpace(container.ComposeService); service != "" {
-			if !containsString(project.Services, service) {
+			if !slices.Contains(project.Services, service) {
 				project.Services = append(project.Services, service)
 			}
 		}
@@ -120,15 +121,6 @@ func deriveComposeNetworks(containers []ContainerRow) string {
 	}
 	sort.Strings(networks)
 	return strings.Join(networks, ",")
-}
-
-func containsString(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
-			return true
-		}
-	}
-	return false
 }
 
 func maxFloat(value, floor float64) float64 {
