@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"log/slog"
+	"os"
 
 	"easydocker/internal/core"
 	"easydocker/internal/docker"
@@ -11,6 +13,13 @@ import (
 )
 
 func main() {
+	logFile, err := os.OpenFile("easydocker.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+	slog.SetDefault(slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelWarn})))
+
 	repo := docker.NewRepository()
 	svc := core.NewService(repo)
 	p := tea.NewProgram(tui.New(svc))

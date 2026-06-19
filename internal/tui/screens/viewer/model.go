@@ -1,6 +1,8 @@
 package viewer
 
 import (
+	"log/slog"
+
 	"easydocker/internal/core"
 
 	"charm.land/bubbles/v2/key"
@@ -160,6 +162,7 @@ func (m Model) handleContentMsg(msg ContentMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 	if msg.Err != nil {
+		slog.Error("log load failed", "sessionID", msg.SessionID, "error", msg.Err)
 		m.Vp.InitialLoad = false
 		m.Logs.HistoryLoad = false
 		return m, nil
