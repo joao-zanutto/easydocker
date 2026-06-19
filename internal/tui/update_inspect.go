@@ -15,33 +15,11 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	if !ok {
 		return m, nil
 	}
-	m.pushScreen(m.screen)
-	m.screen = shared.InspectViewer
-	m.viewer.Width = m.width
-	m.viewer.Height = max(1, m.height-4)
+	m.initViewer(shared.InspectViewer, viewer.ContentTypeInspect, resourceType,
+		resourceID, resourceName, "Loading inspect...", "No inspect data available.")
 	m.viewer.Vp.Follow = false
-	m.viewer.Vp.SetXOffset(0)
 	m.viewer.Vp.GotoTop()
-	m.viewer.Vp.InitialLoad = true
-	m.viewer.Vp.Data = nil
-	m.viewer.ContainerID = resourceID
 	m.viewer.Inspect.ResourceName = resourceName
-	m.viewer.ResourceType = resourceType
-	m.viewer.Vp.ContentType = viewer.ContentTypeInspect
-	m.viewer.LoadingMsg = "Loading inspect..."
-	m.viewer.EmptyMsg = "No inspect data available."
-	m.viewer.Breadcrumb = ""
-	m.viewer.ContainerName = resourceName
-	m.viewer.Styles = viewer.Styles{
-		Breadcrumb:   m.styles.Viewer.Breadcrumb,
-		FollowOn:     m.styles.Viewer.FollowOn,
-		FollowOff:    m.styles.Viewer.FollowOff,
-		Muted:        m.styles.Browse.Muted,
-		Divider:      m.styles.Browse.Divider,
-		SubpageFrame: m.styles.Viewer.SubpageFrame,
-		Key:          m.styles.Chrome.Key,
-		KeyText:      m.styles.Chrome.KeyText,
-	}
 	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
 }
 
