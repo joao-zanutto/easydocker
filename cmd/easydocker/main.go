@@ -13,11 +13,16 @@ import (
 )
 
 func main() {
-	logFile, err := os.OpenFile("easydocker.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile("easydocker.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logFile.Close()
+	defer func() {
+		if err := logFile.Close(); err != nil {
+			log.Printf("error closing log file: %v", err)
+		}
+	}()
+
 	slog.SetDefault(slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelWarn})))
 
 	repo := docker.NewRepository()
