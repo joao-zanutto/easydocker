@@ -2,31 +2,31 @@ package core
 
 import "testing"
 
-func TestFilterContainersByScope_ShowAllReturnsOriginalSlice(t *testing.T) {
+func TestFilterContainersRunningOnly_ShowAllReturnsOriginalSlice(t *testing.T) {
 	containers := []ContainerRow{{Name: "one"}, {Name: "two"}}
 
-	got := FilterContainersByScope(containers, true)
+	got := FilterContainersRunningOnly(containers, true)
 	if len(got) != len(containers) {
-		t.Fatalf("FilterContainersByScope(..., true) len = %d, want %d", len(got), len(containers))
+		t.Fatalf("FilterContainersRunningOnly(..., true) len = %d, want %d", len(got), len(containers))
 	}
 	if &got[0] != &containers[0] {
-		t.Fatalf("FilterContainersByScope(..., true) should return original slice")
+		t.Fatalf("FilterContainersRunningOnly(..., true) should return original slice")
 	}
 }
 
-func TestFilterContainersByScope_RunningOnly(t *testing.T) {
+func TestFilterContainersRunningOnly_RunningOnly(t *testing.T) {
 	containers := []ContainerRow{
 		{Name: "run-1", State: StateRunning},
 		{Name: "run-2", State: StateRunning},
 		{Name: "stopped", State: StateExited},
 		{Name: "other", State: StateCreated},
 	}
-	got := FilterContainersByScope(containers, false)
+	got := FilterContainersRunningOnly(containers, false)
 	if len(got) != 2 {
-		t.Fatalf("FilterContainersByScope(..., false) len = %d, want 2", len(got))
+		t.Fatalf("FilterContainersRunningOnly(..., false) len = %d, want 2", len(got))
 	}
 	if got[0].Name != "run-1" || got[1].Name != "run-2" {
-		t.Fatalf("FilterContainersByScope(..., false) = %#v, want running rows only", got)
+		t.Fatalf("FilterContainersRunningOnly(..., false) = %#v, want running rows only", got)
 	}
 }
 

@@ -64,7 +64,7 @@ func (m *model) selectedLogsContainer() (core.ContainerRow, bool) {
 }
 
 func (m *model) filteredContainers() []core.ContainerRow {
-	scoped := core.FilterContainersByScope(m.browse.Snapshot.Containers, m.browse.ShowAll)
+	scoped := core.FilterContainersRunningOnly(m.browse.Snapshot.Containers, m.browse.ShowAll)
 	return core.FilterContainersByQuery(scoped, m.browse.Filter.Query)
 }
 

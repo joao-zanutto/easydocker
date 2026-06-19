@@ -19,6 +19,7 @@ func (m model) syncBrowseData() model {
 	}
 	m.browse = m.browse.ClampCursors()
 	m.browse.DetailProvider = m.browseDetailRenderer()
+	m.dataDirty = false
 	return m
 }
 
