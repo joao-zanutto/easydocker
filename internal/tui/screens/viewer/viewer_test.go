@@ -228,7 +228,7 @@ func TestFilterJSONLines(t *testing.T) {
 			},
 		},
 		{
-			name:  "nested match includes closing bracket at same level",
+			name: "nested match includes closing bracket at same level",
 			lines: []string{
 				`{`,
 				`  "A": {`,

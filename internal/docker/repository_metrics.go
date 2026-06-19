@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"runtime"
 	"sync"
 	"time"
@@ -73,7 +74,9 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 	close(jobs)
 	wg.Wait()
 
-	_ = metricsErrors
+	for id, err := range metricsErrors {
+		slog.Warn("container metrics failed", "containerID", id, "error", err)
+	}
 	return metricsByID, totalCPU, totalMem, nil
 }
 

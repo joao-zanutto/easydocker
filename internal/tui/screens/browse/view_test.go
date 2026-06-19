@@ -151,7 +151,7 @@ func TestRenderDetailComposeProjectSelected(t *testing.T) {
 		HasComposeProject: true,
 	}, "", fakeProvider{}, section, muted, 160, 20)
 
-		for _, token := range []string{"Project: shop", "Working dir: /srv/shop", "Compose file: compose.yaml", "Created at: just now", "CPU: 12.5%", "Memory: 150 B (50.0%)", "Networks:", "  - shop_default", "  - shop_shared"} {
+	for _, token := range []string{"Project: shop", "Working dir: /srv/shop", "Compose file: compose.yaml", "Created at: just now", "CPU: 12.5%", "Memory: 150 B (50.0%)", "Networks:", "  - shop_default", "  - shop_shared"} {
 		if !strings.Contains(selected, token) {
 			t.Fatalf("compose project detail missing %q in %q", token, selected)
 		}
