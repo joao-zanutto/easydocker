@@ -25,24 +25,6 @@ func (Controller) HandleKey(vp *Viewport, msg tea.KeyPressMsg, keys KeyMap) Tran
 		return handleHome(vp)
 	case key.Matches(msg, keys.End):
 		return handleEnd(vp)
-	case key.Matches(msg, keys.ToggleWrap):
-		vp.SetWrapLines(!vp.WrapLines)
-		return Transition{}
-	case key.Matches(msg, keys.ToggleFollow):
-		vp.SetFollow(!vp.Follow)
-		return Transition{}
-	case key.Matches(msg, keys.OpenFilter):
-		vp.Filter.Active = !vp.Filter.Active
-		if vp.Filter.Active {
-			vp.Filter.Input.Focus()
-		} else {
-			vp.Filter.Input.Blur()
-			vp.Filter.Query = ""
-			vp.Filter.Input.SetValue("")
-		}
-		return Transition{}
-	case key.Matches(msg, keys.OpenShell):
-		return Transition{LaunchShell: true}
 	default:
 		return Transition{}
 	}
