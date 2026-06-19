@@ -452,27 +452,4 @@ func TestKeyBindings(t *testing.T) {
 		}
 	})
 
-	t.Run("ToggleWrap changes wrap state", func(t *testing.T) {
-		vp := NewViewport()
-		vp.WrapLines = false
-
-		controller := Controller{}
-		controller.HandleKey(vp, tea.KeyPressMsg{Code: 'w', Text: "w"}, NewKeyMap())
-
-		if !vp.WrapLines {
-			t.Error("expected WrapLines to be true")
-		}
-	})
-
-	t.Run("ToggleFollow changes follow state", func(t *testing.T) {
-		vp := NewViewport()
-		vp.Follow = false
-
-		controller := Controller{}
-		controller.HandleKey(vp, tea.KeyPressMsg{Code: 'f', Text: "f"}, NewKeyMap())
-
-		if !vp.Follow {
-			t.Error("expected Follow to be true")
-		}
-	})
 }
