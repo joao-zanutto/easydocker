@@ -21,7 +21,6 @@ import (
 func (m model) View() tea.View {
 	if m.dataDirty {
 		m = m.syncBrowseData()
-		m.dataDirty = false
 	}
 	content := "Loading EasyDocker..."
 	if m.width > 0 && m.height > 0 {

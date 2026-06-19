@@ -2,7 +2,7 @@ package core
 
 import "strings"
 
-func FilterContainersByScope(containers []ContainerRow, showAll bool) []ContainerRow {
+func FilterContainersRunningOnly(containers []ContainerRow, showAll bool) []ContainerRow {
 	if showAll {
 		return containers
 	}
