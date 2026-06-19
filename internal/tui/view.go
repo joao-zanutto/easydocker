@@ -11,6 +11,7 @@ import (
 	"easydocker/internal/tui/ui/chrome"
 	"easydocker/internal/tui/ui/components"
 	"easydocker/internal/tui/ui/tables"
+	"easydocker/internal/tui/ui/theme"
 	"easydocker/internal/tui/util"
 
 	tea "charm.land/bubbletea/v2"
@@ -198,13 +199,8 @@ func (m model) renderChromeTab(tab shared.Tab, label string) string {
 
 func (m model) browseDetailRenderer() browse.DetailProvider {
 	return browseDetailRenderer{
-		labelStyle:      m.styles.Browse.Label,
-		valueStyle:      m.styles.Browse.Value,
-		stateRunStyle:   m.styles.States.StateRun,
-		stateWarnStyle:  m.styles.States.StateWarn,
-		stateStopStyle:  m.styles.States.StateStop,
-		stateDeadStyle:  m.styles.States.StateDead,
-		stateOtherStyle: m.styles.States.StateOther,
+		labelStyle: m.styles.Browse.Label,
+		valueStyle: m.styles.Browse.Value,
 	}
 }
 
@@ -266,13 +262,8 @@ func renderResourceTableFromSpec[T any](m model, width, height int, spec tables.
 }
 
 type browseDetailRenderer struct {
-	labelStyle      lipgloss.Style
-	valueStyle      lipgloss.Style
-	stateRunStyle   lipgloss.Style
-	stateWarnStyle  lipgloss.Style
-	stateStopStyle  lipgloss.Style
-	stateDeadStyle  lipgloss.Style
-	stateOtherStyle lipgloss.Style
+	labelStyle lipgloss.Style
+	valueStyle lipgloss.Style
 }
 
 func (r browseDetailRenderer) DetailLine(label, value string, width int) string {
@@ -292,18 +283,6 @@ func (r browseDetailRenderer) DetailLine(label, value string, width int) string 
 }
 
 func (r browseDetailRenderer) RenderContainerState(container core.ContainerRow) string {
-	var stateStyle lipgloss.Style
-	switch container.State {
-	case core.StateRunning:
-		stateStyle = r.stateRunStyle
-	case core.StatePaused, core.StateRestarting, core.StateCreated:
-		stateStyle = r.stateWarnStyle
-	case core.StateExited:
-		stateStyle = r.stateStopStyle
-	case core.StateDead:
-		stateStyle = r.stateDeadStyle
-	default:
-		stateStyle = r.stateOtherStyle
-	}
-	return stateStyle.Render(util.ContainerStateText(container))
+	return r.valueStyle.Foreground(theme.ContainerStateColor(container.State)).
+		Render(util.ContainerStateText(container))
 }
