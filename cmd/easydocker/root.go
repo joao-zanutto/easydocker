@@ -89,8 +89,15 @@ func Execute() {
 func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 	v := viper.New()
 
+	// Check both CLI flag and environment variable for explicit config path
+	// CLI flag takes precedence over environment variable
 	explicitPath, _ := cmd.Flags().GetString("config")
-	if explicitPath != "" {
+	if explicitPath == "" {
+		explicitPath = os.Getenv("EASYDOCKER_CONFIG")
+	}
+
+	hasExplicitPath := explicitPath != ""
+	if hasExplicitPath {
 		v.SetConfigFile(explicitPath)
 	} else {
 		v.SetConfigName("config")
@@ -110,7 +117,9 @@ func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 	cfgPath := ""
 	if err := v.ReadInConfig(); err != nil {
 		var cfgErr viper.ConfigFileNotFoundError
-		if !errors.As(err, &cfgErr) {
+		// If an explicit path was provided, treat missing file as an error
+		// Only ignore ConfigFileNotFoundError when searching default locations
+		if hasExplicitPath || !errors.As(err, &cfgErr) {
 			return config.Config{}, "", fmt.Errorf("read config: %w", err)
 		}
 	} else {

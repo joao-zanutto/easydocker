@@ -138,7 +138,6 @@ func (m model) renderConfigContent(totalWidth, totalHeight int) string {
 	m.viewer.ContainerName = ""
 	m.viewer.Breadcrumb = "Configuration"
 	m.viewer.Vp.ContentType = viewer.ContentTypeConfig
-	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 	m.viewer.ResourceType = 0
 	m.viewer.LoadingMsg = "Loading..."
 	m.viewer.EmptyMsg = "No configuration data available."
@@ -152,6 +151,7 @@ func (m model) renderConfigContent(totalWidth, totalHeight int) string {
 		Key:          m.styles.Chrome.Key,
 		KeyText:      m.styles.Chrome.KeyText,
 	}
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 	return m.viewer.View()
 }
 

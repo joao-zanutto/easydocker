@@ -1,5 +1,10 @@
 package config
 
+import (
+	"os"
+	"path/filepath"
+)
+
 type LoggingConfig struct {
 	Enable bool   `yaml:"enable" mapstructure:"enable"`
 	Level  string `yaml:"level" mapstructure:"level"`
@@ -11,11 +16,19 @@ type Config struct {
 }
 
 func Default() Config {
+	// Use user-writable location for log file instead of /var/log
+	logPath := "/var/log/easydocker.log" // fallback
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		logPath = filepath.Join(xdg, "easydocker", "easydocker.log")
+	} else if home, err := os.UserHomeDir(); err == nil {
+		logPath = filepath.Join(home, ".config", "easydocker", "easydocker.log")
+	}
+
 	return Config{
 		Logging: LoggingConfig{
 			Enable: false,
 			Level:  "warn",
-			Path:   "/var/log/easydocker.log",
+			Path:   logPath,
 		},
 	}
 }
