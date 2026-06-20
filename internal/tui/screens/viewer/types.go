@@ -36,6 +36,7 @@ type ContentType int
 const (
 	ContentTypeLogs ContentType = iota
 	ContentTypeInspect
+	ContentTypeConfig
 )
 
 type Styles struct {

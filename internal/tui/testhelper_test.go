@@ -10,7 +10,7 @@ type testModelBuilder struct {
 }
 
 func newTestModel() testModelBuilder {
-	m := unwrapModel(New(nil))
+	m := unwrapModel(New(nil, nil, ""))
 	return testModelBuilder{m: *m}
 }
 

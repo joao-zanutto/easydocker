@@ -66,6 +66,10 @@ func (m model) renderMain(height int) string {
 		return m.renderLogsContent(container, totalWidth, totalHeight)
 	}
 
+	if m.screen == shared.InspectViewer && m.viewer.Vp.ContentType == viewer.ContentTypeConfig {
+		return m.renderConfigContent(totalWidth, totalHeight)
+	}
+
 	if m.screen == shared.InspectViewer {
 		return m.renderInspectContent(totalWidth, totalHeight)
 	}
@@ -115,6 +119,29 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	m.viewer.ResourceType = shared.TabToResourceType(m.browse.ActiveTab)
 	m.viewer.LoadingMsg = "Loading inspect..."
 	m.viewer.EmptyMsg = "No inspect data available."
+	m.viewer.Styles = viewer.Styles{
+		Breadcrumb:   m.styles.Viewer.Breadcrumb,
+		FollowOn:     m.styles.Viewer.FollowOn,
+		FollowOff:    m.styles.Viewer.FollowOff,
+		Muted:        m.styles.Browse.Muted,
+		Divider:      m.styles.Browse.Divider,
+		SubpageFrame: m.styles.Viewer.SubpageFrame,
+		Key:          m.styles.Chrome.Key,
+		KeyText:      m.styles.Chrome.KeyText,
+	}
+	return m.viewer.View()
+}
+
+func (m model) renderConfigContent(totalWidth, totalHeight int) string {
+	m.viewer.Width = totalWidth
+	m.viewer.Height = totalHeight
+	m.viewer.ContainerName = ""
+	m.viewer.Breadcrumb = "Configuration"
+	m.viewer.Vp.ContentType = viewer.ContentTypeConfig
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	m.viewer.ResourceType = 0
+	m.viewer.LoadingMsg = "Loading..."
+	m.viewer.EmptyMsg = "No configuration data available."
 	m.viewer.Styles = viewer.Styles{
 		Breadcrumb:   m.styles.Viewer.Breadcrumb,
 		FollowOn:     m.styles.Viewer.FollowOn,

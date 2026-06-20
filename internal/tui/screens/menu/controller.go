@@ -6,8 +6,9 @@ import (
 )
 
 type Transition struct {
-	Quit bool
-	Back bool
+	Quit       bool
+	Back       bool
+	OpenConfig bool
 }
 
 type Controller struct{}
@@ -32,6 +33,8 @@ func (Controller) HandleKey(menu *MenuState, help *HelpState, msg tea.KeyPressMs
 				help.Active = true
 				help.Cursor = 0
 				menu.Active = false
+			case MenuActionConfig:
+				return Transition{OpenConfig: true}
 			case MenuActionQuit:
 				return Transition{Quit: true}
 			}

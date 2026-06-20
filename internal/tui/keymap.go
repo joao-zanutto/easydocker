@@ -16,6 +16,9 @@ import (
 
 func (m model) footerKeyMap() help.KeyMap {
 	if m.screen == shared.LogViewer || m.screen == shared.InspectViewer {
+		if m.viewer.Vp.ContentType == viewer.ContentTypeConfig {
+			return footerKeyMap{bindings: []key.Binding{shared.EscBinding("back")}}
+		}
 		viewerKeys := viewer.NewKeyMap()
 		contentType := viewer.ContentTypeLogs
 		if m.screen == shared.InspectViewer {
