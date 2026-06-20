@@ -16,19 +16,35 @@ type Config struct {
 }
 
 func Default() Config {
-	// Use user-writable location for log file instead of /var/log
-	logPath := "/var/log/easydocker.log" // fallback
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		logPath = filepath.Join(xdg, "easydocker", "easydocker.log")
-	} else if home, err := os.UserHomeDir(); err == nil {
-		logPath = filepath.Join(home, ".config", "easydocker", "easydocker.log")
-	}
-
 	return Config{
 		Logging: LoggingConfig{
 			Enable: false,
 			Level:  "warn",
-			Path:   logPath,
+			Path:   defaultLogPath(),
 		},
 	}
+}
+
+func defaultLogPath() string {
+	if isWritableDir("/var/log") {
+		return "/var/log/easydocker.log"
+	}
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, "easydocker", "easydocker.log")
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(home, ".config", "easydocker", "easydocker.log")
+	}
+	// ultimate fallback
+	return "/var/log/easydocker.log"
+}
+
+func isWritableDir(dir string) bool {
+	f, err := os.CreateTemp(dir, ".easydocker-write-check-*")
+	if err != nil {
+		return false
+	}
+	f.Close()
+	os.Remove(f.Name())
+	return true
 }

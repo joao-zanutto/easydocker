@@ -103,12 +103,9 @@ func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 
 		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 			v.AddConfigPath(filepath.Join(xdg, "easydocker"))
-		} else if home, err := os.UserHomeDir(); err == nil {
-			v.AddConfigPath(filepath.Join(home, ".config", "easydocker"))
 		}
-
 		if home, err := os.UserHomeDir(); err == nil {
-			v.AddConfigPath(filepath.Join(home, ".easydocker"))
+			v.AddConfigPath(filepath.Join(home, ".config", "easydocker"))
 		}
 	}
 
