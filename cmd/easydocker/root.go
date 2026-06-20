@@ -115,8 +115,6 @@ func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 	cfgPath := ""
 	if err := v.ReadInConfig(); err != nil {
 		var cfgErr viper.ConfigFileNotFoundError
-		// If an explicit path was provided, treat missing file as an error
-		// Only ignore ConfigFileNotFoundError when searching default locations
 		if hasExplicitPath || !errors.As(err, &cfgErr) {
 			return config.Config{}, "", fmt.Errorf("read config: %w", err)
 		}
