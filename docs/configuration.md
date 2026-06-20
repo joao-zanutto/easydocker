@@ -20,7 +20,7 @@ Values are resolved in this order (last wins):
 EasyDocker looks for a YAML config file in the following locations (in order):
 
 1. `--config` flag or `EASYDOCKER_CONFIG` environment variable (explicit path)
-2. `$XDG_CONFIG_HOME/easydocker/config.yaml` (default: `~/.config/easydocker/config.yaml`)
+2. `$XDG_CONFIG_HOME/easydocker/config.yaml`
 3. `~/.config/easydocker/config.yaml`
 
 ```yaml
