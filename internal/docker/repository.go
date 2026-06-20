@@ -32,7 +32,7 @@ func (r *Repository) LoadContainerRows(ctx context.Context) ([]core.ContainerRow
 	return withClientResult(r, func(cli *client.Client) ([]core.ContainerRow, error) {
 		containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
 		if err != nil {
-			return nil, WrapDockerError(err)
+			return nil, err
 		}
 
 		rows := make([]core.ContainerRow, 0, len(containers))
@@ -100,7 +100,7 @@ func (r *Repository) InspectResource(ctx context.Context, resourceType core.Reso
 			return nil, nil
 		}
 		if err != nil {
-			return nil, WrapDockerError(err)
+			return nil, err
 		}
 		return toInspectResult(result)
 	})
@@ -139,6 +139,4 @@ func withClientResult[T any](r *Repository, fn func(*client.Client) (T, error)) 
 	return fn(cli)
 }
 
-func WrapDockerError(err error) error {
-	return err
-}
+
