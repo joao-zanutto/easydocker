@@ -7,12 +7,10 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/browse"
-	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/util"
 
-	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -182,18 +180,7 @@ func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 }
 
 func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 100
 	m.height = 30
 	m.screen = shared.Main
@@ -223,18 +210,7 @@ func TestIntegration_BackspaceDoesNotQuitOrExitFilter(t *testing.T) {
 }
 
 func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 80
 	m.height = 24
 	m.viewer.Width = m.width
@@ -271,18 +247,7 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 }
 
 func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 80
 	m.height = 24
 	m.viewer.Width = m.width
@@ -321,18 +286,7 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 }
 
 func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.viewer.Vp.SetXOffset(24)
 	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
@@ -368,36 +322,14 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 }
 
 func TestIntegration_FilterPromptIcon(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	if m.browse.Filter.Input.Prompt != "🔎︎ " {
 		t.Fatalf("filter prompt = %q, want %q", m.browse.Filter.Input.Prompt, "🔎︎ ")
 	}
 }
 
 func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
@@ -427,18 +359,7 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 }
 
 func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
@@ -448,7 +369,7 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 			{FullID: "ctr-2", Name: "worker", ComposeProject: "shop", State: "running"},
 		},
 	}
-	*m = m.syncBrowseData()
+	m = m.syncBrowseData()
 	m.dataDirty = false
 
 	if got := m.browse.ItemCountForTab(tabContainers); got != 1 {
@@ -471,25 +392,14 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 }
 
 func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
 	}
-	*m = m.syncBrowseData()
+	m = m.syncBrowseData()
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	after := unwrapModel(updated)
@@ -506,18 +416,7 @@ func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 }
 
 func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 120
 	m.height = 34
 	m.screen = shared.Main
@@ -525,7 +424,7 @@ func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
 	}
-	*m = m.syncBrowseData()
+	m = m.syncBrowseData()
 
 	composeView := m.View().Content
 	if !strings.Contains(composeView, "expand") {
@@ -541,18 +440,7 @@ func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.
 }
 
 func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 120
 	m.height = 34
 	m.screen = shared.Main
@@ -564,7 +452,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 			{FullID: "ctr-2", Name: "worker", ComposeProject: "shop", State: "running"},
 		},
 	}
-	*m = m.syncBrowseData()
+	m = m.syncBrowseData()
 	m.dataDirty = false
 
 	view := m.View().Content
@@ -577,18 +465,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 }
 
 func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
@@ -610,18 +487,7 @@ func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
 }
 
 func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 120
 	m.height = 34
 	m.viewer.Width = m.width
@@ -669,18 +535,7 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 }
 
 func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 120
 	m.height = 34
 	m.viewer.Width = m.width
@@ -716,18 +571,7 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 }
 
 func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 120
 	m.height = 34
 	m.viewer.Width = m.width
@@ -763,18 +607,7 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 }
 
 func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.width = 120
 	m.height = 34
 	m.viewer.Width = m.width
@@ -798,7 +631,7 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 	baseRows := m.viewer.VisibleRows()
 	baseBottom := m.viewer.Vp.YOffset() + baseRows - 1
 
-	current := *m
+	current := m
 	for i := 0; i < 3; i++ {
 		updated, _ := current.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 		current = *unwrapModel(updated)
@@ -820,18 +653,7 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 }
 
 func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.screen = shared.LogViewer
 	m.viewer.ContainerID = "ctr-1"
 	m.viewer.Vp.Data = make([]string, 220)
@@ -882,18 +704,7 @@ func TestIntegration_ShouldPollLogsOnTick_GatedByLogLoadingState(t *testing.T) {
 }
 
 func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.screen = shared.LogViewer
 	m.viewer.ContainerID = "ctr-1"
 	m.viewer.Vp.Data = make([]string, 220)
@@ -924,18 +735,7 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 }
 
 func TestIntegration_FirstEnterOnComposeRow_ExpandsNotLogs(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
@@ -965,18 +765,7 @@ func TestIntegration_FirstEnterOnComposeRow_ExpandsNotLogs(t *testing.T) {
 }
 
 func TestIntegration_ComposeExpandThenDownThenEnter(t *testing.T) {
-	m := unwrapModel(model{
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
-		browse:       browse.NewModel(),
-		viewer:       viewer.NewModel(),
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
-	})
+	m := newTestModel().m
 	m.screen = shared.Main
 	m.browse.ActiveTab = tabContainers
 	m.browse.ShowAll = true
