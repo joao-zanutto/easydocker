@@ -209,7 +209,9 @@ func (m Model) VisibleWidth() int {
 }
 
 func (m Model) VisibleRows() int {
-	return VisibleRowsForContent(m.Height)
+	frameHeight := m.Styles.SubpageFrame.GetVerticalFrameSize()
+	contentHeight := max(1, max(1, m.Height)-frameHeight)
+	return VisibleRowsForContent(contentHeight)
 }
 
 func (m *Model) applyHistoryWithMerge(data []string) {

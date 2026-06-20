@@ -103,6 +103,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 		Key:          m.styles.Chrome.Key,
 		KeyText:      m.styles.Chrome.KeyText,
 	}
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 	return m.viewer.View()
 }
 
@@ -129,6 +130,7 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 		Key:          m.styles.Chrome.Key,
 		KeyText:      m.styles.Chrome.KeyText,
 	}
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 	return m.viewer.View()
 }
 
