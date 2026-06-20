@@ -1,32 +1,33 @@
 package viewer
 
 import (
+	"sort"
 	"strings"
 	"unicode"
 
 	"easydocker/internal/tui/util"
 )
 
-func ViewportRange(state *State, total int) (int, int) {
+func ViewportRange(vp *Viewport, total int) (int, int) {
 	if total <= 0 {
 		return 0, 0
 	}
-	start := util.Clamp(state.Viewport.YOffset(), 0, max(0, total-1))
-	visible := max(1, state.Viewport.VisibleLineCount())
+	start := util.Clamp(vp.YOffset(), 0, max(0, total-1))
+	visible := max(1, vp.VisibleLineCount())
 	end := min(total, start+visible)
 	return start, end
 }
 
-func VisibleContentRange(state *State, lines []string) (int, int) {
+func VisibleContentRange(vp *Viewport, lines []string) (int, int) {
 	total := len(lines)
 	if total <= 0 {
 		return 0, 0
 	}
-	if !state.WrapLines {
-		return ViewportRange(state, total)
+	if !vp.WrapLines {
+		return ViewportRange(vp, total)
 	}
 
-	wrapWidth := max(1, state.Viewport.Width())
+	wrapWidth := max(1, vp.Width())
 	totalRows := 0
 	for _, line := range lines {
 		totalRows += WrappedRowCount(line, wrapWidth)
@@ -35,27 +36,13 @@ func VisibleContentRange(state *State, lines []string) (int, int) {
 		return 0, 0
 	}
 
-	startRow := util.Clamp(state.Viewport.YOffset(), 0, totalRows-1)
-	visibleRows := max(1, state.Viewport.VisibleLineCount())
+	startRow := util.Clamp(vp.YOffset(), 0, totalRows-1)
+	visibleRows := max(1, vp.VisibleLineCount())
 	endRowExclusive := min(totalRows, startRow+visibleRows)
 
 	startLine := rowToLineIndex(lines, wrapWidth, startRow)
 	endLine := rowToLineIndex(lines, wrapWidth, max(startRow, endRowExclusive-1)) + 1
 	return startLine, min(total, endLine)
-}
-
-func RawLineToViewportRowOffset(lines []string, wrapWidth, lineIndex int) int {
-	if len(lines) == 0 || lineIndex <= 0 {
-		return 0
-	}
-	if lineIndex > len(lines) {
-		lineIndex = len(lines)
-	}
-	rows := 0
-	for index := 0; index < lineIndex; index++ {
-		rows += WrappedRowCount(lines[index], wrapWidth)
-	}
-	return rows
 }
 
 func rowToLineIndex(lines []string, wrapWidth, row int) int {
@@ -85,7 +72,7 @@ func WrappedRowCount(line string, width int) int {
 }
 
 func FilterLines(lines []string, query string) []string {
-	if strings.TrimSpace(query) == "" {
+	if query == "" || strings.TrimSpace(query) == "" {
 		return lines
 	}
 	filtered := make([]string, 0, len(lines))
@@ -95,6 +82,126 @@ func FilterLines(lines []string, query string) []string {
 		}
 	}
 	return filtered
+}
+
+func jsonIndentLevel(line string) int {
+	trimmed := strings.TrimLeft(line, " ")
+	return (len(line) - len(trimmed)) / 2
+}
+
+func isJSONCloser(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return trimmed == "}" || trimmed == "}," || trimmed == "]" || trimmed == "],"
+}
+
+func isJSONKey(line string) bool {
+	return !isJSONCloser(line) && strings.Contains(line, "\": ")
+}
+
+func isBlockOpener(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	trimmed = strings.TrimSuffix(trimmed, ",")
+	return strings.HasSuffix(trimmed, "{") || strings.HasSuffix(trimmed, "[")
+}
+
+func findJSONParent(lines []string, idx int) int {
+	level := jsonIndentLevel(lines[idx])
+	if level <= 0 {
+		return -1
+	}
+	if level == 1 {
+		return 0
+	}
+	for k := idx - 1; k >= 0; k-- {
+		l := jsonIndentLevel(lines[k])
+		if l < level && (l == 0 || isJSONKey(lines[k])) {
+			return k
+		}
+	}
+	return 0
+}
+
+func findJSONCloser(lines []string, idx int) int {
+	if !isBlockOpener(lines[idx]) {
+		return -1
+	}
+	level := jsonIndentLevel(lines[idx])
+	for j := idx + 1; j < len(lines); j++ {
+		if jsonIndentLevel(lines[j]) == level && isJSONCloser(lines[j]) {
+			return j
+		}
+	}
+	return -1
+}
+
+func buildAncestryPath(lines []string, matchIdx int) []int {
+	path := []int{matchIdx}
+	for {
+		parent := findJSONParent(lines, path[0])
+		if parent < 0 || parent == path[0] {
+			break
+		}
+		path = append([]int{parent}, path...)
+		if jsonIndentLevel(lines[parent]) == 0 {
+			break
+		}
+	}
+	return path
+}
+
+func FilterJSONLines(lines []string, query string) []string {
+	if query == "" || strings.TrimSpace(query) == "" {
+		return lines
+	}
+
+	lineSet := make(map[int]bool)
+
+	for i, line := range lines {
+		if !strings.Contains(line, query) {
+			continue
+		}
+
+		path := buildAncestryPath(lines, i)
+
+		closers := make([]int, len(path))
+		for p, idx := range path {
+			closers[p] = findJSONCloser(lines, idx)
+		}
+
+		for _, idx := range path {
+			lineSet[idx] = true
+		}
+
+		matchIdx := path[len(path)-1]
+		matchCloser := closers[len(closers)-1]
+		if matchCloser > matchIdx+1 {
+			for j := matchIdx + 1; j < matchCloser; j++ {
+				lineSet[j] = true
+			}
+		}
+
+		for p := len(path) - 1; p >= 0; p-- {
+			if closers[p] >= 0 {
+				lineSet[closers[p]] = true
+			}
+		}
+	}
+
+	if len(lineSet) == 0 {
+		return nil
+	}
+
+	indices := make([]int, 0, len(lineSet))
+	for idx := range lineSet {
+		indices = append(indices, idx)
+	}
+	sort.Ints(indices)
+
+	result := make([]string, len(indices))
+	for i, idx := range indices {
+		result[i] = lines[idx]
+	}
+	return result
 }
 
 func WrapLines(lines []string, width int) []string {
@@ -168,23 +275,72 @@ func normalizeLine(line string) string {
 	return line
 }
 
-func RenderedViewportLineDelta(state *State, allLines []string, prepended int) int {
-	if prepended <= 0 || len(allLines) == 0 {
-		return 0
+func MergePolledLogs(prev, polled []string) ([]string, bool) {
+	if len(prev) == 0 {
+		return polled, true
 	}
-	if prepended > len(allLines) {
-		prepended = len(allLines)
-	}
-
-	added := FilterLines(allLines[:prepended], state.Filter.Query)
-	if !state.WrapLines {
-		return len(added)
+	if len(polled) == 0 {
+		return prev, true
 	}
 
-	width := max(1, state.Viewport.Width())
-	delta := 0
-	for _, line := range added {
-		delta += WrappedRowCount(SanitizeLine(line), width)
+	maxOverlap := min(len(prev), len(polled))
+	for o := maxOverlap; o > 0; o-- {
+		match := true
+		for i := 0; i < o; i++ {
+			if strings.TrimRight(prev[len(prev)-o+i], "\r") != strings.TrimRight(polled[i], "\r") {
+				match = false
+				break
+			}
+		}
+		if match {
+			result := make([]string, len(prev)+len(polled)-o)
+			for i, l := range prev {
+				result[i] = strings.TrimRight(l, "\r")
+			}
+			for i := o; i < len(polled); i++ {
+				result[len(prev)+(i-o)] = strings.TrimRight(polled[i], "\r")
+			}
+			return result, true
+		}
 	}
-	return delta
+
+	normPrev := make([]string, len(prev))
+	for i, l := range prev {
+		normPrev[i] = strings.TrimRight(l, "\r")
+	}
+	normPolled := make([]string, len(polled))
+	for i, l := range polled {
+		normPolled[i] = strings.TrimRight(l, "\r")
+	}
+
+	if equalLogSlices(normPrev, normPolled) {
+		return normPrev, true
+	}
+	if len(normPolled) < len(normPrev) && equalLogSlices(normPrev[len(normPrev)-len(normPolled):], normPolled) {
+		return normPrev, true
+	}
+
+	return normPolled, false
+}
+
+func equalLogSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (vp *Viewport) PrepareContentLines(wrapWidth int, wrapEnabled bool) []string {
+	lines := vp.FilteredLines()
+
+	if wrapEnabled && wrapWidth > 0 {
+		lines = WrapLines(lines, wrapWidth)
+	}
+
+	return lines
 }

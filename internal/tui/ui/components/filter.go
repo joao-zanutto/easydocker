@@ -25,27 +25,8 @@ func NewFilterState() FilterState {
 	return FilterState{Input: input}
 }
 
-func RenderFilterHeader(input string, width int, dividerStyle lipgloss.Style) string {
-	if width <= 0 {
-		return ""
-	}
-	inputLine := PadVisibleWidth(input, width)
-	titleDivider := dividerStyle.Bold(true).Render(strings.Repeat("━", max(1, width)))
-	divider := dividerStyle.Render(strings.Repeat("─", max(1, width)))
-	return util.JoinSections(titleDivider, inputLine, divider)
-}
-
 func RenderTitleDivider(style lipgloss.Style, width int) string {
 	return style.Bold(true).Render(strings.Repeat("━", max(1, width)))
-}
-
-func RenderFilterInputOnly(input string, width int, dividerStyle lipgloss.Style) string {
-	if width <= 0 {
-		return ""
-	}
-	inputLine := PadVisibleWidth(input, width)
-	divider := dividerStyle.Render(strings.Repeat("─", max(1, width)))
-	return util.JoinSections(inputLine, divider)
 }
 
 func PadVisibleWidth(line string, width int) string {

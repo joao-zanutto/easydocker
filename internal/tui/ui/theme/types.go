@@ -6,49 +6,75 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// Set contains all style primitives used by the root TUI orchestrator.
-type Set struct {
-	Page         lipgloss.Style
-	Header       lipgloss.Style
-	Title        lipgloss.Style
-	TitleMeta    lipgloss.Style
+type ChromeStyles struct {
+	Page      lipgloss.Style
+	Header    lipgloss.Style
+	Title     lipgloss.Style
+	TitleMeta lipgloss.Style
+	Badge     lipgloss.Style
+	ErrorText lipgloss.Style
+	Footer    lipgloss.Style
+	Key       lipgloss.Style
+	KeyText   lipgloss.Style
+}
+
+type TabStyles struct {
+	Tab       lipgloss.Style
+	ActiveTab lipgloss.Style
+}
+
+type TableStyles struct {
+	HeaderRow lipgloss.Style
+	Row       lipgloss.Style
+	ActiveRow lipgloss.Style
+}
+
+type BrowseStyles struct {
+	MainFrame lipgloss.Style
+	Divider   lipgloss.Style
+	Muted     lipgloss.Style
+	Section   lipgloss.Style
+	Label     lipgloss.Style
+	Value     lipgloss.Style
+}
+
+type ViewerStyles struct {
 	Breadcrumb   lipgloss.Style
-	Tab          lipgloss.Style
-	ActiveTab    lipgloss.Style
-	Badge        lipgloss.Style
-	Muted        lipgloss.Style
-	MainFrame    lipgloss.Style
-	SubpageFrame lipgloss.Style
-	Divider      lipgloss.Style
-	HeaderRow    lipgloss.Style
-	Row          lipgloss.Style
-	ActiveRow    lipgloss.Style
-	Section      lipgloss.Style
-	Label        lipgloss.Style
-	Value        lipgloss.Style
-	ErrorText    lipgloss.Style
-	Footer       lipgloss.Style
-	Key          lipgloss.Style
-	KeyText      lipgloss.Style
 	FollowOn     lipgloss.Style
 	FollowOff    lipgloss.Style
-	MonitorBox   lipgloss.Style
-	StateRun     lipgloss.Style
-	StateWarn    lipgloss.Style
-	StateStop    lipgloss.Style
-	StateDead    lipgloss.Style
-	StateOther   lipgloss.Style
-	MenuFrame    lipgloss.Style
-	MenuSelector lipgloss.Style
-	MenuItem     lipgloss.Style
-	MenuDesc     lipgloss.Style
-	HelpFrame    lipgloss.Style
-	HelpTitle    lipgloss.Style
-	HelpSection  lipgloss.Style
-	HelpCommand  lipgloss.Style
-	HelpKey      lipgloss.Style
-	HelpContext  lipgloss.Style
-	HelpFooter   lipgloss.Style
-	Scrollbar    lipgloss.Style
-	ActiveBG     color.Color
+	SubpageFrame lipgloss.Style
+}
+
+type MenuStyles struct {
+	Frame           lipgloss.Style
+	Selector        lipgloss.Style
+	ItemNormal      lipgloss.Style
+	ItemDescription lipgloss.Style
+	HelpFrame       lipgloss.Style
+	HelpTitle       lipgloss.Style
+	HelpSection     lipgloss.Style
+	HelpCommand     lipgloss.Style
+	HelpKey         lipgloss.Style
+	HelpContext     lipgloss.Style
+	HelpFooter      lipgloss.Style
+	Scrollbar       lipgloss.Style
+}
+
+type StateStyles struct {
+	StateRun   lipgloss.Style
+	StateWarn  lipgloss.Style
+	StateStop  lipgloss.Style
+	StateDead  lipgloss.Style
+	StateOther lipgloss.Style
+}
+
+type Set struct {
+	Chrome   ChromeStyles
+	Tabs     TabStyles
+	Tables   TableStyles
+	Browse   BrowseStyles
+	Viewer   ViewerStyles
+	Menu     MenuStyles
+	States   StateStyles
+	ActiveBG color.Color
 }

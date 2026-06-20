@@ -23,8 +23,8 @@ func TestApplyMetricsToContainers_AppliesMatchingRowsOnly(t *testing.T) {
 
 	updated := ApplyMetricsToContainers(rows, metrics)
 
-	if len(updated) != len(rows) {
-		t.Fatalf("ApplyMetricsToContainers len = %d, want %d", len(updated), len(rows))
+	if &updated[0] != &rows[0] {
+		t.Fatalf("ApplyMetricsToContainers should update in-place, got different backing array")
 	}
 
 	if updated[0].CPUPercent != metrics["id-1"].CPUPercent {
@@ -36,9 +36,5 @@ func TestApplyMetricsToContainers_AppliesMatchingRowsOnly(t *testing.T) {
 
 	if updated[1].CPUPercent != originalCPU || updated[1].MemoryUsage != originalMem {
 		t.Fatalf("row 1 should be unchanged, got CPU=%v MemoryUsage=%q", updated[1].CPUPercent, updated[1].MemoryUsage)
-	}
-
-	if rows[0].CPUPercent != 1.5 {
-		t.Fatalf("input slice mutated: rows[0].CPUPercent = %v, want 1.5", rows[0].CPUPercent)
 	}
 }

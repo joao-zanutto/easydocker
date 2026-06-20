@@ -1,224 +1,78 @@
 package viewer
 
 import (
-	"easydocker/internal/tui/shared"
-	"easydocker/internal/tui/util"
-
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 )
 
-type KeyMap struct {
-	Up           key.Binding
-	Down         key.Binding
-	Left         key.Binding
-	Right        key.Binding
-	PageUp       key.Binding
-	PageDown     key.Binding
-	Home         key.Binding
-	End          key.Binding
-	ToggleWrap   key.Binding
-	ToggleFollow key.Binding
-	OpenFilter   key.Binding
-	OpenShell    key.Binding
-	Back         key.Binding
-}
-
-func NewKeyMap() KeyMap {
-	return KeyMap{
-		Up: key.NewBinding(
-			key.WithKeys("up"),
-			key.WithHelp("↑", "line up"),
-		),
-		Down: key.NewBinding(
-			key.WithKeys("down"),
-			key.WithHelp("↓", "line down"),
-		),
-		Left: key.NewBinding(
-			key.WithKeys("left"),
-			key.WithHelp("←", "scroll left"),
-		),
-		Right: key.NewBinding(
-			key.WithKeys("right"),
-			key.WithHelp("→", "scroll right"),
-		),
-		PageUp: key.NewBinding(
-			key.WithKeys("pgup"),
-			key.WithHelp("pgup", "page up"),
-		),
-		PageDown: key.NewBinding(
-			key.WithKeys("pgdown"),
-			key.WithHelp("pgdn", "page down"),
-		),
-		Home: key.NewBinding(
-			key.WithKeys("home"),
-			key.WithHelp("home", "top"),
-		),
-		End: key.NewBinding(
-			key.WithKeys("end"),
-			key.WithHelp("end", "bottom"),
-		),
-		ToggleWrap: key.NewBinding(
-			key.WithKeys("w"),
-			key.WithHelp(helpKeyLabel("w"), "toggle wrap"),
-		),
-		ToggleFollow: key.NewBinding(
-			key.WithKeys("f"),
-			key.WithHelp(helpKeyLabel("f"), "toggle follow"),
-		),
-		OpenFilter: key.NewBinding(
-			key.WithKeys("/"),
-			key.WithHelp(helpKeyLabel("/"), "filter"),
-		),
-		OpenShell: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp(helpKeyLabel("s"), "shell"),
-		),
-		Back: key.NewBinding(
-			key.WithKeys("esc"),
-			key.WithHelp(helpKeyLabel("esc"), "back"),
-		),
-	}
-}
-
-func helpKeyLabel(label string) string {
-	return util.HelpKeyLabel(label)
-}
-
-func canOpenShell(state string) bool {
-	return shared.CanOpenShell(state)
-}
-
 type Controller struct{}
 
-func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Transition {
+func (Controller) HandleKey(vp *Viewport, msg tea.KeyPressMsg, keys KeyMap) Transition {
 	switch {
 	case key.Matches(msg, keys.Right):
-		return handleHorizontalScroll(state, true)
+		return handleHorizontalScroll(vp, true)
 	case key.Matches(msg, keys.Left):
-		return handleHorizontalScroll(state, false)
+		return handleHorizontalScroll(vp, false)
 	case key.Matches(msg, keys.Up):
-		return handleVerticalScroll(state, -1, false)
+		return handleVerticalScroll(vp, -1, false)
 	case key.Matches(msg, keys.Down):
-		return handleVerticalScroll(state, 1, false)
+		return handleVerticalScroll(vp, 1, false)
 	case key.Matches(msg, keys.PageUp):
-		return handleVerticalScroll(state, -1, true)
+		return handleVerticalScroll(vp, -1, true)
 	case key.Matches(msg, keys.PageDown):
-		return handleVerticalScroll(state, 1, true)
+		return handleVerticalScroll(vp, 1, true)
 	case key.Matches(msg, keys.Home):
-		return handleHome(state)
+		return handleHome(vp)
 	case key.Matches(msg, keys.End):
-		return handleEnd(state)
-	case key.Matches(msg, keys.ToggleWrap):
-		state.SetWrapLines(!state.WrapLines)
-		return Transition{}
-	case key.Matches(msg, keys.ToggleFollow):
-		state.SetFollow(!state.Follow)
-		return Transition{}
-	case key.Matches(msg, keys.OpenFilter):
-		state.Filter.Active = !state.Filter.Active
-		if state.Filter.Active {
-			state.Filter.Input.Focus()
-		} else {
-			state.Filter.Input.Blur()
-			state.Filter.Query = ""
-			state.Filter.Input.SetValue("")
-		}
-		return Transition{}
-	case key.Matches(msg, keys.OpenShell):
-		return Transition{LaunchShell: true}
-	case key.Matches(msg, keys.Back):
-		return Transition{ExitToBrowse: true}
+		return handleEnd(vp)
 	default:
 		return Transition{}
 	}
 }
 
-func handleHorizontalScroll(state *State, right bool) Transition {
-	if state.WrapLines {
+func handleHorizontalScroll(vp *Viewport, right bool) Transition {
+	if vp.WrapLines {
 		return Transition{}
 	}
-	state.SetFollow(false)
+	vp.SetFollow(false)
 	step := 8
 	if right {
-		state.Viewport.ScrollRight(step)
-		state.HorizontalOffset += step
+		vp.ScrollRight(step)
 	} else {
-		state.Viewport.ScrollLeft(step)
-		state.HorizontalOffset = max(0, state.HorizontalOffset-step)
+		vp.ScrollLeft(step)
 	}
 	return Transition{}
 }
 
-func handleVerticalScroll(state *State, direction int, isPage bool) Transition {
-	state.SetFollow(false)
+func handleVerticalScroll(vp *Viewport, direction int, isPage bool) Transition {
+	vp.SetFollow(false)
 	if isPage {
 		if direction > 0 {
-			state.Viewport.PageDown()
+			vp.PageDown()
 		} else {
-			state.Viewport.PageUp()
+			vp.PageUp()
 		}
 	} else {
 		if direction > 0 {
-			state.Viewport.ScrollDown(1)
+			vp.ScrollDown(1)
 		} else {
-			state.Viewport.ScrollUp(1)
+			vp.ScrollUp(1)
 		}
 	}
-	if direction > 0 && state.Viewport.AtBottom() {
-		state.SetFollow(true)
+	if direction > 0 && vp.AtBottom() {
+		vp.SetFollow(true)
 	}
 	return Transition{}
 }
 
-func handleHome(state *State) Transition {
-	state.SetFollow(false)
-	state.Viewport.SetXOffset(0)
-	state.HorizontalOffset = 0
-	state.Viewport.GotoTop()
+func handleHome(vp *Viewport) Transition {
+	vp.SetFollow(false)
+	vp.SetXOffset(0)
+	vp.GotoTop()
 	return Transition{}
 }
 
-func handleEnd(state *State) Transition {
-	state.SetFollow(true)
+func handleEnd(vp *Viewport) Transition {
+	vp.SetFollow(true)
 	return Transition{}
-}
-
-func (k KeyMap) ShortHelp(resourceType ResourceType, contentType ContentType, containerState string) []key.Binding {
-	bindings := []key.Binding{
-		k.HelpNavigate(), k.HelpPage(), k.HelpHomeEnd(), k.ToggleWrap, k.Back,
-	}
-
-	bindings = append(bindings, k.OpenFilter)
-
-	if contentType == ContentTypeLogs {
-		bindings = append(bindings, k.ToggleFollow)
-	}
-
-	if resourceType == ResourceTypeContainer && canOpenShell(containerState) {
-		bindings = append(bindings, k.OpenShell)
-	}
-
-	return bindings
-}
-
-func (k KeyMap) HelpNavigate() key.Binding {
-	return key.NewBinding(
-		key.WithKeys("left", "up", "down", "right"),
-		key.WithHelp(helpKeyLabel("← ↑ ↓ →"), "navigate"),
-	)
-}
-
-func (k KeyMap) HelpPage() key.Binding {
-	return key.NewBinding(
-		key.WithKeys("pgup", "pgdown"),
-		key.WithHelp(helpKeyLabel("pgup/dn"), "jump up/down"),
-	)
-}
-
-func (k KeyMap) HelpHomeEnd() key.Binding {
-	return key.NewBinding(
-		key.WithKeys("home", "end"),
-		key.WithHelp(helpKeyLabel("home/end"), "go to top/bottom"),
-	)
 }

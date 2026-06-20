@@ -66,27 +66,26 @@ func SortVolumes(rows []VolumeRow) {
 	sort.Slice(rows, func(i, j int) bool {
 		left := rows[i]
 		right := rows[j]
-		if left.CreatedAt != right.CreatedAt {
-			return left.CreatedAt > right.CreatedAt
+		if !left.CreatedAt.Equal(right.CreatedAt) {
+			return left.CreatedAt.After(right.CreatedAt)
 		}
 		return strings.ToLower(left.Name) < strings.ToLower(right.Name)
 	})
 }
 
 func containerStateRank(container ContainerRow) int {
-	state := strings.ToLower(container.State)
 	switch {
-	case state == "running" && container.Healthy:
+	case container.State == StateRunning && container.Healthy:
 		return 0
-	case state == "running":
+	case container.State == StateRunning:
 		return 1
-	case state == "created":
+	case container.State == StateCreated:
 		return 2
-	case state == "restarting" || state == "paused":
+	case container.State == StateRestarting || container.State == StatePaused:
 		return 3
-	case state == "exited" || state == "stopped":
+	case container.State == StateExited:
 		return 4
-	case state == "dead":
+	case container.State == StateDead:
 		return 5
 	default:
 		return 6

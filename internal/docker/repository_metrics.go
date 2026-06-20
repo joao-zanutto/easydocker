@@ -3,8 +3,8 @@ package docker
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,7 +22,7 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 
 	runningRows := make([]core.ContainerRow, 0, len(rows))
 	for _, row := range rows {
-		if strings.EqualFold(row.State, "running") {
+		if row.State == core.StateRunning {
 			runningRows = append(runningRows, row)
 		}
 	}
@@ -31,6 +31,7 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 	}
 
 	metricsByID := make(map[string]core.ContainerMetrics, len(runningRows))
+	metricsErrors := make(map[string]error)
 	workerCount := min(len(runningRows), max(2, min(runtime.NumCPU(), 6)))
 	jobs := make(chan core.ContainerRow)
 	var mu sync.Mutex
@@ -43,6 +44,9 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 		for row := range jobs {
 			metrics, err := r.loadSingleContainerMetrics(ctx, cli, row.FullID)
 			if err != nil {
+				mu.Lock()
+				metricsErrors[row.FullID] = err
+				mu.Unlock()
 				continue
 			}
 
@@ -70,31 +74,23 @@ func (r *Repository) LoadContainerMetrics(ctx context.Context, rows []core.Conta
 	close(jobs)
 	wg.Wait()
 
+	for id, err := range metricsErrors {
+		slog.Warn("container metrics failed", "containerID", id, "error", err)
+	}
 	return metricsByID, totalCPU, totalMem, nil
 }
 
 func (r *Repository) loadSingleContainerMetrics(ctx context.Context, cli *client.Client, containerID string) (core.ContainerMetrics, error) {
-	var lastErr error
-	for attempt := 0; attempt < 2; attempt++ {
-		statsCtx, cancel := context.WithTimeout(ctx, 1500*time.Millisecond)
-		statsReader, err := cli.ContainerStats(statsCtx, containerID, false)
+	return retryWithBackoff(ctx, 2, 1500*time.Millisecond, func(ctx context.Context) (core.ContainerMetrics, error) {
+		statsReader, err := cli.ContainerStats(ctx, containerID, false)
 		if err != nil {
-			cancel()
-			lastErr = err
-			continue
+			return core.ContainerMetrics{}, err
 		}
+		defer func() { _ = statsReader.Body.Close() }()
 
 		var stats container.StatsResponse
-		decodeErr := json.NewDecoder(statsReader.Body).Decode(&stats)
-		closeErr := statsReader.Body.Close()
-		cancel()
-		if decodeErr != nil {
-			lastErr = decodeErr
-			continue
-		}
-		if closeErr != nil {
-			lastErr = closeErr
-			continue
+		if err := json.NewDecoder(statsReader.Body).Decode(&stats); err != nil {
+			return core.ContainerMetrics{}, err
 		}
 
 		cpuPercent := computeCPUPercent(stats)
@@ -108,9 +104,26 @@ func (r *Repository) loadSingleContainerMetrics(ctx context.Context, cli *client
 			MemoryUsageBytes: memoryBytes,
 			MemoryLimitBytes: memoryMax,
 		}, nil
-	}
+	})
+}
 
-	return core.ContainerMetrics{}, lastErr
+func retryWithBackoff[T any](ctx context.Context, maxAttempts int, timeout time.Duration, fn func(context.Context) (T, error)) (T, error) {
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if ctx.Err() != nil {
+			var zero T
+			return zero, ctx.Err()
+		}
+		opCtx, cancel := context.WithTimeout(ctx, timeout)
+		result, err := fn(opCtx)
+		cancel()
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+	}
+	var zero T
+	return zero, lastErr
 }
 
 func computeCPUPercent(stats container.StatsResponse) float64 {
@@ -133,10 +146,10 @@ func computeMemoryUsage(stats container.StatsResponse) (float64, string, string,
 	used := effectiveMemoryUsage(stats)
 	limit := stats.MemoryStats.Limit
 	if limit == 0 {
-		return 0, core.HumanBytes(int64(used)), "-", used, 0
+		return 0, core.HumanBytes(used), "-", used, 0
 	}
 	percent := (float64(used) / float64(limit)) * 100
-	return percent, core.HumanBytes(int64(used)), core.HumanBytes(int64(limit)), used, limit
+	return percent, core.HumanBytes(used), core.HumanBytes(limit), used, limit
 }
 
 func effectiveMemoryUsage(stats container.StatsResponse) uint64 {

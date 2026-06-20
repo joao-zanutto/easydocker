@@ -1,6 +1,8 @@
 package browse
 
 import (
+	"easydocker/internal/tui/shared"
+
 	"charm.land/bubbles/v2/key"
 )
 
@@ -16,50 +18,22 @@ type KeyMap struct {
 	OpenFilter  key.Binding
 	OpenShell   key.Binding
 	OpenInspect key.Binding
-	Quit        key.Binding
 	OpenMenu    key.Binding
 }
 
 func NewKeyMap() KeyMap {
 	return KeyMap{
-		TabRight: key.NewBinding(
-			key.WithKeys("right"),
-		),
-		TabLeft: key.NewBinding(
-			key.WithKeys("left"),
-		),
-		MoveUp: key.NewBinding(
-			key.WithKeys("up"),
-		),
-		MoveDown: key.NewBinding(
-			key.WithKeys("down"),
-		),
-		PageUp: key.NewBinding(
-			key.WithKeys("pgup"),
-		),
-		PageDown: key.NewBinding(
-			key.WithKeys("pgdown"),
-		),
-		ToggleScope: key.NewBinding(
-			key.WithKeys("a"),
-		),
-		OpenLogs: key.NewBinding(
-			key.WithKeys("enter"),
-		),
-		OpenFilter: key.NewBinding(
-			key.WithKeys("/"),
-		),
-		OpenShell: key.NewBinding(
-			key.WithKeys("s"),
-		),
-		OpenInspect: key.NewBinding(
-			key.WithKeys("i"),
-		),
-		OpenMenu: key.NewBinding(
-			key.WithKeys("esc"),
-		),
-		Quit: key.NewBinding(
-			key.WithKeys("q"),
-		),
+		TabRight:    shared.RightBinding("next tab"),
+		TabLeft:     shared.LeftBinding("prev tab"),
+		MoveUp:      shared.UpBinding("move up"),
+		MoveDown:    shared.DownBinding("move down"),
+		PageUp:      shared.PageUpBinding("page up"),
+		PageDown:    shared.PageDownBinding("page down"),
+		ToggleScope: shared.ActionBinding("a", "toggle running/all"),
+		OpenLogs:    shared.EnterBinding("logs"),
+		OpenFilter:  shared.SlashBinding("filter"),
+		OpenShell:   shared.ActionBinding("s", "shell"),
+		OpenInspect: shared.ActionBinding("i", "inspect"),
+		OpenMenu:    shared.EscBinding("menu"),
 	}
 }

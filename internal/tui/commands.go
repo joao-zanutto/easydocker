@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"time"
 
 	"easydocker/internal/core"
@@ -11,42 +12,38 @@ import (
 
 func tickCmd() tea.Cmd {
 	return tea.Tick(pollInterval, func(t time.Time) tea.Msg {
-		return tickMsg(t)
+		return tickMsg{}
 	})
 }
 
-func (m model) loadContainersCmd() tea.Cmd {
-	svc := m.service
+func loadContainersCmd(svc core.ServiceInterface) tea.Cmd {
 	return func() tea.Msg {
-		containers, err := svc.LoadContainerRows()
+		containers, err := svc.LoadContainerRows(context.Background())
 		return containersResultMsg{containers: containers, err: err}
 	}
 }
 
-func (m model) loadResourcesCmd() tea.Cmd {
-	svc := m.service
+func loadResourcesCmd(svc core.ServiceInterface) tea.Cmd {
 	return func() tea.Msg {
-		snapshot, err := svc.LoadSupportingResources()
+		snapshot, err := svc.LoadSupportingResources(context.Background())
 		return resourcesResultMsg{snapshot: snapshot, err: err}
 	}
 }
 
-func (m model) loadMetricsCmd(rows []core.ContainerRow) tea.Cmd {
-	svc := m.service
+func loadMetricsCmd(svc core.ServiceInterface, rows []core.ContainerRow) tea.Cmd {
 	return func() tea.Msg {
-		metricsByID, totalCPU, totalMem, err := svc.LoadContainerMetrics(rows)
+		metricsByID, totalCPU, totalMem, err := svc.LoadContainerMetrics(context.Background(), rows)
 		return metricsResultMsg{metricsByID: metricsByID, totalCPU: totalCPU, totalMem: totalMem, err: err}
 	}
 }
 
-func (m model) loadDockerCmd() tea.Cmd {
-	svc := m.service
+func loadDockerCmd(svc core.ServiceInterface) tea.Cmd {
 	return func() tea.Msg {
-		snapshot, err := svc.LoadSnapshot()
+		snapshot, err := svc.LoadSnapshot(context.Background())
 		return loadResultMsg{snapshot: snapshot, err: err}
 	}
 }
 
-func (m model) shellCmd(containerID string) tea.Cmd {
-	return shared.ShellCmd(m.service, containerID, shellDoneMsg{})
+func shellCmd(svc core.ServiceInterface, containerID string) tea.Cmd {
+	return shared.ShellCmd(svc, containerID, shellDoneMsg{})
 }

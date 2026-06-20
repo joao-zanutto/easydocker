@@ -8,15 +8,15 @@ import (
 type Controller struct{}
 
 type Transition struct {
-	ChangeTab        int
-	CursorMove       int
-	ActivateFilter   bool
-	DeactivateFilter bool
-	OpenResource     bool
-	OpenShell        bool
-	OpenInspect      bool
-	OpenMenu         bool
-	ToggleScope      bool
+	ChangeTab      int
+	CursorMove     int
+	ActivateFilter bool
+	OpenResource   bool
+	OpenShell      bool
+	OpenInspect    bool
+	OpenMenu       bool
+	ToggleScope    bool
+	ToggleCompose  bool
 }
 
 func (Controller) HandleKey(state *State, msg tea.KeyPressMsg, keys KeyMap) Transition {

@@ -11,15 +11,14 @@ func TestContainerStateRank(t *testing.T) {
 		container ContainerRow
 		want      int
 	}{
-		{name: "running healthy", container: ContainerRow{State: "running", Healthy: true}, want: 0},
-		{name: "running", container: ContainerRow{State: "running", Healthy: false}, want: 1},
-		{name: "created", container: ContainerRow{State: "created"}, want: 2},
-		{name: "restarting", container: ContainerRow{State: "restarting"}, want: 3},
-		{name: "paused", container: ContainerRow{State: "paused"}, want: 3},
-		{name: "exited", container: ContainerRow{State: "exited"}, want: 4},
-		{name: "stopped", container: ContainerRow{State: "stopped"}, want: 4},
-		{name: "dead", container: ContainerRow{State: "dead"}, want: 5},
-		{name: "unknown", container: ContainerRow{State: "whatever"}, want: 6},
+		{name: "running healthy", container: ContainerRow{State: StateRunning, Healthy: true}, want: 0},
+		{name: "running", container: ContainerRow{State: StateRunning, Healthy: false}, want: 1},
+		{name: "created", container: ContainerRow{State: StateCreated}, want: 2},
+		{name: "restarting", container: ContainerRow{State: StateRestarting}, want: 3},
+		{name: "paused", container: ContainerRow{State: StatePaused}, want: 3},
+		{name: "exited", container: ContainerRow{State: StateExited}, want: 4},
+		{name: "dead", container: ContainerRow{State: StateDead}, want: 5},
+		{name: "unknown", container: ContainerRow{State: ContainerState("whatever")}, want: 6},
 	}
 
 	for _, tt := range tests {
@@ -33,11 +32,11 @@ func TestContainerStateRank(t *testing.T) {
 
 func TestSortContainers_StateRankThenCreatedThenName(t *testing.T) {
 	rows := []ContainerRow{
-		{Name: "zeta", State: "running", Healthy: false, CreatedUnix: 100},
-		{Name: "alpha", State: "running", Healthy: false, CreatedUnix: 100},
-		{Name: "newer", State: "running", Healthy: false, CreatedUnix: 200},
-		{Name: "healthy", State: "running", Healthy: true, CreatedUnix: 50},
-		{Name: "created", State: "created", CreatedUnix: 999},
+		{Name: "zeta", State: StateRunning, Healthy: false, CreatedUnix: 100},
+		{Name: "alpha", State: StateRunning, Healthy: false, CreatedUnix: 100},
+		{Name: "newer", State: StateRunning, Healthy: false, CreatedUnix: 200},
+		{Name: "healthy", State: StateRunning, Healthy: true, CreatedUnix: 50},
+		{Name: "created", State: StateCreated, CreatedUnix: 999},
 	}
 
 	SortContainers(rows)
@@ -96,9 +95,9 @@ func TestSortNetworks_CreatedDescThenNameAsc(t *testing.T) {
 
 func TestSortVolumes_CreatedDescThenNameAsc(t *testing.T) {
 	rows := []VolumeRow{
-		{Name: "z", CreatedAt: "2024-01-01T00:00:00Z"},
-		{Name: "a", CreatedAt: "2024-01-01T00:00:00Z"},
-		{Name: "n", CreatedAt: "2025-01-01T00:00:00Z"},
+		{Name: "z", CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{Name: "a", CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{Name: "n", CreatedAt: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 	}
 
 	SortVolumes(rows)

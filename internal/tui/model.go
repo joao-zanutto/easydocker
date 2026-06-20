@@ -6,6 +6,7 @@ import (
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/browse"
 	"easydocker/internal/tui/screens/menu"
+	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/theme"
 
@@ -14,28 +15,15 @@ import (
 )
 
 const (
-	tabContainers = iota
-	tabImages
-	tabNetworks
-	tabVolumes
+	tabContainers = shared.TabContainers
+	tabImages     = shared.TabImages
+	tabNetworks   = shared.TabNetworks
+	tabVolumes    = shared.TabVolumes
 
 	pollInterval = time.Second
-
-	loadStageIdle       = int(shared.StageIdle)
-	loadStageContainers = int(shared.StageContainers)
-	loadStageResources  = int(shared.StageResources)
-	loadStageMetrics    = int(shared.StageMetrics)
 )
 
-type screenMode int
-
-const (
-	screenModeBrowse screenMode = iota
-	screenModeLogs
-	screenModeInspect
-)
-
-type tickMsg time.Time
+type tickMsg struct{}
 
 type containersResultMsg struct {
 	containers []core.ContainerRow
@@ -62,7 +50,7 @@ type loadResultMsg struct {
 type shellDoneMsg struct{ err error }
 
 type inspectResultMsg struct {
-	resourceType int
+	resourceType core.ResourceType
 	resourceID   string
 	resourceName string
 	data         []string
@@ -70,72 +58,119 @@ type inspectResultMsg struct {
 }
 
 type model struct {
-	service          *core.Service
-	width            int
-	height           int
-	activeTab        int
-	showAll          bool
+	service core.ServiceInterface
+	err     error
+
+	width  int
+	height int
+
+	browse browse.Model
+	viewer viewer.Model
+
+	screen      shared.Screen
+	screenStack []shared.Screen
+
+	dataDirty        bool
 	loading          bool
-	err              error
-	snapshot         core.Snapshot
-	containerCursor  int
-	imageCursor      int
-	networkCursor    int
-	volumeCursor     int
-	screen           screenMode
-	previousScreen   screenMode
-	logs             LogsState
-	loadingStage     int
-	styles           theme.Set
+	loadingStage     shared.Stage
 	metricsLoaded    bool
-	metricsSpinner   spinner.Model
-	containerSpinner spinner.Model
-	logsSpinner      spinner.Model
-	browseFilter     browse.FilterState
-	composeExpanded  map[string]bool
-	menu             menu.MenuState
-	help             menu.HelpState
+	snapshotInflight bool
+	spinner          spinner.Model
+
+	lastResizeTime time.Time
+
+	styles theme.Set
+	menu   menu.MenuState
+	help   menu.HelpState
+
+	appliedConfig  []string
+	configFilePath string
 }
 
-func New(service *core.Service) tea.Model {
-	metricsSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
-	containerSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
-	logsSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
+func New(service core.ServiceInterface, appliedConfig []string, configFilePath string) tea.Model {
+	s := spinner.New(spinner.WithSpinner(spinner.Points))
+
+	bm := browse.NewModel()
+	vm := viewer.NewModel()
 
 	return model{
-		service:          service,
-		activeTab:        tabContainers,
-		showAll:          true,
-		loading:          true,
-		screen:           screenModeBrowse,
-		loadingStage:     loadStageContainers,
-		logs:             NewLogsState(),
-		styles:           defaultStyles(),
-		metricsSpinner:   metricsSpinner,
-		containerSpinner: containerSpinner,
-		logsSpinner:      logsSpinner,
-		browseFilter:     browse.NewFilterState(),
-		composeExpanded:  map[string]bool{},
-		menu:             menu.NewMenuState(),
-		help:             menu.NewHelpState(0, 0),
+		service:        service,
+		dataDirty:      true,
+		loading:        true,
+		screen:         shared.Main,
+		loadingStage:   shared.StageContainers,
+		styles:         defaultStyles(),
+		spinner:        s,
+		browse:         bm,
+		viewer:         vm,
+		menu:           menu.NewMenuState(),
+		help:           menu.NewHelpState(0, 0),
+		appliedConfig:  appliedConfig,
+		configFilePath: configFilePath,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.loadContainersCmd(), tickCmd()}
-	if m.shouldAnimateMetricsLoadingIndicator() {
-		spinnerTickInterval := time.Second / 7
-		cmds = append(cmds,
-			tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
-				return spinner.TickMsg{Time: t, ID: m.metricsSpinner.ID()}
-			}),
-			tea.Tick(spinnerTickInterval, func(t time.Time) tea.Msg {
-				return spinner.TickMsg{Time: t, ID: m.containerSpinner.ID()}
-			}))
-	}
+	cmds := []tea.Cmd{loadContainersCmd(m.service)}
+
+	cmds = append(cmds,
+		tea.Tick(shared.SpinnerTickInterval, func(t time.Time) tea.Msg {
+			return spinner.TickMsg{Time: t, ID: m.spinner.ID()}
+		}),
+	)
+
 	return tea.Batch(cmds...)
 }
 
 func defaultStyles() theme.Set {
 	return theme.Default()
+}
+
+func (m *model) pushScreen(s shared.Screen) {
+	m.screenStack = append(m.screenStack, s)
+}
+
+func (m *model) popScreen() shared.Screen {
+	if len(m.screenStack) == 0 {
+		return shared.Main
+	}
+	s := m.screenStack[len(m.screenStack)-1]
+	m.screenStack = m.screenStack[:len(m.screenStack)-1]
+	return s
+}
+
+func (m *model) initViewer(
+	screen shared.Screen,
+	contentType viewer.ContentType,
+	resourceType core.ResourceType,
+	containerID, resourceName, loadingMsg, emptyMsg string,
+) {
+	m.pushScreen(m.screen)
+	m.screen = screen
+	m.viewer.Width = m.width
+	m.viewer.Height = max(1, m.height-4)
+	m.viewer.ContainerID = containerID
+	m.viewer.ResourceType = resourceType
+	m.viewer.ContainerName = resourceName
+	m.viewer.LoadingMsg = loadingMsg
+	m.viewer.EmptyMsg = emptyMsg
+	m.viewer.Breadcrumb = ""
+	m.viewer.Vp.InitialLoad = true
+	m.viewer.Vp.Data = nil
+	m.viewer.Vp.SetXOffset(0)
+	m.viewer.Vp.Filter.Active = false
+	m.viewer.Vp.Filter.Query = ""
+	m.viewer.Vp.Filter.Input.SetValue("")
+	m.viewer.Vp.ContentType = contentType
+	m.viewer.Styles = viewer.Styles{
+		Breadcrumb:   m.styles.Viewer.Breadcrumb,
+		FollowOn:     m.styles.Viewer.FollowOn,
+		FollowOff:    m.styles.Viewer.FollowOff,
+		Muted:        m.styles.Browse.Muted,
+		Divider:      m.styles.Browse.Divider,
+		SubpageFrame: m.styles.Viewer.SubpageFrame,
+		Key:          m.styles.Chrome.Key,
+		KeyText:      m.styles.Chrome.KeyText,
+	}
+	m.err = nil
 }

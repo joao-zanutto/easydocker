@@ -117,6 +117,156 @@ func TestFilterLines(t *testing.T) {
 	}
 }
 
+func TestFilterJSONLines(t *testing.T) {
+	inspectJSON := []string{
+		`{`,
+		`  "Id": "abc123",`,
+		`  "Config": {`,
+		`    "Env": [`,
+		`      "PATH=/usr/bin:/bin",`,
+		`      "HOME=/root"`,
+		`    ],`,
+		`    "Cmd": null`,
+		`  },`,
+		`  "Name": "/foo"`,
+		`}`,
+	}
+
+	tests := []struct {
+		name     string
+		lines    []string
+		query    string
+		expected []string
+	}{
+		{
+			name:     "empty query returns all lines",
+			lines:    inspectJSON,
+			query:    "",
+			expected: inspectJSON,
+		},
+		{
+			name:  "key match shows full subtree",
+			lines: inspectJSON,
+			query: "Env",
+			expected: []string{
+				`{`,
+				`  "Config": {`,
+				`    "Env": [`,
+				`      "PATH=/usr/bin:/bin",`,
+				`      "HOME=/root"`,
+				`    ],`,
+				`  },`,
+				`}`,
+			},
+		},
+		{
+			name:  "value match shows leaf line",
+			lines: inspectJSON,
+			query: "/root",
+			expected: []string{
+				`{`,
+				`  "Config": {`,
+				`    "Env": [`,
+				`      "HOME=/root"`,
+				`    ],`,
+				`  },`,
+				`}`,
+			},
+		},
+		{
+			name:  "inner key match shows parent subtree",
+			lines: inspectJSON,
+			query: "Cmd",
+			expected: []string{
+				`{`,
+				`  "Config": {`,
+				`    "Cmd": null`,
+				`  },`,
+				`}`,
+			},
+		},
+		{
+			name:  "top-level key shows full subtree through close",
+			lines: inspectJSON,
+			query: "Config",
+			expected: []string{
+				`{`,
+				`  "Config": {`,
+				`    "Env": [`,
+				`      "PATH=/usr/bin:/bin",`,
+				`      "HOME=/root"`,
+				`    ],`,
+				`    "Cmd": null`,
+				`  },`,
+				`}`,
+			},
+		},
+		{
+			name:     "no match returns empty",
+			lines:    inspectJSON,
+			query:    "NOSUCHKEY",
+			expected: []string{},
+		},
+		{
+			name:     "empty lines returns empty",
+			lines:    []string{},
+			query:    "foo",
+			expected: []string{},
+		},
+		{
+			name:  "multiple matches merge overlapping blocks",
+			lines: inspectJSON,
+			query: "PATH",
+			expected: []string{
+				`{`,
+				`  "Config": {`,
+				`    "Env": [`,
+				`      "PATH=/usr/bin:/bin",`,
+				`    ],`,
+				`  },`,
+				`}`,
+			},
+		},
+		{
+			name: "nested match includes closing bracket at same level",
+			lines: []string{
+				`{`,
+				`  "A": {`,
+				`    "B": 1`,
+				`  },`,
+				`  "C": 2`,
+				`}`,
+			},
+			query: "A",
+			expected: []string{
+				`{`,
+				`  "A": {`,
+				`    "B": 1`,
+				`  },`,
+				`}`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FilterJSONLines(tt.lines, tt.query)
+			if len(got) != len(tt.expected) {
+				t.Errorf("FilterJSONLines() returned %d lines, want %d", len(got), len(tt.expected))
+				for i, l := range got {
+					t.Logf("  got[%d] = %q", i, l)
+				}
+				return
+			}
+			for i := range got {
+				if got[i] != tt.expected[i] {
+					t.Errorf("FilterJSONLines()[%d] = %q, want %q", i, got[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
 func TestSanitizeLine(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -165,219 +315,141 @@ func TestSanitizeLine(t *testing.T) {
 	}
 }
 
-func TestStateFollow(t *testing.T) {
+func TestVpFollow(t *testing.T) {
 	t.Run("SetFollow enables follow and goes to bottom", func(t *testing.T) {
-		state := NewState()
-		state.Data = []string{"line1", "line2", "line3", "line4", "line5"}
-		state.Viewport.SetHeight(3)
-		state.Viewport.SetYOffset(0)
+		vp := NewViewport()
+		vp.Data = []string{"line1", "line2", "line3", "line4", "line5"}
+		vp.SetHeight(3)
+		vp.SetYOffset(0)
 
-		state.SetFollow(true)
+		vp.SetFollow(true)
 
-		if !state.Follow {
+		if !vp.Follow {
 			t.Error("expected Follow to be true")
 		}
 	})
 
 	t.Run("SetFollow disables follow", func(t *testing.T) {
-		state := NewState()
-		state.Follow = true
+		vp := NewViewport()
+		vp.Follow = true
 
-		state.SetFollow(false)
+		vp.SetFollow(false)
 
-		if state.Follow {
+		if vp.Follow {
 			t.Error("expected Follow to be false")
 		}
 	})
 }
 
-func TestStateWrap(t *testing.T) {
+func TestVpWrap(t *testing.T) {
 	t.Run("SetWrapLines enables wrapping", func(t *testing.T) {
-		state := NewState()
+		vp := NewViewport()
 
-		state.SetWrapLines(true)
+		vp.SetWrapLines(true)
 
-		if !state.WrapLines {
+		if !vp.WrapLines {
 			t.Error("expected WrapLines to be true")
 		}
 	})
 
 	t.Run("SetWrapLines disables wrapping", func(t *testing.T) {
-		state := NewState()
-		state.WrapLines = true
+		vp := NewViewport()
+		vp.WrapLines = true
 
-		state.SetWrapLines(false)
+		vp.SetWrapLines(false)
 
-		if state.WrapLines {
+		if vp.WrapLines {
 			t.Error("expected WrapLines to be false")
-		}
-	})
-}
-
-func TestRenderedViewportLineDelta(t *testing.T) {
-	t.Run("no prepended lines returns zero", func(t *testing.T) {
-		state := NewState()
-		state.Filter.Query = ""
-		state.WrapLines = false
-		allLines := []string{"a", "b", "c"}
-
-		delta := RenderedViewportLineDelta(&state, allLines, 0)
-
-		if delta != 0 {
-			t.Errorf("expected 0, got %d", delta)
-		}
-	})
-
-	t.Run("prepended lines without wrap returns count", func(t *testing.T) {
-		state := NewState()
-		state.Filter.Query = ""
-		state.WrapLines = false
-		allLines := []string{"a", "b", "c", "d", "e"}
-
-		delta := RenderedViewportLineDelta(&state, allLines, 2)
-
-		if delta != 2 {
-			t.Errorf("expected 2, got %d", delta)
-		}
-	})
-
-	t.Run("filter affects delta count", func(t *testing.T) {
-		state := NewState()
-		state.Filter.Query = "a"
-		state.WrapLines = false
-		allLines := []string{"a", "b", "a", "c", "a"}
-
-		delta := RenderedViewportLineDelta(&state, allLines, 3)
-
-		if delta != 2 {
-			t.Errorf("expected 2 (filtered lines), got %d", delta)
-		}
-	})
-
-	t.Run("wrapped lines calculate correctly", func(t *testing.T) {
-		state := NewState()
-		state.Filter.Query = ""
-		state.WrapLines = true
-		state.Viewport.SetWidth(10)
-		allLines := []string{"1234567890", "short", "123456789012345"}
-
-		delta := RenderedViewportLineDelta(&state, allLines, 3)
-
-		if delta != 4 {
-			t.Errorf("expected 4 (1+1+2 wrapped rows), got %d", delta)
 		}
 	})
 }
 
 func TestSyncFromData(t *testing.T) {
 	t.Run("syncs viewport with filtered and sanitized data", func(t *testing.T) {
-		state := NewState()
-		state.Data = []string{"\x1b[31mred\x1b[0m", "normal", "   spaces   "}
-		state.Filter.Query = ""
-		state.Follow = false
+		vp := NewViewport()
+		vp.Data = []string{"\x1b[31mred\x1b[0m", "normal", "   spaces   "}
+		vp.Filter.Query = ""
+		vp.Follow = false
 
-		state.SyncFromData(80, 10)
+		vp.SyncFromData(80, 10)
 
-		if state.InitialLoad {
+		if vp.InitialLoad {
 			t.Error("expected InitialLoad to be false after sync")
 		}
 	})
 
 	t.Run("follow mode goes to bottom", func(t *testing.T) {
-		state := NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Follow = true
+		vp := NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.Follow = true
 
-		state.SyncFromData(80, 10)
+		vp.SyncFromData(80, 10)
 
 		// Viewport should be at bottom in follow mode
-		if state.Viewport.YOffset() != 0 {
-			// YOffset 0 means at bottom in bubbletea viewport
+		if got := vp.YOffset(); got != 0 {
+			t.Errorf("viewport YOffset = %d, want 0 (meaning bottom)", got)
 		}
 	})
 }
 
 func TestKeyBindings(t *testing.T) {
 	t.Run("Up key navigation", func(t *testing.T) {
-		state := NewState()
-		state.Data = []string{"line1", "line2", "line3", "line4", "line5"}
-		state.Viewport.SetHeight(2)
-		state.Viewport.SetContent("line1\nline2\nline3\nline4\nline5")
-		state.Viewport.SetYOffset(2)
+		vp := NewViewport()
+		vp.Data = []string{"line1", "line2", "line3", "line4", "line5"}
+		vp.SetHeight(2)
+		vp.SetContent("line1\nline2\nline3\nline4\nline5")
+		vp.SetYOffset(2)
 
 		controller := Controller{}
-		controller.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyUp}, NewKeyMap())
+		controller.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyUp}, NewKeyMap())
 
-		if state.Viewport.YOffset() != 1 {
-			t.Errorf("expected YOffset 1, got %d", state.Viewport.YOffset())
+		if vp.YOffset() != 1 {
+			t.Errorf("expected YOffset 1, got %d", vp.YOffset())
 		}
 	})
 
 	t.Run("Down key navigation", func(t *testing.T) {
-		state := NewState()
-		state.Data = []string{"line1", "line2", "line3", "line4", "line5"}
-		state.Viewport.SetHeight(2)
-		state.Viewport.SetContent("line1\nline2\nline3\nline4\nline5")
-		state.Viewport.SetYOffset(2)
+		vp := NewViewport()
+		vp.Data = []string{"line1", "line2", "line3", "line4", "line5"}
+		vp.SetHeight(2)
+		vp.SetContent("line1\nline2\nline3\nline4\nline5")
+		vp.SetYOffset(2)
 
 		controller := Controller{}
-		controller.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyDown}, NewKeyMap())
+		controller.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyDown}, NewKeyMap())
 
-		if state.Viewport.YOffset() != 3 {
-			t.Errorf("expected YOffset 3, got %d", state.Viewport.YOffset())
+		if vp.YOffset() != 3 {
+			t.Errorf("expected YOffset 3, got %d", vp.YOffset())
 		}
 	})
 
 	t.Run("Home key goes to top", func(t *testing.T) {
-		state := NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetHeight(2)
-		state.Viewport.SetContent("line1\nline2\nline3")
-		state.Viewport.SetYOffset(2)
+		vp := NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetHeight(2)
+		vp.SetContent("line1\nline2\nline3")
+		vp.SetYOffset(2)
 
 		controller := Controller{}
-		controller.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyHome}, NewKeyMap())
+		controller.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyHome}, NewKeyMap())
 
-		if state.Viewport.YOffset() != 0 {
-			t.Errorf("expected YOffset 0, got %d", state.Viewport.YOffset())
+		if vp.YOffset() != 0 {
+			t.Errorf("expected YOffset 0, got %d", vp.YOffset())
 		}
 	})
 
 	t.Run("End key goes to bottom", func(t *testing.T) {
-		state := NewState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetHeight(2)
-		state.Viewport.SetContent("line1\nline2\nline3")
+		vp := NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetHeight(2)
+		vp.SetContent("line1\nline2\nline3")
 
 		controller := Controller{}
-		controller.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyEnd}, NewKeyMap())
+		controller.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyEnd}, NewKeyMap())
 
-		if state.Viewport.YOffset() != 1 {
-			t.Errorf("expected YOffset 1, got %d", state.Viewport.YOffset())
+		if vp.YOffset() != 1 {
+			t.Errorf("expected YOffset 1, got %d", vp.YOffset())
 		}
 	})
 
-	t.Run("ToggleWrap changes wrap state", func(t *testing.T) {
-		state := NewState()
-		state.WrapLines = false
-
-		controller := Controller{}
-		controller.HandleKey(&state, tea.KeyPressMsg{Code: 'w', Text: "w"}, NewKeyMap())
-
-		if !state.WrapLines {
-			t.Error("expected WrapLines to be true")
-		}
-	})
-
-	t.Run("ToggleFollow changes follow state", func(t *testing.T) {
-		state := NewState()
-		state.Follow = false
-
-		controller := Controller{}
-		controller.HandleKey(&state, tea.KeyPressMsg{Code: 'f', Text: "f"}, NewKeyMap())
-
-		if !state.Follow {
-			t.Error("expected Follow to be true")
-		}
-	})
 }

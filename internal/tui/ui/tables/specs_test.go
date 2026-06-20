@@ -29,12 +29,12 @@ func TestTableColumnSchemas(t *testing.T) {
 		{
 			name:       "networks",
 			columns:    NetworkColumns(tableWidth),
-			wantHeader: []string{"NAME", "DRIVER", "SCOPE", "ENDPOINTS", "META"},
+			wantHeader: []string{"NAME", "DRIVER", "ENDPOINTS", "CREATED"},
 		},
 		{
 			name:       "volumes",
 			columns:    VolumeColumns(tableWidth),
-			wantHeader: []string{"NAME", "DRIVER", "SCOPE", "SIZE", "REFS"},
+			wantHeader: []string{"NAME", "MOUNTPOINT", "SIZE", "CREATED"},
 		},
 	}
 
@@ -45,6 +45,7 @@ func TestTableColumnSchemas(t *testing.T) {
 			}
 
 			totalWidth := 0
+			firstPinned := len(tt.columns)
 			for i, col := range tt.columns {
 				if col.Header != tt.wantHeader[i] {
 					t.Fatalf("header[%d] = %q, want %q", i, col.Header, tt.wantHeader[i])
@@ -53,8 +54,14 @@ func TestTableColumnSchemas(t *testing.T) {
 					t.Fatalf("minWidth[%d] = %d, want > 0", i, col.MinWidth)
 				}
 				totalWidth += col.MinWidth
+				if col.PinnedRight && i < firstPinned {
+					firstPinned = i
+				}
 			}
-			totalWidth += (len(tt.columns) - 1) * 2
+			nonPinnedCount := firstPinned
+			pinnedCount := len(tt.columns) - firstPinned
+			gapCount := max(0, nonPinnedCount-1) + max(0, pinnedCount-1)
+			totalWidth += gapCount * 2
 			if totalWidth > tableWidth {
 				t.Fatalf("resolved columns width = %d, want <= %d", totalWidth, tableWidth)
 			}
@@ -163,6 +170,33 @@ func TestContainerTableRow_StateColoringByWidth(t *testing.T) {
 	}
 }
 
+func TestColorStateLabel_DoesNotUseAllReset(t *testing.T) {
+	// colorStateLabel must use \x1b[39m (foreground reset), not \x1b[m (SGR 0).
+	tests := []struct {
+		name  string
+		state core.ContainerState
+		width int
+	}{
+		{name: "normal width", state: core.StateRunning, width: 20},
+		{name: "narrow (bullet fallback)", state: core.StateRunning, width: 1},
+		{name: "exited", state: core.StateExited, width: 20},
+		{name: "paused", state: core.StatePaused, width: 20},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			container := core.ContainerRow{Name: "test", State: tt.state}
+			row := ContainerTableRow(container, tt.width, "", "")
+			cell := row[1]
+			if strings.Contains(cell, "\x1b[m") {
+				t.Fatalf("state cell must not contain SGR 0 (all reset), got %q", cell)
+			}
+			if !strings.HasSuffix(cell, "\x1b[39m") {
+				t.Fatalf("state cell must end with foreground reset \\x1b[39m, got %q", cell)
+			}
+		})
+	}
+}
+
 func TestBuildContainerSpec_LoadingIndicatorOnlyOnSelectedRow(t *testing.T) {
 	items := []core.ContainerRow{
 		{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"},
@@ -197,9 +231,9 @@ func TestBuildContainerSpec_LoadingIndicatorOnlyOnHoveredRowAcrossKinds(t *testi
 	containerIndex := -1
 	for i, row := range rows {
 		switch row.Kind {
-		case ContainerListRowComposeProject:
+		case RowComposeProject:
 			composeIndex = i
-		case ContainerListRowContainer:
+		case RowContainer:
 			if row.Container.FullID == "ctr-standalone" {
 				containerIndex = i
 			}
@@ -241,10 +275,10 @@ func TestBuildContainerListRows_ComposeGroupingAndExpansion(t *testing.T) {
 	if len(collapsed) != 2 {
 		t.Fatalf("collapsed rows len = %d, want 2", len(collapsed))
 	}
-	if collapsed[0].Kind != ContainerListRowContainer || collapsed[0].Container.FullID != "c1" {
+	if collapsed[0].Kind != RowContainer || collapsed[0].Container.FullID != "c1" {
 		t.Fatalf("collapsed first row = %#v, want standalone container", collapsed[0])
 	}
-	if collapsed[1].Kind != ContainerListRowComposeProject {
+	if collapsed[1].Kind != RowComposeProject {
 		t.Fatalf("collapsed second row kind = %v, want compose project", collapsed[1].Kind)
 	}
 	if collapsed[1].ComposeProject.Name != "shop" || collapsed[1].ComposeProject.ContainerCount != 2 || collapsed[1].ComposeProject.RunningCount != 1 {
@@ -255,16 +289,16 @@ func TestBuildContainerListRows_ComposeGroupingAndExpansion(t *testing.T) {
 	if len(expanded) != 4 {
 		t.Fatalf("expanded rows len = %d, want 4", len(expanded))
 	}
-	if expanded[1].Kind != ContainerListRowComposeProject || !expanded[1].ComposeExpanded {
+	if expanded[1].Kind != RowComposeProject || !expanded[1].ComposeExpanded {
 		t.Fatalf("expanded project row = %#v, want expanded compose project", expanded[1])
 	}
-	if expanded[2].Kind != ContainerListRowContainer || expanded[2].Container.FullID != "c2" {
+	if expanded[2].Kind != RowContainer || expanded[2].Container.FullID != "c2" {
 		t.Fatalf("expanded first child row = %#v, want c2", expanded[2])
 	}
 	if expanded[2].TreePrefix != "├─ " {
 		t.Fatalf("expanded first child prefix = %q, want %q", expanded[2].TreePrefix, "├─ ")
 	}
-	if expanded[3].Kind != ContainerListRowContainer || expanded[3].Container.FullID != "c3" {
+	if expanded[3].Kind != RowContainer || expanded[3].Container.FullID != "c3" {
 		t.Fatalf("expanded second child row = %#v, want c3", expanded[3])
 	}
 	if expanded[3].TreePrefix != "└─ " {
@@ -297,7 +331,7 @@ func TestBuildContainerSpec_LoadingIndicatorOnlyOnHoveredComposeRow(t *testing.T
 
 func TestComposeProjectTableRow_ShowsCollapsedState(t *testing.T) {
 	row := ComposeProjectTableRow(ContainerListRow{
-		Kind: ContainerListRowComposeProject,
+		Kind: RowComposeProject,
 		ComposeProject: core.ComposeProject{
 			Name:           "shop",
 			ContainerCount: 3,

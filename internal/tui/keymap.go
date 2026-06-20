@@ -1,195 +1,83 @@
 package tui
 
 import (
+	"strings"
+
+	"easydocker/internal/core"
+	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/menu"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
 	"easydocker/internal/tui/ui/tables"
-	"easydocker/internal/tui/util"
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 )
 
-// BrowseKeyMap defines browse-mode key bindings and help metadata.
-type BrowseKeyMap struct {
-	TabRight     key.Binding
-	TabLeft      key.Binding
-	MoveUp       key.Binding
-	MoveDown     key.Binding
-	PageUp       key.Binding
-	PageDown     key.Binding
-	ToggleScope  key.Binding
-	OpenLogs     key.Binding
-	OpenFilter   key.Binding
-	OpenShell    key.Binding
-	OpenInspect  key.Binding
-	Quit         key.Binding
-	HelpNavigate key.Binding
-	HelpSwitch   key.Binding
-}
-
-var (
-	defaultBrowseKeyMap = newBrowseKeyMap()
-	defaultViewerKeyMap = viewer.NewKeyMap()
-)
-
-func newBrowseKeyMap() BrowseKeyMap {
-	return BrowseKeyMap{
-		TabRight: key.NewBinding(
-			key.WithKeys("right"),
-			key.WithHelp("→", "next tab"),
-		),
-		TabLeft: key.NewBinding(
-			key.WithKeys("left"),
-			key.WithHelp("←", "prev tab"),
-		),
-		MoveUp: key.NewBinding(
-			key.WithKeys("up"),
-			key.WithHelp("↑", "move up"),
-		),
-		MoveDown: key.NewBinding(
-			key.WithKeys("down"),
-			key.WithHelp("↓", "move down"),
-		),
-		PageUp: key.NewBinding(
-			key.WithKeys("pgup"),
-			key.WithHelp("pgup", "page up"),
-		),
-		PageDown: key.NewBinding(
-			key.WithKeys("pgdown"),
-			key.WithHelp("pgdn", "page down"),
-		),
-		ToggleScope: key.NewBinding(
-			key.WithKeys("a"),
-			key.WithHelp(helpKeyLabel("a"), "toggle running/all"),
-		),
-		OpenLogs: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp(helpKeyLabel("enter"), "logs"),
-		),
-		OpenFilter: key.NewBinding(
-			key.WithKeys("/"),
-			key.WithHelp(helpKeyLabel("/"), "filter"),
-		),
-		OpenShell: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp(helpKeyLabel("s"), "shell"),
-		),
-		OpenInspect: key.NewBinding(
-			key.WithKeys("i"),
-			key.WithHelp(helpKeyLabel("i"), "inspect"),
-		),
-		Quit: key.NewBinding(
-			key.WithKeys("esc"),
-			key.WithHelp(helpKeyLabel("esc"), "quit"),
-		),
-		HelpNavigate: key.NewBinding(
-			key.WithKeys("up", "down"),
-			key.WithHelp("↑/↓", "navigate"),
-		),
-		HelpSwitch: key.NewBinding(
-			key.WithKeys("left", "right"),
-			key.WithHelp("←/→", "switch tabs"),
-		),
-	}
-}
-
-func helpKeyLabel(label string) string {
-	return util.HelpKeyLabel(label)
-}
-
-func browseKeyMap() BrowseKeyMap {
-	return defaultBrowseKeyMap
-}
-
-func viewerKeyMap() viewer.KeyMap {
-	return defaultViewerKeyMap
-}
-
-func canOpenShell(state string) bool {
-	return shared.CanOpenShell(state)
-}
-
 func (m model) footerKeyMap() help.KeyMap {
-	if m.screen == screenModeLogs || m.screen == screenModeInspect {
-		viewerKeys := viewerKeyMap()
+	if m.screen == shared.LogViewer || m.screen == shared.InspectViewer {
+		if m.viewer.Vp.ContentType == viewer.ContentTypeConfig {
+			return footerKeyMap{bindings: []key.Binding{shared.EscBinding("back")}}
+		}
+		viewerKeys := viewer.NewKeyMap()
 		contentType := viewer.ContentTypeLogs
-		if m.screen == screenModeInspect {
+		if m.screen == shared.InspectViewer {
 			contentType = viewer.ContentTypeInspect
 		}
-		if m.logs.Filter.Active {
-			logsFilterVerticalNavigate := key.NewBinding(
-				key.WithKeys("up", "down"),
-				key.WithHelp(helpKeyLabel("↑/↓"), "navigate"),
-			)
+		if m.viewer.Vp.Filter.Active {
 			bindings := []key.Binding{
-				logsFilterVerticalNavigate,
-				viewerKeys.HelpPage(),
-				viewerKeys.HelpHomeEnd(),
-				key.NewBinding(
-					key.WithKeys("esc"),
-					key.WithHelp(helpKeyLabel("esc"), "clear/exit filter"),
-				),
-				key.NewBinding(
-					key.WithKeys("enter"),
-					key.WithHelp(helpKeyLabel("enter"), "apply/close filter"),
-				),
+				shared.EscBinding("clear filter"),
+				shared.EnterBinding("apply filter"),
 			}
 			return footerKeyMap{bindings: bindings}
 		}
-		containerState := ""
-		if m.activeTab == tabContainers {
+		var containerState core.ContainerState
+		if m.browse.ActiveTab == tabContainers {
 			if c, ok := m.selectedContainer(); ok {
 				containerState = c.State
 			}
 		}
-		return footerKeyMap{bindings: viewerKeys.ShortHelp(viewer.ResourceType(m.activeTab), contentType, containerState)}
+		return footerKeyMap{bindings: viewerKeys.ShortHelp(shared.TabToResourceType(m.browse.ActiveTab), contentType, containerState)}
 	}
 
-	browseKeys := browseKeyMap()
+	browseKeys := browse.NewKeyMap()
 
-	// If filter mode is active, show filter-specific controls
-	if m.browseFilter.Active {
+	if m.browse.Filter.Active {
 		bindings := []key.Binding{
-			browseKeys.HelpNavigate,
-			key.NewBinding(
-				key.WithKeys("esc"),
-				key.WithHelp(helpKeyLabel("esc"), "clear/exit filter"),
-			),
-			key.NewBinding(
-				key.WithKeys("enter"),
-				key.WithHelp(helpKeyLabel("enter"), "apply/close filter"),
-			),
+			shared.EscBinding("clear filter"),
+			shared.EnterBinding("apply filter"),
 		}
 		return footerKeyMap{bindings: bindings}
 	}
 
-	bindings := []key.Binding{
-		browseKeys.OpenFilter,
-		browseKeys.Quit,
-	}
-	if m.activeTab == tabContainers {
-		bindings = append(bindings, browseKeys.ToggleScope)
-		if row, ok := m.selectedContainerListRow(); ok && row.Kind == tables.ContainerListRowComposeProject {
+	bindings := []key.Binding{}
+	if m.browse.ActiveTab == tabContainers {
+		if row, ok := m.selectedContainerListRow(); ok && row.Kind == tables.RowComposeProject {
 			action := "expand"
 			if row.ComposeExpanded {
 				action = "collapse"
 			}
-			bindings = append(bindings, key.NewBinding(
-				key.WithKeys("enter"),
-				key.WithHelp(helpKeyLabel("enter"), action),
-			))
+			bindings = append(bindings, shared.EnterBinding(action))
 		} else {
 			bindings = append(bindings, browseKeys.OpenLogs, browseKeys.OpenInspect)
-			if container, ok := m.selectedContainer(); ok && canOpenShell(container.State) {
+			if container, ok := m.selectedContainer(); ok && shared.CanOpenShell(container.State) {
 				bindings = append(bindings, browseKeys.OpenShell)
 			}
 		}
 	}
-	if m.activeTab == tabImages || m.activeTab == tabNetworks || m.activeTab == tabVolumes {
+	if m.browse.ActiveTab == tabImages || m.browse.ActiveTab == tabNetworks || m.browse.ActiveTab == tabVolumes {
 		bindings = append(bindings, browseKeys.OpenInspect)
 	}
 	return footerKeyMap{bindings: bindings}
+}
+
+func (m *model) selectedContainerListRow() (tables.ContainerListRow, bool) {
+	rows := m.browse.Data.ContainerListRows
+	var zero tables.ContainerListRow
+	if len(rows) == 0 || m.browse.ContainerCursor < 0 || m.browse.ContainerCursor >= len(rows) {
+		return zero, false
+	}
+	return rows[m.browse.ContainerCursor], true
 }
 
 type footerKeyMap struct {
@@ -202,4 +90,42 @@ func (m footerKeyMap) ShortHelp() []key.Binding {
 
 func (m footerKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{m.bindings}
+}
+
+func keyLabel(binding key.Binding) string {
+	return strings.TrimSpace(binding.Help().Key)
+}
+
+func joinKeyLabels(sep string, bindings ...key.Binding) string {
+	labels := make([]string, 0, len(bindings))
+	for _, binding := range bindings {
+		label := keyLabel(binding)
+		if label == "" {
+			continue
+		}
+		labels = append(labels, label)
+	}
+	return strings.Join(labels, sep)
+}
+
+func (m *model) buildHelpCommands() []menu.HelpCommand {
+	browseKeys := browse.NewKeyMap()
+	viewerKeys := viewer.NewKeyMap()
+	menuKeys := menu.NewKeyMap()
+
+	return menu.BuildHelpCommands(menu.HelpKeyLabels{
+		MoveUpDown:   joinKeyLabels("/", browseKeys.MoveUp, browseKeys.MoveDown),
+		PageUpDown:   joinKeyLabels("/", viewerKeys.PageUp, viewerKeys.PageDown),
+		HomeEnd:      joinKeyLabels("/", viewerKeys.Home, viewerKeys.End),
+		TabLeftRight: joinKeyLabels("/", browseKeys.TabLeft, browseKeys.TabRight),
+		LeftRight:    joinKeyLabels("/", viewerKeys.Left, viewerKeys.Right),
+		OpenLogs:     keyLabel(browseKeys.OpenLogs),
+		OpenFilter:   keyLabel(browseKeys.OpenFilter),
+		ToggleScope:  keyLabel(browseKeys.ToggleScope),
+		OpenInspect:  keyLabel(browseKeys.OpenInspect),
+		OpenShell:    keyLabel(browseKeys.OpenShell),
+		ToggleWrap:   keyLabel(viewerKeys.ToggleWrap),
+		ToggleFollow: keyLabel(viewerKeys.ToggleFollow),
+		BackClose:    keyLabel(menuKeys.Back),
+	})
 }

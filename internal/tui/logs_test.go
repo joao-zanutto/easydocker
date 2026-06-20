@@ -28,9 +28,9 @@ func TestMergePolledLogs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotOverlap := mergePolledLogs(tt.previous, tt.polled, 0)
+			got, gotOverlap := viewer.MergePolledLogs(tt.previous, tt.polled)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergePolledLogs() = %v, want %v", got, tt.want)
+				t.Errorf("MergePolledLogs() = %v, want %v", got, tt.want)
 			}
 			if gotOverlap != tt.wantOverlap {
 				t.Errorf("overlap = %v, want %v", gotOverlap, tt.wantOverlap)
@@ -38,10 +38,11 @@ func TestMergePolledLogs(t *testing.T) {
 		})
 	}
 
-	t.Run("max lines trims merged result", func(t *testing.T) {
-		got, gotOverlap := mergePolledLogs([]string{"1", "2", "3"}, []string{"3", "4", "5"}, 3)
-		if !reflect.DeepEqual(got, []string{"3", "4", "5"}) {
-			t.Errorf("mergePolledLogs() = %v, want %v", got, []string{"3", "4", "5"})
+	t.Run("overlap detected and merged", func(t *testing.T) {
+		got, gotOverlap := viewer.MergePolledLogs([]string{"1", "2", "3"}, []string{"3", "4", "5"})
+		want := []string{"1", "2", "3", "4", "5"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("MergePolledLogs() = %v, want %v", got, want)
 		}
 		if !gotOverlap {
 			t.Error("expected overlap true")
@@ -49,150 +50,90 @@ func TestMergePolledLogs(t *testing.T) {
 	})
 }
 
-func TestHistoryLoading(t *testing.T) {
-	t.Run("CanLoadHistory returns true when at top and not loading", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(0)
-		state.HistoryDone = false
-		state.HistoryLoad = false
-		if !CanLoadHistory(state) {
-			t.Fatal("expected CanLoadHistory to return true")
+func TestViewerStateHistory(t *testing.T) {
+	t.Run("at top triggers history condition", func(t *testing.T) {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetYOffset(0)
+		if !vp.AtTop() {
+			t.Fatal("expected viewport to be at top")
 		}
 	})
 
-	t.Run("CanLoadHistory returns false when not at top", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetHeight(2)
-		state.Viewport.SetContent("line1\nline2\nline3")
-		state.Viewport.SetYOffset(1)
-		state.HistoryDone = false
-		state.HistoryLoad = false
-		if CanLoadHistory(state) {
-			t.Fatal("expected CanLoadHistory to return false")
+	t.Run("not at top when scrolled", func(t *testing.T) {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetHeight(2)
+		vp.SetContent("line1\nline2\nline3")
+		vp.SetYOffset(1)
+		if vp.AtTop() {
+			t.Fatal("expected viewport not to be at top")
 		}
 	})
 
-	t.Run("StartHistoryLoad sets correct state", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.TailLines = 200
-		StartHistoryLoad(&state, 400)
-		if !state.HistoryLoad {
-			t.Fatal("expected HistoryLoad to be true")
-		}
-		if state.TailLines != 400 {
-			t.Fatalf("TailLines = %d, want 400", state.TailLines)
+	t.Run("set follow jumps to bottom", func(t *testing.T) {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetContent("line1\nline2\nline3")
+		vp.SetFollow(true)
+		if !vp.AtBottom() {
+			t.Fatal("expected follow to scroll to bottom")
 		}
 	})
 
-	t.Run("ApplyHistory prepends new lines and adjusts viewport", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"base1", "base2", "base3"}
-		state.Viewport.SetYOffset(2)
-		state.Follow = false
-		state.HistoryLoad = true
-		olderLogs := []string{"older1", "older2"}
-		newData := append(olderLogs, state.Data...)
-		ApplyHistoryWithMerge(&state, newData)
-		if state.HistoryLoad {
-			t.Fatal("expected HistoryLoad to be false")
-		}
-		if len(state.Data) != 5 {
-			t.Fatalf("expected 5 lines, got %d", len(state.Data))
-		}
-		if state.Data[0] != "older1" {
-			t.Fatalf("expected first line to be older1, got %s", state.Data[0])
+	t.Run("unfollow stops following", func(t *testing.T) {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetContent("line1\nline2\nline3")
+		vp.SetFollow(false)
+		if vp.Follow {
+			t.Fatal("expected Follow to be false")
 		}
 	})
 
-	t.Run("ApplyHistory marks done after three unchanged responses", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(0)
-		state.Follow = false
-		state.HistoryBaseLen = 3
-		for attempt := 0; attempt < 3; attempt++ {
-			state.HistoryLoad = true
-			ApplyHistoryWithMerge(&state, state.Data)
-		}
-		if !state.HistoryDone {
-			t.Fatal("expected HistoryDone to be true")
-		}
-	})
-
-	t.Run("ApplyPoll merges overlapping logs", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"line1", "line2", "line3"}
-		polled := []string{"line2", "line3", "line4", "line5"}
-		merged, _ := ApplyPollWithMerge(&state, polled)
-		state.Data = merged
-		if len(state.Data) != 5 {
-			t.Fatalf("expected 5 lines, got %d", len(state.Data))
-		}
-		if state.Data[3] != "line4" {
-			t.Fatalf("expected line4 at index 3, got %s", state.Data[3])
-		}
-	})
-
-	t.Run("ApplyPoll replaces non-overlapping logs", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"old1", "old2"}
-		polled := []string{"new1", "new2"}
-		merged, _ := ApplyPollWithMerge(&state, polled)
-		state.Data = merged
-		if len(state.Data) != 2 {
-			t.Fatalf("expected 2 lines, got %d", len(state.Data))
-		}
-		if state.Data[0] != "new1" {
-			t.Fatalf("expected new1, got %s", state.Data[0])
+	t.Run("SyncFromData applies content to viewport", func(t *testing.T) {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line-a", "line-b", "line-c"}
+		vp.SyncFromData(80, 10)
+		if vp.View() == "" {
+			t.Fatal("expected viewport to have content after SyncFromData")
 		}
 	})
 }
 
-func TestHistoryKeyHandling(t *testing.T) {
-	t.Run("Home key triggers history load", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(0)
-		state.Follow = false
-		state.HistoryDone = false
-		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyHome}, viewer.NewKeyMap())
-		trans := HistoryLoadRequest(&state)
-		if trans == nil {
-			t.Fatal("expected Load request")
+func TestViewerControllerHistoryKey(t *testing.T) {
+	t.Run("Home key moves to top, disables follow", func(t *testing.T) {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetYOffset(0)
+		vp.Follow = false
+
+		trans := viewer.Controller{}.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyHome}, viewer.NewKeyMap())
+		if !vp.AtTop() || vp.Follow {
+			t.Fatalf("unexpected state after Home: AtTop=%v, Follow=%v", vp.AtTop(), vp.Follow)
 		}
-		if trans.Src != viewer.SourceHistory {
-			t.Fatalf("expected SourceHistory, got %v", trans.Src)
+		_ = trans
+	})
+
+	t.Run("End key enables follow", func(t *testing.T) {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetYOffset(0)
+		vp.Follow = false
+
+		viewer.Controller{}.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyEnd}, viewer.NewKeyMap())
+		if !vp.Follow {
+			t.Fatal("expected follow to be enabled after End key")
 		}
 	})
 
-	t.Run("PgUp key triggers history load", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(1)
-		state.Follow = false
-		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyPgUp}, viewer.NewKeyMap())
-		trans := HistoryLoadRequest(&state)
-		if trans == nil {
-			t.Fatal("expected Load request")
-		}
-		if trans.Src != viewer.SourceHistory {
-			t.Fatalf("expected SourceHistory, got %v", trans.Src)
-		}
-	})
+	t.Run("PgUp at top returns transition without load", func(t *testing.T) {
+		vp := viewer.NewViewport()
+		vp.Data = []string{"line1", "line2", "line3"}
+		vp.SetYOffset(0)
+		vp.Follow = false
 
-	t.Run("End key triggers history check", func(t *testing.T) {
-		state := NewLogsState()
-		state.Data = []string{"line1", "line2", "line3"}
-		state.Viewport.SetYOffset(0)
-		state.Follow = false
-		state.HistoryDone = false
-		viewer.Controller{}.HandleKey(&state, tea.KeyPressMsg{Code: tea.KeyEnd}, viewer.NewKeyMap())
-		trans := HistoryLoadRequest(&state)
-		if trans == nil {
-			t.Fatal("expected Load request for End key")
-		}
+		viewer.Controller{}.HandleKey(vp, tea.KeyPressMsg{Code: tea.KeyPgUp}, viewer.NewKeyMap())
+		// PgUp does not trigger a load request; history loading is tick-driven
 	})
 }

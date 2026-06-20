@@ -5,19 +5,21 @@ import (
 	"strings"
 
 	"easydocker/internal/core"
-	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/ui/theme"
 	"easydocker/internal/tui/util"
+
+	"charm.land/lipgloss/v2"
 )
 
-type ContainerListRowKind int
+type RowKind int
 
 const (
-	ContainerListRowContainer ContainerListRowKind = iota
-	ContainerListRowComposeProject
+	RowContainer RowKind = iota
+	RowComposeProject
 )
 
 type ContainerListRow struct {
-	Kind            ContainerListRowKind
+	Kind            RowKind
 	Container       core.ContainerRow
 	ComposeProject  core.ComposeProject
 	ComposeExpanded bool
@@ -27,21 +29,6 @@ type ContainerListRow struct {
 // ContainerColumns resolves container columns for a given table width.
 func ContainerColumns(tableWidth int) []ColumnDef {
 	return ResolveColumns(tableWidth, ContainerSchema)
-}
-
-// ImageColumns resolves image columns for a given table width.
-func ImageColumns(tableWidth int) []ColumnDef {
-	return ResolveColumns(tableWidth, ImageSchema)
-}
-
-// NetworkColumns resolves network columns for a given table width.
-func NetworkColumns(tableWidth int) []ColumnDef {
-	return ResolveColumns(tableWidth, NetworkSchema)
-}
-
-// VolumeColumns resolves volume columns for a given table width.
-func VolumeColumns(tableWidth int) []ColumnDef {
-	return ResolveColumns(tableWidth, VolumeSchema)
 }
 
 // BuildContainerListRows creates a flat row model that includes compose project rows.
@@ -57,7 +44,7 @@ func BuildContainerListRows(items []core.ContainerRow, composeExpanded map[strin
 	for _, container := range items {
 		projectName := strings.TrimSpace(container.ComposeProject)
 		if projectName == "" {
-			rows = append(rows, ContainerListRow{Kind: ContainerListRowContainer, Container: container})
+			rows = append(rows, ContainerListRow{Kind: RowContainer, Container: container})
 			continue
 		}
 		if emittedProjects[projectName] {
@@ -69,7 +56,7 @@ func BuildContainerListRows(items []core.ContainerRow, composeExpanded map[strin
 		}
 		expanded := composeExpanded[projectName]
 		rows = append(rows, ContainerListRow{
-			Kind:            ContainerListRowComposeProject,
+			Kind:            RowComposeProject,
 			ComposeProject:  project,
 			ComposeExpanded: expanded,
 		})
@@ -87,7 +74,7 @@ func BuildContainerListRows(items []core.ContainerRow, composeExpanded map[strin
 				prefix = "└─ "
 			}
 			rows = append(rows, ContainerListRow{
-				Kind:       ContainerListRowContainer,
+				Kind:       RowContainer,
 				Container:  child,
 				TreePrefix: prefix,
 			})
@@ -104,12 +91,12 @@ func BuildContainerSpec(width, cursor int, items []ContainerListRow, includeScop
 	stateWidth := ContainerStateColumnWidth(columns)
 	selectedContainerID := ""
 	selectedComposeProject := ""
-	selectedKind := ContainerListRowContainer
+	selectedKind := RowContainer
 	hasSelectedKind := false
 	if cursor >= 0 && cursor < len(items) {
 		hasSelectedKind = true
 		selectedKind = items[cursor].Kind
-		if items[cursor].Kind == ContainerListRowContainer {
+		if items[cursor].Kind == RowContainer {
 			selectedContainerID = items[cursor].Container.FullID
 		} else {
 			selectedComposeProject = items[cursor].ComposeProject.Name
@@ -126,16 +113,16 @@ func BuildContainerSpec(width, cursor int, items []ContainerListRow, includeScop
 		Items:        items,
 		Columns:      columns,
 		RowBuilder: func(item ContainerListRow) []string {
-			if item.Kind == ContainerListRowComposeProject {
+			if item.Kind == RowComposeProject {
 				rowLoadingIndicator := ""
-				if hasSelectedKind && selectedKind == ContainerListRowComposeProject && item.ComposeProject.Name == selectedComposeProject {
+				if hasSelectedKind && selectedKind == RowComposeProject && item.ComposeProject.Name == selectedComposeProject {
 					rowLoadingIndicator = loadingIndicator
 				}
 				return ComposeProjectTableRow(item, rowLoadingIndicator)
 			}
 			container := item.Container
 			rowLoadingIndicator := ""
-			if hasSelectedKind && selectedKind == ContainerListRowContainer && selectedContainerID != "" && container.FullID == selectedContainerID {
+			if hasSelectedKind && selectedKind == RowContainer && selectedContainerID != "" && container.FullID == selectedContainerID {
 				rowLoadingIndicator = loadingIndicator
 			}
 			return ContainerTableRow(container, stateWidth, rowLoadingIndicator, item.TreePrefix)
@@ -143,33 +130,19 @@ func BuildContainerSpec(width, cursor int, items []ContainerListRow, includeScop
 	}
 }
 
-// BuildImageSpec builds a complete images table spec.
-func BuildImageSpec(width, cursor int, items []core.ImageRow) Spec[core.ImageRow] {
-	return SimpleSpec(width, "No images found.", cursor, items, ImageColumns, ImageTableRow)
-}
-
-// BuildNetworkSpec builds a complete networks table spec.
-func BuildNetworkSpec(width, cursor int, items []core.NetworkRow) Spec[core.NetworkRow] {
-	return SimpleSpec(width, "No networks found.", cursor, items, NetworkColumns, NetworkTableRow)
-}
-
-// BuildVolumeSpec builds a complete volumes table spec.
-func BuildVolumeSpec(width, cursor int, items []core.VolumeRow) Spec[core.VolumeRow] {
-	return SimpleSpec(width, "No volumes found.", cursor, items, VolumeColumns, VolumeTableRow)
-}
-
 // ContainerTableRow builds a single row for the containers table.
 func ContainerTableRow(container core.ContainerRow, stateWidth int, loadingIndicator, treePrefix string) []string {
-	state := browse.ContainerStateText(container)
+	state := util.ContainerStateText(container)
 	if stateWidth > 0 && util.StripANSI(util.TruncateWithEllipsis(state, stateWidth)) == "…" {
 		state = "●"
 	}
 	state = colorStateLabel(state, container.State)
 	name := container.Name
-	cpu := browse.ContainerCPUValue(container, loadingIndicator)
-	mem := browse.ContainerMemoryTableValue(container, loadingIndicator)
+	cpu := util.ContainerCPUValue(container, loadingIndicator)
+	mem := util.ContainerMemoryTableValue(container, loadingIndicator)
 	if treePrefix != "" {
 		name = treePrefix + name
+		state = childMetricGuidePrefix(treePrefix) + state
 		cpu = childMetricGuidePrefix(treePrefix) + cpu
 		mem = childMetricGuidePrefix(treePrefix) + mem
 	}
@@ -207,7 +180,7 @@ func ComposeProjectTableRow(item ContainerListRow, loadingIndicator string) []st
 	}
 	mem := "-"
 	if item.ComposeProject.MemoryUsage != "-" {
-		mem = fmt.Sprintf("%s", item.ComposeProject.MemoryUsage)
+		mem = item.ComposeProject.MemoryUsage
 	} else if item.ComposeProject.RunningCount > 0 && loadingIndicator != "" {
 		mem = loadingIndicator
 	}
@@ -225,77 +198,11 @@ func ansiBold(value string) string {
 	return "\x1b[1m" + value + "\x1b[22m"
 }
 
-// ImageTableRow builds a single row for the images table.
-func ImageTableRow(image core.ImageRow) []string {
-	repository, tags := splitImageTags(image.Tags)
-	return []string{repository, tags, image.Size, image.Created, image.ID}
-}
-
-func splitImageTags(formattedTags string) (string, string) {
-	if formattedTags == "" {
-		return "-", "-"
-	}
-
-	repositories := make([]string, 0, 4)
-	tags := make([]string, 0, 4)
-	for _, reference := range strings.Split(formattedTags, ", ") {
-		repository, tag := splitImageTagReference(reference)
-		repositories = append(repositories, repository)
-		tags = append(tags, tag)
-	}
-
-	return strings.Join(repositories, ", "), strings.Join(tags, ", ")
-}
-
-func splitImageTagReference(reference string) (string, string) {
-	if reference == "<none>:<none>" {
-		return "<none>", "<none>"
-	}
-
-	lastColon := strings.LastIndex(reference, ":")
-	if lastColon <= 0 || lastColon == len(reference)-1 {
-		return reference, "-"
-	}
-
-	return reference[:lastColon], reference[lastColon+1:]
-}
-
-// NetworkTableRow builds a single row for the networks table.
-func NetworkTableRow(network core.NetworkRow) []string {
-	return []string{
-		network.Name,
-		network.Driver,
-		network.Scope,
-		fmt.Sprintf("%d", network.Endpoints),
-		fmt.Sprintf("internal:%s attach:%s", network.Internal, network.Attachable),
-	}
-}
-
-// VolumeTableRow builds a single row for the volumes table.
-func VolumeTableRow(volume core.VolumeRow) []string {
-	return []string{
-		volume.Name,
-		volume.Driver,
-		volume.Scope,
-		volume.Size,
-		util.RefCountText(volume.RefCount),
-	}
-}
-
-func colorStateLabel(label, state string) string {
-	code := "37"
-	switch strings.ToLower(state) {
-	case "running":
-		code = "32"
-	case "paused", "restarting", "created":
-		code = "33"
-	case "exited", "stopped":
-		code = "31"
-	case "dead":
-		code = "91"
-	default:
-		code = "36"
-	}
-	// Reset only the foreground so selected-row background remains intact.
-	return "\x1b[" + code + "m" + label + "\x1b[39m"
+func colorStateLabel(label string, state core.ContainerState) string {
+	s := lipgloss.NewStyle().Foreground(theme.ContainerStateColor(state)).Render(label)
+	// Strip full SGR reset to avoid killing parent background, then
+	// reset only foreground so the parent can keep its background color.
+	s = strings.TrimSuffix(s, "\x1b[0m")
+	s = strings.TrimSuffix(s, "\x1b[m")
+	return s + "\x1b[39m"
 }

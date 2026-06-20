@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 )
@@ -9,9 +11,6 @@ import (
 func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 	projects := make(map[string]*ComposeProject)
 	order := make([]string, 0)
-	memoryPercentSums := make(map[string]float64)
-	memoryPercentCounts := make(map[string]int)
-
 	for _, container := range containers {
 		projectName := strings.TrimSpace(container.ComposeProject)
 		if projectName == "" {
@@ -25,7 +24,7 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		}
 		project.Containers = append(project.Containers, container)
 		project.ContainerCount++
-		if strings.EqualFold(container.State, "running") {
+		if container.State == StateRunning {
 			project.RunningCount++
 		}
 		if container.Healthy {
@@ -40,11 +39,8 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		if project.ConfigFiles == "" {
 			project.ConfigFiles = strings.TrimSpace(container.ComposeConfigFiles)
 		}
-		if project.Network == "" {
-			project.Network = deriveComposeNetwork(projectName)
-		}
 		if service := strings.TrimSpace(container.ComposeService); service != "" {
-			if !containsString(project.Services, service) {
+			if !slices.Contains(project.Services, service) {
 				project.Services = append(project.Services, service)
 			}
 		}
@@ -52,15 +48,15 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		if container.MemoryUsageBytes > 0 {
 			project.MemoryUsageBytes += container.MemoryUsageBytes
 		}
-		if container.MemoryLimitBytes > 0 {
+		if container.MemoryLimitBytes > 0 && container.MemoryLimitBytes > project.MemoryLimitBytes {
 			project.MemoryLimitBytes = container.MemoryLimitBytes
-		}
-		if hasComposeMemoryPercent(container) {
-			memoryPercentSums[projectName] += container.MemoryPercent
-			memoryPercentCounts[projectName]++
 		}
 	}
 
+	return enrichComposeProjects(projects, order)
+}
+
+func enrichComposeProjects(projects map[string]*ComposeProject, order []string) []ComposeProject {
 	for _, name := range order {
 		project := projects[name]
 		SortContainers(project.Containers)
@@ -70,20 +66,18 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 			project.Created = "-"
 		}
 		if project.MemoryUsageBytes > 0 {
-			project.MemoryUsage = HumanBytes(int64(project.MemoryUsageBytes))
+			project.MemoryUsage = HumanBytes(project.MemoryUsageBytes)
 		} else {
 			project.MemoryUsage = "-"
 		}
 		if project.MemoryLimitBytes > 0 {
-			project.MemoryLimit = HumanBytes(int64(project.MemoryLimitBytes))
+			project.MemoryLimit = HumanBytes(project.MemoryLimitBytes)
+			project.MemoryPercent = float64(project.MemoryUsageBytes) / float64(project.MemoryLimitBytes) * 100
 		} else {
 			project.MemoryLimit = "-"
-		}
-		if memoryPercentCounts[name] > 0 {
-			project.MemoryPercent = memoryPercentSums[name]
-		} else {
 			project.MemoryPercent = 0
 		}
+		project.Network = deriveComposeNetworks(project.Containers)
 	}
 
 	projectsOut := make([]ComposeProject, 0, len(order))
@@ -111,20 +105,22 @@ func HumanAge(then time.Time) string {
 	}
 }
 
-func deriveComposeNetwork(projectName string) string {
-	if projectName == "" {
-		return "-"
-	}
-	return projectName + "_default"
-}
-
-func containsString(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
-			return true
+func deriveComposeNetworks(containers []ContainerRow) string {
+	seen := make(map[string]struct{})
+	var networks []string
+	for _, c := range containers {
+		for _, n := range c.Networks {
+			if _, ok := seen[n]; !ok {
+				seen[n] = struct{}{}
+				networks = append(networks, n)
+			}
 		}
 	}
-	return false
+	if len(networks) == 0 {
+		return "-"
+	}
+	sort.Strings(networks)
+	return strings.Join(networks, ",")
 }
 
 func maxFloat(value, floor float64) float64 {
@@ -132,17 +128,6 @@ func maxFloat(value, floor float64) float64 {
 		return value
 	}
 	return floor
-}
-
-func hasComposeMemoryPercent(container ContainerRow) bool {
-	if container.MemoryPercent <= 0 {
-		return false
-	}
-	if container.MemoryUsageBytes > 0 {
-		return true
-	}
-	memoryUsage := strings.TrimSpace(strings.ToLower(container.MemoryUsage))
-	return memoryUsage != "" && memoryUsage != "-" && memoryUsage != "loading"
 }
 
 func fmtDurationMinutes(delta time.Duration) string {

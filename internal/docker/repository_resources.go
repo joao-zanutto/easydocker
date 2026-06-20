@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
@@ -22,7 +23,7 @@ type networksResult struct {
 }
 
 type volumesResult struct {
-	items volume.ListResponse
+	items []*volume.Volume
 	err   error
 }
 
@@ -31,7 +32,7 @@ type infoResult struct {
 	err  error
 }
 
-func (r *Repository) loadSupportingResourcesData(ctx context.Context, cli *client.Client) ([]image.Summary, []network.Inspect, volume.ListResponse, system.Info, error) {
+func (r *Repository) loadSupportingResourcesData(ctx context.Context, cli *client.Client) ([]image.Summary, []network.Inspect, []*volume.Volume, system.Info, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -49,8 +50,12 @@ func (r *Repository) loadSupportingResourcesData(ctx context.Context, cli *clien
 		networksCh <- networksResult{items: items, err: err}
 	}()
 	go func() {
-		items, err := cli.VolumeList(ctx, volume.ListOptions{})
-		volumesCh <- volumesResult{items: items, err: err}
+		du, err := cli.DiskUsage(ctx, types.DiskUsageOptions{Types: []types.DiskUsageObject{types.VolumeObject}})
+		if err != nil {
+			volumesCh <- volumesResult{items: nil, err: err}
+			return
+		}
+		volumesCh <- volumesResult{items: du.Volumes, err: nil}
 	}()
 	go func() {
 		item, err := cli.Info(ctx)
@@ -60,19 +65,19 @@ func (r *Repository) loadSupportingResourcesData(ctx context.Context, cli *clien
 	imagesRes := <-imagesCh
 	if imagesRes.err != nil {
 		cancel()
-		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("list images: %w", imagesRes.err)
+		return nil, nil, nil, system.Info{}, WrapDockerError(fmt.Errorf("repository.list images: %w", imagesRes.err))
 	}
 
 	networksRes := <-networksCh
 	if networksRes.err != nil {
 		cancel()
-		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("list networks: %w", networksRes.err)
+		return nil, nil, nil, system.Info{}, WrapDockerError(fmt.Errorf("repository.list networks: %w", networksRes.err))
 	}
 
 	volumesRes := <-volumesCh
 	if volumesRes.err != nil {
 		cancel()
-		return nil, nil, volume.ListResponse{}, system.Info{}, fmt.Errorf("list volumes: %w", volumesRes.err)
+		return nil, nil, nil, system.Info{}, WrapDockerError(fmt.Errorf("repository.list volumes: %w", volumesRes.err))
 	}
 
 	infoRes := <-infoCh

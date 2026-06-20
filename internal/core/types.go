@@ -1,6 +1,49 @@
 package core
 
-import "time"
+import (
+	"time"
+)
+
+type ContainerState string
+
+const (
+	StateRunning    ContainerState = "running"
+	StateExited     ContainerState = "exited"
+	StatePaused     ContainerState = "paused"
+	StateCreated    ContainerState = "created"
+	StateRemoving   ContainerState = "removing"
+	StateDead       ContainerState = "dead"
+	StateRestarting ContainerState = "restarting"
+)
+
+const (
+	MetricsLoading = "loading"
+	MetricsNA      = "-"
+)
+
+type ResourceType int
+
+const (
+	ResourceContainer ResourceType = iota
+	ResourceImage
+	ResourceNetwork
+	ResourceVolume
+)
+
+func (r ResourceType) String() string {
+	switch r {
+	case ResourceContainer:
+		return "Containers"
+	case ResourceImage:
+		return "Images"
+	case ResourceNetwork:
+		return "Networks"
+	case ResourceVolume:
+		return "Volumes"
+	default:
+		return "Unknown"
+	}
+}
 
 type Snapshot struct {
 	Containers      []ContainerRow
@@ -15,28 +58,28 @@ type Snapshot struct {
 }
 
 type ContainerRow struct {
-	ID                     string
-	FullID                 string
-	Name                   string
-	ComposeProject         string
-	ComposeService         string
-	ComposeWorkingDir      string
-	ComposeConfigFiles     string
-	ComposeOneOff          bool
-	ComposeContainerNumber int
-	Image                  string
-	State                  string
-	Status                 string
-	Ports                  string
-	Command                string
-	CreatedUnix            int64
-	CPUPercent             float64
-	MemoryPercent          float64
-	MemoryUsage            string
-	MemoryLimit            string
-	MemoryUsageBytes       uint64
-	MemoryLimitBytes       uint64
-	Healthy                bool
+	ID                 string
+	FullID             string
+	Name               string
+	ComposeProject     string
+	ComposeService     string
+	ComposeWorkingDir  string
+	ComposeConfigFiles string
+	Image              string
+	ImageID            string
+	State              ContainerState
+	Status             string
+	Ports              string
+	Command            string
+	CreatedUnix        int64
+	CPUPercent         float64
+	MemoryPercent      float64
+	MemoryUsage        string
+	MemoryLimit        string
+	MemoryUsageBytes   uint64
+	MemoryLimitBytes   uint64
+	Healthy            bool
+	Networks           []string
 }
 
 type ComposeProject struct {
@@ -88,22 +131,7 @@ type VolumeRow struct {
 	Size       string
 	RefCount   int64
 	Created    string
-	CreatedAt  string
-}
-
-type ContainerLiveData struct {
-	ContainerID   string
-	Logs          []string
-	CPUPercent    float64
-	MemoryPercent float64
-	MemoryUsage   string
-	MemoryLimit   string
-	MemoryBytes   uint64
-	MemoryMax     uint64
-	CPUHistory    []float64
-	MemHistory    []float64
-	State         string
-	UpdatedAt     time.Time
+	CreatedAt  time.Time
 }
 
 type ContainerMetrics struct {
@@ -116,19 +144,54 @@ type ContainerMetrics struct {
 }
 
 func ApplyMetricsToContainers(rows []ContainerRow, metricsByID map[string]ContainerMetrics) []ContainerRow {
-	updated := make([]ContainerRow, len(rows))
-	copy(updated, rows)
-	for index, row := range updated {
-		metrics, ok := metricsByID[row.FullID]
+	idx := make(map[string]int, len(rows))
+	for i, row := range rows {
+		idx[row.FullID] = i
+	}
+	for id, metrics := range metricsByID {
+		i, ok := idx[id]
 		if !ok {
 			continue
 		}
-		updated[index].CPUPercent = metrics.CPUPercent
-		updated[index].MemoryPercent = metrics.MemoryPercent
-		updated[index].MemoryUsage = metrics.MemoryUsage
-		updated[index].MemoryLimit = metrics.MemoryLimit
-		updated[index].MemoryUsageBytes = metrics.MemoryUsageBytes
-		updated[index].MemoryLimitBytes = metrics.MemoryLimitBytes
+		rows[i].CPUPercent = metrics.CPUPercent
+		rows[i].MemoryPercent = metrics.MemoryPercent
+		rows[i].MemoryUsage = metrics.MemoryUsage
+		rows[i].MemoryLimit = metrics.MemoryLimit
+		rows[i].MemoryUsageBytes = metrics.MemoryUsageBytes
+		rows[i].MemoryLimitBytes = metrics.MemoryLimitBytes
 	}
-	return updated
+	return rows
+}
+
+func PreserveRunningContainerMetrics(currentRows, previousRows []ContainerRow) []ContainerRow {
+	if len(currentRows) == 0 || len(previousRows) == 0 {
+		return currentRows
+	}
+
+	previousByID := make(map[string]ContainerRow, len(previousRows))
+	for _, row := range previousRows {
+		previousByID[row.FullID] = row
+	}
+
+	for index := range currentRows {
+		row := &currentRows[index]
+		if row.State != StateRunning {
+			continue
+		}
+		if row.CPUPercent >= 0 && row.MemoryUsage != MetricsNA && row.MemoryUsage != MetricsLoading {
+			continue
+		}
+		previous, ok := previousByID[row.FullID]
+		if !ok || previous.MemoryUsage == MetricsNA || previous.MemoryUsage == MetricsLoading {
+			continue
+		}
+		row.CPUPercent = previous.CPUPercent
+		row.MemoryPercent = previous.MemoryPercent
+		row.MemoryUsage = previous.MemoryUsage
+		row.MemoryLimit = previous.MemoryLimit
+		row.MemoryUsageBytes = previous.MemoryUsageBytes
+		row.MemoryLimitBytes = previous.MemoryLimitBytes
+	}
+
+	return currentRows
 }

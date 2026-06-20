@@ -9,8 +9,8 @@ func ConstrainLines(lines []string, width int) []string {
 	return out
 }
 
-// ClipLines limits the number of lines to height.
-func ClipLines(lines []string, height int) []string {
+// clipLines limits the number of lines to height.
+func clipLines(lines []string, height int) []string {
 	if height <= 0 {
 		return []string{}
 	}
@@ -25,7 +25,7 @@ func ClipAndPadLines(lines []string, height int, fill string) []string {
 	if height <= 0 {
 		return []string{}
 	}
-	clipped := ClipLines(lines, height)
+	clipped := clipLines(lines, height)
 	out := make([]string, 0, height)
 	out = append(out, clipped...)
 	for len(out) < height {

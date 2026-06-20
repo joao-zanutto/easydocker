@@ -1,7 +1,6 @@
 package tables
 
 import (
-	"easydocker/internal/tui/ui/tables/btable"
 	"easydocker/internal/tui/util"
 
 	"charm.land/lipgloss/v2"
@@ -24,20 +23,86 @@ func DefaultStyles() Styles {
 }
 
 // ResolveColumns computes final column widths based on available space.
+// All columns are guaranteed their MinWidth. Left-aligned columns absorb
+// any deficit first, protecting pinned-right columns from falling below
+// their MinWidth. Surplus space is distributed to left columns first.
 func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
-	desired := make([]int, 0, len(defs))
-	for _, def := range defs {
-		width := def.MinWidth
-		if def.Desired != nil {
-			width = max(width, def.Desired(tableWidth))
+	firstPinned := len(defs)
+	for i, def := range defs {
+		if def.PinnedRight {
+			firstPinned = i
+			break
 		}
-		desired = append(desired, width)
 	}
 
-	widths := util.AllocateColumns(max(1, tableWidth-((len(defs)-1)*2)), desired)
+	nonPinnedCount := firstPinned
+	pinnedCount := len(defs) - firstPinned
+	gapCount := max(0, nonPinnedCount-1) + max(0, pinnedCount-1)
+	if nonPinnedCount > 0 && pinnedCount > 0 {
+		gapCount++ // section gap between left and right pinned groups
+	}
+	netWidth := max(1, tableWidth-gapCount*2)
+
+	desired := make([]int, len(defs))
+	for i, def := range defs {
+		w := def.MinWidth
+		if def.Desired != nil {
+			w = max(w, def.Desired(tableWidth))
+		}
+		desired[i] = w
+	}
+
+	nonPinnedDesired := make([]int, firstPinned)
+	nonPinnedMin := 0
+	nonPinnedSum := 0
+	for i := 0; i < firstPinned; i++ {
+		nonPinnedDesired[i] = desired[i]
+		nonPinnedMin += defs[i].MinWidth
+		nonPinnedSum += desired[i]
+	}
+
+	pinnedDesired := desired[firstPinned:]
+	pinnedMin := 0
+	pinnedSum := 0
+	for i := firstPinned; i < len(defs); i++ {
+		pinnedMin += defs[i].MinWidth
+		pinnedSum += desired[i]
+	}
+
+	remaining := netWidth - pinnedMin - nonPinnedMin
+
+	var nonPinnedWidths, pinnedWidths []int
+
+	if remaining >= 0 {
+		// Enough for everyone's minimum. Give to non-pinned up to
+		// desired, then to pinned up to desired, then surplus to
+		// non-pinned.
+		nonPinnedExtra := nonPinnedSum - nonPinnedMin
+		give := min(remaining, nonPinnedExtra)
+		nonPinnedWidths = util.AllocateColumns(nonPinnedMin+give, nonPinnedDesired)
+		remaining -= give
+
+		pinnedExtra := pinnedSum - pinnedMin
+		give = min(remaining, pinnedExtra)
+		pinnedWidths = util.AllocateColumns(pinnedMin+give, pinnedDesired)
+		remaining -= give
+
+		if remaining > 0 {
+			nonPinnedWidths = util.AllocateColumns(nonPinnedMin+nonPinnedExtra+remaining, nonPinnedDesired)
+		}
+	} else {
+		// Deficit: pinned keep their mins, left absorb the shortfall.
+		pinnedWidths = util.AllocateColumns(pinnedMin, pinnedDesired)
+		nonPinnedWidths = util.AllocateColumns(max(1, netWidth-pinnedMin), nonPinnedDesired)
+	}
+
 	resolved := make([]ColumnDef, 0, len(defs))
-	for index, def := range defs {
-		def.MinWidth = widths[index]
+	for i, def := range defs {
+		if def.PinnedRight {
+			def.MinWidth = pinnedWidths[i-firstPinned]
+		} else {
+			def.MinWidth = nonPinnedWidths[i]
+		}
 		resolved = append(resolved, def)
 	}
 	return resolved
@@ -55,42 +120,61 @@ func RowsFrom[T any](items []T, rowBuilder func(T) []string) []Row {
 // RenderFromSpec renders a table from a spec, handling empty state.
 func RenderFromSpec[T any](width, height int, spec Spec[T], styles Styles) string {
 	rows := RowsFrom(spec.Items, spec.RowBuilder)
-	return RenderOrEmpty(width, height, spec.EmptyMessage, spec.Columns, rows, spec.Cursor, styles)
+	return RenderOrEmpty(width, height, spec.EmptyMessage, spec.Columns, rows, spec.Cursor, styles, spec.HideHeader)
 }
 
 // RenderOrEmpty renders a table or an empty message.
-func RenderOrEmpty(width, height int, emptyMessage string, columns []ColumnDef, rows []Row, cursor int, styles Styles) string {
+// When rows are empty but the header should be visible (hideHeader=false),
+// the header is rendered above the empty message.
+func RenderOrEmpty(width, height int, emptyMessage string, columns []ColumnDef, rows []Row, cursor int, styles Styles, hideHeader bool) string {
 	if len(rows) == 0 {
+		if hideHeader || len(columns) == 0 {
+			return util.ConstrainLine(emptyMessage, width)
+		}
+		cols := make([]tableColumn, 0, len(columns))
+		for _, def := range columns {
+			cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth, PinnedRight: def.PinnedRight})
+		}
+		t := newTable(
+			withColumns(cols),
+			withStyles(styles),
+			withWidth(max(1, width)),
+			withHeight(0),
+			withHideHeader(false),
+		)
+		header := t.view()
+		if header != "" {
+			return header + "\n" + util.ConstrainLine(emptyMessage, width)
+		}
 		return util.ConstrainLine(emptyMessage, width)
 	}
-	return RenderBubblesTable(styles, width, height, columns, rows, cursor)
+	return renderTable(styles, width, height, columns, rows, cursor, hideHeader)
 }
 
-// RenderBubblesTable creates a rendered btable.Table with styled rows and cursor.
-func RenderBubblesTable(styles Styles, width, height int, defs []ColumnDef, rows []Row, cursor int) string {
-	cols := make([]btable.Column, 0, len(defs))
+// renderTable creates a rendered table with styled rows and cursor.
+func renderTable(styles Styles, width, height int, defs []ColumnDef, rows []Row, cursor int, hideHeader bool) string {
+	cols := make([]tableColumn, 0, len(defs))
 	for _, def := range defs {
-		cols = append(cols, btable.Column{Title: def.Header, Width: def.MinWidth})
+		cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth, PinnedRight: def.PinnedRight})
 	}
-	privateRows := make([]btable.Row, 0, len(rows))
+	privateRows := make([]tableRow, 0, len(rows))
 	for _, row := range rows {
-		privateRows = append(privateRows, btable.Row(row))
+		privateRows = append(privateRows, tableRow(row))
 	}
-	privateStyles := btable.Styles{
-		Header:   styles.Header,
-		Cell:     styles.Cell,
-		Selected: styles.Selected,
+	viewportHeight := max(1, height)
+	if !hideHeader {
+		viewportHeight = max(1, height-1)
 	}
-
-	t := btable.New(
-		btable.WithColumns(cols),
-		btable.WithRows(privateRows),
-		btable.WithStyles(privateStyles),
-		btable.WithWidth(max(1, width)),
-		btable.WithHeight(max(2, height)),
+	t := newTable(
+		withColumns(cols),
+		withRows(privateRows),
+		withStyles(styles),
+		withWidth(max(1, width)),
+		withHeight(viewportHeight),
+		withHideHeader(hideHeader),
 	)
 	if len(rows) > 0 {
-		t.SetCursor(util.Clamp(cursor, 0, len(rows)-1))
+		t.setCursor(util.Clamp(cursor, 0, len(rows)-1))
 	}
-	return t.View()
+	return t.view()
 }

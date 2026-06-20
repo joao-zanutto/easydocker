@@ -75,7 +75,7 @@ func RenderMenu(state MenuState, styles MenuStyles, width, height int) string {
 		if i == state.Cursor {
 			selector = styles.Selector.Render(">")
 		}
-		label := item.Label
+		var label string
 		if i == state.Cursor {
 			label = styles.Selector.Render(item.Label)
 		} else {

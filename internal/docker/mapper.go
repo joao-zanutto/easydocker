@@ -3,7 +3,6 @@ package docker
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,32 +15,40 @@ import (
 )
 
 func mapContainerRow(item types.Container) core.ContainerRow {
-	memoryUsage := "-"
+	memoryUsage := core.MetricsNA
 	cpuPercent := float64(0)
-	if strings.EqualFold(item.State, "running") {
+	if core.ContainerState(item.State) == core.StateRunning {
 		cpuPercent = -1
 	}
 
+	var networks []string
+	if item.NetworkSettings != nil {
+		for name := range item.NetworkSettings.Networks {
+			networks = append(networks, name)
+		}
+		sort.Strings(networks)
+	}
+
 	return core.ContainerRow{
-		ID:                     shortID(item.ID),
-		FullID:                 item.ID,
-		Name:                   primaryName(item.Names),
-		ComposeProject:         strings.TrimSpace(item.Labels["com.docker.compose.project"]),
-		ComposeService:         strings.TrimSpace(item.Labels["com.docker.compose.service"]),
-		ComposeWorkingDir:      strings.TrimSpace(item.Labels["com.docker.compose.project.working_dir"]),
-		ComposeConfigFiles:     strings.TrimSpace(item.Labels["com.docker.compose.project.config_files"]),
-		ComposeOneOff:          strings.EqualFold(item.Labels["com.docker.compose.oneoff"], "true"),
-		ComposeContainerNumber: parseContainerNumber(item.Labels["com.docker.compose.container-number"]),
-		Image:                  item.Image,
-		State:                  item.State,
-		Status:                 item.Status,
-		Ports:                  formatPorts(item.Ports),
-		Command:                cleanCommand(item.Command),
-		CreatedUnix:            item.Created,
-		CPUPercent:             cpuPercent,
-		Healthy:                strings.Contains(strings.ToLower(item.Status), "healthy"),
-		MemoryUsage:            memoryUsage,
-		MemoryLimit:            "-",
+		ID:                 shortID(item.ID),
+		FullID:             item.ID,
+		Name:               primaryName(item.Names),
+		ComposeProject:     strings.TrimSpace(item.Labels["com.docker.compose.project"]),
+		ComposeService:     strings.TrimSpace(item.Labels["com.docker.compose.service"]),
+		ComposeWorkingDir:  strings.TrimSpace(item.Labels["com.docker.compose.project.working_dir"]),
+		ComposeConfigFiles: strings.TrimSpace(item.Labels["com.docker.compose.project.config_files"]),
+		Image:              item.Image,
+		ImageID:            item.ImageID,
+		State:              core.ContainerState(item.State),
+		Status:             item.Status,
+		Ports:              formatPorts(item.Ports),
+		Command:            cleanCommand(item.Command),
+		CreatedUnix:        item.Created,
+		CPUPercent:         cpuPercent,
+		Healthy:            strings.Contains(strings.ToLower(item.Status), "healthy"),
+		MemoryUsage:        memoryUsage,
+		MemoryLimit:        core.MetricsNA,
+		Networks:           networks,
 	}
 }
 
@@ -49,8 +56,8 @@ func mapImageRow(item image.Summary) core.ImageRow {
 	return core.ImageRow{
 		ID:          shortID(item.ID),
 		Tags:        formatTags(item.RepoTags),
-		Size:        core.HumanBytes(item.Size),
-		Created:     humanAge(time.Unix(item.Created, 0)),
+		Size:        humanBytesUnknown(item.Size),
+		Created:     core.HumanAge(time.Unix(item.Created, 0)),
 		CreatedUnix: item.Created,
 		Containers:  item.Containers,
 	}
@@ -65,7 +72,7 @@ func mapNetworkRow(item network.Inspect) core.NetworkRow {
 		Internal:   yesNo(item.Internal),
 		Attachable: yesNo(item.Attachable),
 		Endpoints:  len(item.Containers),
-		Created:    humanAge(item.Created),
+		Created:    core.HumanAge(item.Created),
 		CreatedAt:  item.Created,
 	}
 }
@@ -76,6 +83,10 @@ func mapVolumeRow(item *volume.Volume) core.VolumeRow {
 		refCount = item.UsageData.RefCount
 		size = item.UsageData.Size
 	}
+	createdAt, parseErr := time.Parse(time.RFC3339Nano, item.CreatedAt)
+	if parseErr != nil {
+		createdAt = time.Time{}
+	}
 	return core.VolumeRow{
 		Name:       item.Name,
 		Driver:     item.Driver,
@@ -84,7 +95,7 @@ func mapVolumeRow(item *volume.Volume) core.VolumeRow {
 		Size:       humanBytesUnknown(size),
 		RefCount:   refCount,
 		Created:    humanTimestamp(item.CreatedAt),
-		CreatedAt:  item.CreatedAt,
+		CreatedAt:  createdAt,
 	}
 }
 
@@ -132,17 +143,6 @@ func cleanCommand(command string) string {
 	return trimmed[:61] + "..."
 }
 
-func parseContainerNumber(value string) int {
-	if value == "" {
-		return 0
-	}
-	parsed, err := strconv.Atoi(value)
-	if err != nil {
-		return 0
-	}
-	return parsed
-}
-
 func formatTags(tags []string) string {
 	if len(tags) == 0 {
 		return "<none>:<none>"
@@ -162,7 +162,7 @@ func humanBytesUnknown(size int64) string {
 	if size < 0 {
 		return "-"
 	}
-	return core.HumanBytes(size)
+	return core.HumanBytes(uint64(size))
 }
 
 func humanTimestamp(value string) string {
@@ -173,25 +173,7 @@ func humanTimestamp(value string) string {
 	if err != nil {
 		return value
 	}
-	return humanAge(parsed)
-}
-
-func humanAge(then time.Time) string {
-	delta := time.Since(then)
-	switch {
-	case delta < time.Minute:
-		return "just now"
-	case delta < time.Hour:
-		return fmt.Sprintf("%dm ago", int(delta.Minutes()))
-	case delta < 24*time.Hour:
-		return fmt.Sprintf("%dh ago", int(delta.Hours()))
-	case delta < 30*24*time.Hour:
-		return fmt.Sprintf("%dd ago", int(delta.Hours()/24))
-	case delta < 365*24*time.Hour:
-		return fmt.Sprintf("%dmo ago", int(delta.Hours()/(24*30)))
-	default:
-		return fmt.Sprintf("%dy ago", int(delta.Hours()/(24*365)))
-	}
+	return core.HumanAge(parsed)
 }
 
 func yesNo(value bool) string {

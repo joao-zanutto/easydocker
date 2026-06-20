@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	mobyterm "github.com/moby/term"
 )
 
@@ -44,53 +45,24 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 		execResp, err = cli.ContainerExecCreate(ctx, containerID, shellExecOptionsFallback())
 	}
 	if err != nil {
-		return fmt.Errorf("create exec: %w", err)
+		return fmt.Errorf("repository.create exec: %w", err)
 	}
 
 	resp, err := cli.ContainerExecAttach(ctx, execResp.ID, container.ExecStartOptions{Tty: true})
 	if err != nil {
-		return fmt.Errorf("attach exec: %w", err)
+		return fmt.Errorf("repository.attach exec: %w", err)
 	}
 	defer resp.Close()
 
-	// Put stdin into raw mode so the remote shell gets raw keystrokes.
-	if f, ok := stdin.(*os.File); ok {
-		fd := f.Fd()
-		oldState, rawErr := mobyterm.MakeRaw(fd)
-		if rawErr == nil {
-			defer mobyterm.RestoreTerminal(fd, oldState) //nolint:errcheck
-		}
+	if restore, ok := setupTerminalRaw(stdin); ok {
+		defer restore()
 	}
-
-	// Sync initial terminal size to the exec session.
-	if f, ok := stdout.(*os.File); ok {
-		fd := f.Fd()
-		if ws, sizeErr := mobyterm.GetWinsize(fd); sizeErr == nil {
-			_ = cli.ContainerExecResize(ctx, execResp.ID, container.ResizeOptions{
-				Height: uint(ws.Height),
-				Width:  uint(ws.Width),
-			})
-		}
-
-		// Forward subsequent SIGWINCH signals so the shell reacts to resizes.
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGWINCH)
-		defer signal.Stop(sigCh)
-		go func() {
-			for range sigCh {
-				if ws, err := mobyterm.GetWinsize(fd); err == nil {
-					_ = cli.ContainerExecResize(ctx, execResp.ID, container.ResizeOptions{
-						Height: uint(ws.Height),
-						Width:  uint(ws.Width),
-					})
-				}
-			}
-		}()
-	}
+	forwardResizeSignals(ctx, cli, execResp.ID, stdout)
 
 	// Pump I/O between the terminal and the hijacked exec connection.
 	go func() {
 		_, _ = io.Copy(resp.Conn, stdin)
+		// Best-effort close of the write side of the exec connection.
 		_ = resp.CloseWrite()
 	}()
 
@@ -101,4 +73,44 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 	}()
 
 	return <-outDone
+}
+
+// setupTerminalRaw puts stdin into raw mode and returns a restore function.
+func setupTerminalRaw(stdin io.Reader) (func(), bool) {
+	if f, ok := stdin.(*os.File); ok {
+		fd := f.Fd()
+		oldState, rawErr := mobyterm.MakeRaw(fd)
+		if rawErr == nil {
+			return func() { _ = mobyterm.RestoreTerminal(fd, oldState) }, true
+		}
+	}
+	return nil, false
+}
+
+// forwardResizeSignals syncs the initial terminal size and forwards SIGWINCH.
+// Resize errors are best-effort — the terminal will correct itself on the next resize event.
+func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string, stdout io.Writer) {
+	if f, ok := stdout.(*os.File); ok {
+		fd := f.Fd()
+		if ws, sizeErr := mobyterm.GetWinsize(fd); sizeErr == nil {
+			_ = cli.ContainerExecResize(ctx, execID, container.ResizeOptions{
+				Height: uint(ws.Height),
+				Width:  uint(ws.Width),
+			})
+		}
+
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGWINCH)
+		defer signal.Stop(sigCh)
+		go func() {
+			for range sigCh {
+				if ws, err := mobyterm.GetWinsize(fd); err == nil {
+					_ = cli.ContainerExecResize(ctx, execID, container.ResizeOptions{
+						Height: uint(ws.Height),
+						Width:  uint(ws.Width),
+					})
+				}
+			}
+		}()
+	}
 }

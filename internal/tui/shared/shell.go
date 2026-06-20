@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"io"
 
 	"easydocker/internal/core"
@@ -9,7 +10,7 @@ import (
 )
 
 type ShellCommand struct {
-	service     *core.Service
+	service     core.ServiceInterface
 	containerID string
 	stdin       io.Reader
 	stdout      io.Writer
@@ -21,16 +22,16 @@ func (e *ShellCommand) SetStdout(w io.Writer) { e.stdout = w }
 func (e *ShellCommand) SetStderr(w io.Writer) { e.stderr = w }
 
 func (e *ShellCommand) Run() error {
-	// Enter alternate screen buffer and move cursor to home position
+	// Enter/exit alternate screen buffer. Errors are intentionally discarded
+	// because terminal escape sequences are best-effort.
 	_, _ = io.WriteString(e.stdout, "\033[?1049h\033[H")
 	defer func() {
-		// Exit alternate screen buffer
 		_, _ = io.WriteString(e.stdout, "\033[?1049l")
 	}()
-	return e.service.ExecShell(e.containerID, e.stdin, e.stdout, e.stderr)
+	return e.service.ExecShell(context.Background(), e.containerID, e.stdin, e.stdout, e.stderr)
 }
 
-func ShellCmd(service *core.Service, containerID string, doneMsg tea.Msg) tea.Cmd {
+func ShellCmd(service core.ServiceInterface, containerID string, doneMsg tea.Msg) tea.Cmd {
 	return tea.Exec(
 		&ShellCommand{service: service, containerID: containerID},
 		func(err error) tea.Msg {
