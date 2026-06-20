@@ -90,7 +90,12 @@ func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 	v := viper.New()
 
 	explicitPath, _ := cmd.Flags().GetString("config")
-	if explicitPath != "" {
+	if explicitPath == "" {
+		explicitPath = os.Getenv("EASYDOCKER_CONFIG")
+	}
+
+	hasExplicitPath := explicitPath != ""
+	if hasExplicitPath {
 		v.SetConfigFile(explicitPath)
 	} else {
 		v.SetConfigName("config")
@@ -98,19 +103,16 @@ func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 
 		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 			v.AddConfigPath(filepath.Join(xdg, "easydocker"))
-		} else if home, err := os.UserHomeDir(); err == nil {
-			v.AddConfigPath(filepath.Join(home, ".config", "easydocker"))
 		}
-
 		if home, err := os.UserHomeDir(); err == nil {
-			v.AddConfigPath(filepath.Join(home, ".easydocker"))
+			v.AddConfigPath(filepath.Join(home, ".config", "easydocker"))
 		}
 	}
 
 	cfgPath := ""
 	if err := v.ReadInConfig(); err != nil {
 		var cfgErr viper.ConfigFileNotFoundError
-		if !errors.As(err, &cfgErr) {
+		if hasExplicitPath || !errors.As(err, &cfgErr) {
 			return config.Config{}, "", fmt.Errorf("read config: %w", err)
 		}
 	} else {
