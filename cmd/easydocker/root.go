@@ -75,9 +75,9 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 
 	rootCmd.Flags().String("config", "", "path to config file")
-	rootCmd.Flags().Bool("log-enable", false, "enable file logging")
-	rootCmd.Flags().String("log-level", "warn", "log level (debug, info, warn, error)")
-	rootCmd.Flags().String("log-path", "/var/log/easydocker.log", "log file path")
+	rootCmd.Flags().Bool("log-enable", config.Default().Logging.Enable, "enable file logging")
+	rootCmd.Flags().String("log-level", config.Default().Logging.Level, "log level (debug, info, warn, error)")
+	rootCmd.Flags().String("log-path", config.Default().Logging.Path, "log file path")
 }
 
 func Execute() {
@@ -88,10 +88,6 @@ func Execute() {
 
 func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 	v := viper.New()
-
-	v.SetDefault("log.enable", false)
-	v.SetDefault("log.level", "warn")
-	v.SetDefault("log.path", "/var/log/easydocker.log")
 
 	explicitPath, _ := cmd.Flags().GetString("config")
 	if explicitPath != "" {
