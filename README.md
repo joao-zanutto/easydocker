@@ -17,7 +17,7 @@ Already implemented features:
 
 - 🧭 Browse containers, images, networks, and volumes.
 - 🪵 View live container logs that dynamic loads as you scroll up.
-- 📃 Inspect resources to get low level information about them.
+- 📃 Inspect resources to get low-level information about them.
 - 🔎 Filter resources, log lines and inspect output to look for specific strings.
 - 🤿 Dive into containers by entering interacting shell sessions.
 - 📊 Individual and aggregated container resource usage metrics.
