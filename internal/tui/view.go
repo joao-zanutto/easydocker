@@ -93,16 +93,7 @@ func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalH
 	m.viewer.ResourceType = core.ResourceContainer
 	m.viewer.LoadingMsg = "Loading logs..."
 	m.viewer.EmptyMsg = "No logs found for this container."
-	m.viewer.Styles = viewer.Styles{
-		Breadcrumb:   m.styles.Viewer.Breadcrumb,
-		FollowOn:     m.styles.Viewer.FollowOn,
-		FollowOff:    m.styles.Viewer.FollowOff,
-		Muted:        m.styles.Browse.Muted,
-		Divider:      m.styles.Browse.Divider,
-		SubpageFrame: m.styles.Viewer.SubpageFrame,
-		Key:          m.styles.Chrome.Key,
-		KeyText:      m.styles.Chrome.KeyText,
-	}
+	m.viewer.Styles = m.viewerStyles()
 	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 	return m.viewer.View()
 }
@@ -120,16 +111,7 @@ func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	m.viewer.ResourceType = shared.TabToResourceType(m.browse.ActiveTab)
 	m.viewer.LoadingMsg = "Loading inspect..."
 	m.viewer.EmptyMsg = "No inspect data available."
-	m.viewer.Styles = viewer.Styles{
-		Breadcrumb:   m.styles.Viewer.Breadcrumb,
-		FollowOn:     m.styles.Viewer.FollowOn,
-		FollowOff:    m.styles.Viewer.FollowOff,
-		Muted:        m.styles.Browse.Muted,
-		Divider:      m.styles.Browse.Divider,
-		SubpageFrame: m.styles.Viewer.SubpageFrame,
-		Key:          m.styles.Chrome.Key,
-		KeyText:      m.styles.Chrome.KeyText,
-	}
+	m.viewer.Styles = m.viewerStyles()
 	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
 	return m.viewer.View()
 }
@@ -143,7 +125,13 @@ func (m model) renderConfigContent(totalWidth, totalHeight int) string {
 	m.viewer.ResourceType = 0
 	m.viewer.LoadingMsg = "Loading..."
 	m.viewer.EmptyMsg = "No configuration data available."
-	m.viewer.Styles = viewer.Styles{
+	m.viewer.Styles = m.viewerStyles()
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	return m.viewer.View()
+}
+
+func (m model) viewerStyles() viewer.Styles {
+	return viewer.Styles{
 		Breadcrumb:   m.styles.Viewer.Breadcrumb,
 		FollowOn:     m.styles.Viewer.FollowOn,
 		FollowOff:    m.styles.Viewer.FollowOff,
@@ -153,8 +141,6 @@ func (m model) renderConfigContent(totalWidth, totalHeight int) string {
 		Key:          m.styles.Chrome.Key,
 		KeyText:      m.styles.Chrome.KeyText,
 	}
-	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	return m.viewer.View()
 }
 
 func (m model) metricsLoadingIndicator() string {
