@@ -2,7 +2,12 @@ package tui
 
 import (
 	"easydocker/internal/core"
+	"easydocker/internal/tui/screens/browse"
+	"easydocker/internal/tui/screens/menu"
+	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
+
+	"charm.land/bubbles/v2/spinner"
 )
 
 type testModelBuilder struct {
@@ -10,7 +15,18 @@ type testModelBuilder struct {
 }
 
 func newTestModel() testModelBuilder {
-	m := unwrapModel(New(nil))
+	m := unwrapModel(model{
+		dataDirty:    true,
+		loading:      true,
+		screen:       shared.Main,
+		loadingStage: shared.StageContainers,
+		styles:       defaultStyles(),
+		spinner:      spinner.New(spinner.WithSpinner(spinner.Points)),
+		browse:       browse.NewModel(),
+		viewer:       viewer.NewModel(),
+		menu:         menu.NewMenuState(),
+		help:         menu.NewHelpState(0, 0),
+	})
 	return testModelBuilder{m: *m}
 }
 

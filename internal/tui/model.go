@@ -82,26 +82,31 @@ type model struct {
 	styles theme.Set
 	menu   menu.MenuState
 	help   menu.HelpState
+
+	appliedConfig  []string
+	configFilePath string
 }
 
-func New(service core.ServiceInterface) tea.Model {
+func New(service core.ServiceInterface, appliedConfig []string, configFilePath string) tea.Model {
 	s := spinner.New(spinner.WithSpinner(spinner.Points))
 
 	bm := browse.NewModel()
 	vm := viewer.NewModel()
 
 	return model{
-		service:      service,
-		dataDirty:    true,
-		loading:      true,
-		screen:       shared.Main,
-		loadingStage: shared.StageContainers,
-		styles:       defaultStyles(),
-		spinner:      s,
-		browse:       bm,
-		viewer:       vm,
-		menu:         menu.NewMenuState(),
-		help:         menu.NewHelpState(0, 0),
+		service:        service,
+		dataDirty:      true,
+		loading:        true,
+		screen:         shared.Main,
+		loadingStage:   shared.StageContainers,
+		styles:         defaultStyles(),
+		spinner:        s,
+		browse:         bm,
+		viewer:         vm,
+		menu:           menu.NewMenuState(),
+		help:           menu.NewHelpState(0, 0),
+		appliedConfig:  appliedConfig,
+		configFilePath: configFilePath,
 	}
 }
 

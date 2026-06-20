@@ -238,6 +238,8 @@ func getContentLabel(ct ContentType) string {
 		return "Logs"
 	case ContentTypeInspect:
 		return "Inspect"
+	case ContentTypeConfig:
+		return "Configuration"
 	default:
 		return "Logs"
 	}

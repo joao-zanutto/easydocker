@@ -18,6 +18,7 @@ export default defineConfig({
     nav: [
       {text: "Install", link: "/install"},
       {text: "Usage", link: "/usage"},
+      {text: "Configuration", link: "/configuration"},
       {text: "Changelog", link: "/changelog"},
       {text: "GitHub", link: "https://github.com/joao-zanutto/easydocker"},
     ],
@@ -29,6 +30,7 @@ export default defineConfig({
             {text: "Home", link: "/"},
             {text: "Install", link: "/install"},
             {text: "Usage", link: "/usage"},
+            {text: "Configuration", link: "/configuration"},
             {text: "Changelog", link: "/changelog"},
           ],
         },

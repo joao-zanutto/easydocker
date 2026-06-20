@@ -6,6 +6,7 @@ type MenuAction int
 
 const (
 	MenuActionHelp MenuAction = iota
+	MenuActionConfig
 	MenuActionQuit
 )
 
@@ -72,8 +73,9 @@ func NewMenuState() MenuState {
 		Active: false,
 		Cursor: 0,
 		Items: []MenuItem{
-			{Label: "Help", Description: "Show all commands", Action: MenuActionHelp},
-			{Label: "Quit", Description: "Exit application", Action: MenuActionQuit},
+			{Label: "Help  ", Description: "Show all commands", Action: MenuActionHelp},
+			{Label: "Config", Description: "Show resolved configuration", Action: MenuActionConfig},
+			{Label: "Quit  ", Description: "Exit application", Action: MenuActionQuit},
 		},
 	}
 }

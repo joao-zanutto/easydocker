@@ -155,6 +155,25 @@ func (m *model) handleMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if transition.Quit {
 		return m, tea.Quit
 	}
+	if transition.OpenConfig {
+		return m.handleConfigTransition()
+	}
+	return m, nil
+}
+
+func (m *model) handleConfigTransition() (tea.Model, tea.Cmd) {
+	m.menu.Active = false
+	m.pushScreen(m.screen)
+	m.screen = shared.InspectViewer
+	m.viewer = viewer.NewModel()
+	m.viewer.Vp.ContentType = viewer.ContentTypeConfig
+	m.viewer.Vp.Data = m.appliedConfig
+	m.viewer.Vp.InitialLoad = false
+	m.viewer.Vp.SetXOffset(0)
+	m.viewer.Vp.Filter.Active = false
+	m.viewer.Vp.Filter.Query = ""
+	m.viewer.Vp.Filter.Input.SetValue("")
+	m.err = nil
 	return m, nil
 }
 
