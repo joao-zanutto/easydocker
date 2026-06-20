@@ -27,13 +27,13 @@ func fetchRawLogs(ctx context.Context, cli *client.Client, containerID string, t
 		Tail:       tailOption(tail),
 	})
 	if err != nil {
-		return nil, WrapDockerError(err)
+		return nil, err
 	}
 	defer func() { _ = logReader.Close() }()
 
 	rawLogBytes, err := io.ReadAll(logReader)
 	if err != nil {
-		return nil, WrapDockerError(err)
+		return nil, err
 	}
 
 	var merged bytes.Buffer
