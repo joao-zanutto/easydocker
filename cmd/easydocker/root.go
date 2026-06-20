@@ -89,8 +89,6 @@ func Execute() {
 func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 	v := viper.New()
 
-	// Check both CLI flag and environment variable for explicit config path
-	// CLI flag takes precedence over environment variable
 	explicitPath, _ := cmd.Flags().GetString("config")
 	if explicitPath == "" {
 		explicitPath = os.Getenv("EASYDOCKER_CONFIG")
