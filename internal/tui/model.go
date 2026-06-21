@@ -85,9 +85,11 @@ type model struct {
 
 	appliedConfig  []string
 	configFilePath string
+
+	logTailLines int
 }
 
-func New(service core.ServiceInterface, appliedConfig []string, configFilePath string) tea.Model {
+func New(service core.ServiceInterface, appliedConfig []string, configFilePath string, logTailLines int) tea.Model {
 	s := spinner.New(spinner.WithSpinner(spinner.Points))
 
 	bm := browse.NewModel()
@@ -107,6 +109,7 @@ func New(service core.ServiceInterface, appliedConfig []string, configFilePath s
 		help:           menu.NewHelpState(0, 0),
 		appliedConfig:  appliedConfig,
 		configFilePath: configFilePath,
+		logTailLines:   logTailLines,
 	}
 }
 
