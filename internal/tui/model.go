@@ -78,6 +78,7 @@ type model struct {
 	spinner          spinner.Model
 
 	lastResizeTime time.Time
+	tickStarted    bool
 
 	styles theme.Set
 	menu   menu.MenuState
@@ -110,6 +111,7 @@ func New(service core.ServiceInterface, appliedConfig []string, configFilePath s
 		appliedConfig:  appliedConfig,
 		configFilePath: configFilePath,
 		logTailLines:   logTailLines,
+		tickStarted:    false,
 	}
 }
 

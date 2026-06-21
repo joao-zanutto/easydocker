@@ -197,6 +197,7 @@ func (m *model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, loadDockerCmd(m.service))
 	}
 	if m.shouldLoadHistoryOnTick() {
+		m.viewer.Logs.HistoryBaseLen = len(m.viewer.Vp.Data)
 		m.viewer.Logs.HistoryLoad = true
 		tail := len(m.viewer.Vp.Data) + m.logTailLines
 		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.Logs.SessionID, tail, viewer.SourceHistory))
@@ -210,5 +211,8 @@ func (m *model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 func (m *model) handleSpinnerTickMsg(msg spinner.TickMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.spinner, cmd = m.spinner.Update(msg)
+	if m.screen == shared.LogViewer || m.screen == shared.InspectViewer {
+		m.viewer.Spinner, _ = m.viewer.Spinner.Update(spinner.TickMsg{Time: msg.Time, ID: m.viewer.Spinner.ID()})
+	}
 	return m, cmd
 }
