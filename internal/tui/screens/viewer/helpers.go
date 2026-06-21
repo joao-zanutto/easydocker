@@ -28,9 +28,13 @@ func VisibleContentRange(vp *Viewport, lines []string) (int, int) {
 	}
 
 	wrapWidth := max(1, vp.Width())
-	totalRows := 0
-	for _, line := range lines {
-		totalRows += WrappedRowCount(line, wrapWidth)
+	var totalRows int
+	if vp.wrapCacheWidth == wrapWidth && vp.wrapCacheGen == vp.dataGen {
+		totalRows = vp.wrapTotalRows
+	} else {
+		for _, line := range lines {
+			totalRows += WrappedRowCount(line, wrapWidth)
+		}
 	}
 	if totalRows <= 0 {
 		return 0, 0
@@ -64,7 +68,7 @@ func WrappedRowCount(line string, width int) int {
 	if width <= 0 {
 		return 1
 	}
-	lineWidth := util.DisplayWidth(line)
+	lineWidth := util.DisplayWidthPure(line)
 	if lineWidth <= 0 {
 		return 1
 	}
@@ -234,7 +238,7 @@ func wrapLogLine(line string, width int) []string {
 	}
 
 	for _, r := range line {
-		runeWidth := util.DisplayWidth(string(r))
+		runeWidth := util.DisplayWidthPure(string(r))
 		if runeWidth <= 0 {
 			current.WriteRune(r)
 			continue
@@ -293,6 +297,9 @@ func MergePolledLogs(prev, polled []string) ([]string, bool) {
 			}
 		}
 		if match {
+			if o == len(polled) {
+				return prev, true
+			}
 			result := make([]string, len(prev)+len(polled)-o)
 			for i, l := range prev {
 				result[i] = strings.TrimRight(l, "\r")
@@ -338,9 +345,27 @@ func equalLogSlices(a, b []string) bool {
 func (vp *Viewport) PrepareContentLines(wrapWidth int, wrapEnabled bool) []string {
 	lines := vp.FilteredLines()
 
-	if wrapEnabled && wrapWidth > 0 {
-		lines = WrapLines(lines, wrapWidth)
+	if !wrapEnabled || wrapWidth <= 0 {
+		vp.wrappedLines = nil
+		return lines
 	}
 
-	return lines
+	if len(vp.wrappedLines) > 0 && vp.wrappedWidth == wrapWidth &&
+		len(lines) == vp.wrappedSourceCount {
+		return vp.wrappedLines
+	}
+
+	if vp.wrapCanAppend && len(vp.wrappedLines) > 0 && vp.wrappedWidth == wrapWidth &&
+		len(lines) > vp.wrappedSourceCount {
+		newLines := lines[vp.wrappedSourceCount:]
+		newWrapped := WrapLines(newLines, wrapWidth)
+		vp.wrappedLines = append(vp.wrappedLines, newWrapped...)
+		vp.wrappedSourceCount = len(lines)
+		return vp.wrappedLines
+	}
+
+	vp.wrappedLines = WrapLines(lines, wrapWidth)
+	vp.wrappedWidth = wrapWidth
+	vp.wrappedSourceCount = len(lines)
+	return vp.wrappedLines
 }

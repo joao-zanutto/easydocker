@@ -50,7 +50,12 @@ func (m *model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd
 	m.browse.Snapshot.TotalMem = msg.totalMem
 	m.browse.Snapshot.Timestamp = time.Now()
 	m.metricsLoaded = true
-	return m, tickCmd()
+	var cmds []tea.Cmd
+	if !m.tickStarted {
+		m.tickStarted = true
+		cmds = append(cmds, tickCmd())
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func (m *model) handleLoadResultMsg(msg loadResultMsg) (tea.Model, tea.Cmd) {
@@ -90,7 +95,15 @@ func recomputeSnapshotTotals(snapshot *core.Snapshot) {
 func (m *model) handleViewerContentMsg(msg viewer.ContentMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.viewer, cmd = m.viewer.Update(msg)
-	return m, cmd
+	var cmds []tea.Cmd
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	if msg.Src == viewer.SourceInitial && !m.tickStarted {
+		m.tickStarted = true
+		cmds = append(cmds, tickCmd())
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func (m *model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd) {

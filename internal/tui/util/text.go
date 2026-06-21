@@ -14,6 +14,10 @@ func DisplayWidth(text string) int {
 	return ansi.StringWidth(StripANSI(text))
 }
 
+func DisplayWidthPure(text string) int {
+	return ansi.StringWidth(text)
+}
+
 func TruncateWithEllipsis(text string, width int) string {
 	return ansi.Truncate(text, width, "…")
 }
