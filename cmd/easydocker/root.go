@@ -108,7 +108,12 @@ func loadConfig(cmd *cobra.Command) (config.Config, string, error) {
 	v.AutomaticEnv()
 	config.BindFlags(v, cmd)
 
-	return config.ReadConfig(v), cfgPath, nil
+
+	cfg := config.ReadConfig(v)
+	if cfg.Viewer.Log.Lines <= 0 {
+		return config.Config{}, "", fmt.Errorf("viewer.log.lines must be > 0")
+	}
+	return cfg, cfgPath, nil
 }
 
 
