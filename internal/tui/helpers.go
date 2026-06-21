@@ -31,7 +31,7 @@ func (m model) shouldPollLogsOnTick() bool {
 
 func (m *model) logsPollTail() int {
 	if m.viewer.Logs.TailLines <= 0 {
-		return InitialTail
+		return m.logTailLines
 	}
 	return m.viewer.Logs.TailLines
 }

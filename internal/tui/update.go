@@ -137,8 +137,7 @@ func (m *model) handleViewerTransition(msg viewer.TransitionMsg) (tea.Model, tea
 	if msg.BackToBrowse {
 		m.screen = m.popScreen()
 		m.dataDirty = true
-		m.viewer.Vp.Data = nil
-		m.viewer.Vp.ClearCache()
+		m.viewer = viewer.NewModel()
 		return m, nil
 	}
 	if msg.LaunchShell {
@@ -199,7 +198,7 @@ func (m *model) handleTickMsg(_ tickMsg) (tea.Model, tea.Cmd) {
 	}
 	if m.shouldLoadHistoryOnTick() {
 		m.viewer.Logs.HistoryLoad = true
-		tail := len(m.viewer.Vp.Data) + TailStep
+		tail := len(m.viewer.Vp.Data) + m.logTailLines
 		cmds = append(cmds, LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.Logs.SessionID, tail, viewer.SourceHistory))
 	} else if m.shouldPollLogsOnTick() {
 		tail := m.logsPollTail()
