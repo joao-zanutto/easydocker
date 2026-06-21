@@ -10,16 +10,12 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-const (
-	InitialTail = 200
-	TailStep    = 200
-)
-
 func (m *model) enterLogsMode(container core.ContainerRow) tea.Cmd {
 	m.initViewer(shared.LogViewer, viewer.ContentTypeLogs, core.ResourceContainer,
 		container.FullID, container.Name, "Loading logs...", "No logs found for this container.")
 	m.viewer.Vp.Follow = true
 	m.viewer.Logs = viewer.NewLogsViewer()
+	m.viewer.Logs.TailLines = m.logTailLines
 	return LoadLogsCmd(m.service, m.viewer.ContainerID, m.viewer.Logs.SessionID,
 		m.viewer.Logs.TailLines, viewer.SourceInitial)
 }

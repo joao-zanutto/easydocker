@@ -28,18 +28,22 @@ log:
   enable: true
   level: debug
   path: /tmp/easydocker.log
+viewer:
+  log:
+    lines: 2000
 ```
 
 If no config file is found, all options use their defaults.
 
 ## Options
 
-| CLI flag       | Environment variable    | Config key   | Default                   | Description                                 |
-| -------------- | ----------------------- | ------------ | ------------------------- | ------------------------------------------- |
-| `--config`     | `EASYDOCKER_CONFIG`     | —            | auto                      | Path to YAML config file                    |
-| `--log-enable` | `EASYDOCKER_LOG_ENABLE` | `log.enable` | `false`                   | Enable file logging                         |
-| `--log-level`  | `EASYDOCKER_LOG_LEVEL`  | `log.level`  | `warn`                    | Log level: `debug`, `info`, `warn`, `error` |
-| `--log-path`   | `EASYDOCKER_LOG_PATH`   | `log.path`   | `/var/log/easydocker.log` | Log file path                               |
+| CLI flag             | Environment variable          | Config key         | Default                   | Description                                  |
+| -------------------- | ----------------------------- | ------------------ | ------------------------- | -------------------------------------------- |
+| `--config`           | `EASYDOCKER_CONFIG`           | —                  | auto                      | Path to YAML config file                     |
+| `--log-enable`       | `EASYDOCKER_LOG_ENABLE`       | `log.enable`       | `false`                   | Enable file logging                          |
+| `--log-level`        | `EASYDOCKER_LOG_LEVEL`        | `log.level`        | `warn`                    | Log level: `debug`, `info`, `warn`, `error`  |
+| `--log-path`         | `EASYDOCKER_LOG_PATH`         | `log.path`         | `/var/log/easydocker.log` | Log file path                                |
+| `--viewer-log-lines` | `EASYDOCKER_VIEWER_LOG_LINES` | `viewer.log.lines` | `2000`                    | Amount of log lines to fetch for a container |
 
 ## Examples
 

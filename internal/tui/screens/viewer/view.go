@@ -25,6 +25,7 @@ type ViewModel struct {
 	ContentType      ContentType
 	ResourceType     core.ResourceType
 	Logs             LogsViewer
+	FilteredLines    []string
 }
 
 func RenderContent(vm ViewModel) string {
@@ -127,8 +128,7 @@ func renderPanel(vm ViewModel, width, height int) string {
 		return strings.Join(util.ClipAndPadLines([]string{renderLoadingLine(vm.Styles.Muted, contentWidth, vm.LoadingIndicator, loadingMsg)}, height, ""), "\n")
 	}
 
-	filtered := vm.Vp.FilteredLines()
-	if len(filtered) == 0 {
+	if len(vm.FilteredLines) == 0 {
 		empty := vm.EmptyMessage
 		if empty == "" {
 			empty = "No content available."
@@ -140,7 +140,7 @@ func renderPanel(vm ViewModel, width, height int) string {
 	}
 
 	lines := strings.Split(vm.Vp.View(), "\n")
-	lines = renderHorizontalScrollIndicators(vm.Vp, lines, filtered, contentWidth, vm.Styles.Muted.Reverse(true))
+	lines = renderHorizontalScrollIndicators(vm.Vp, lines, vm.FilteredLines, contentWidth, vm.Styles.Muted.Reverse(true))
 	if vm.ContentType == ContentTypeLogs && vm.Logs.HistoryLoad {
 		msg := vm.LoadingMessage
 		if msg == "" {
