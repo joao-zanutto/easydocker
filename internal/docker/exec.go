@@ -13,23 +13,13 @@ import (
 	mobyterm "github.com/moby/term"
 )
 
-func shellExecOptions() container.ExecOptions {
+func shellExecOptions(shell string) container.ExecOptions {
 	return container.ExecOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          true,
-		Cmd:          []string{"bash"},
-	}
-}
-
-func shellExecOptionsFallback() container.ExecOptions {
-	return container.ExecOptions{
-		AttachStdin:  true,
-		AttachStdout: true,
-		AttachStderr: true,
-		Tty:          true,
-		Cmd:          []string{"sh"},
+		Cmd:          []string{shell},
 	}
 }
 
@@ -39,10 +29,10 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 		return err
 	}
 
-	execResp, err := cli.ContainerExecCreate(ctx, containerID, shellExecOptions())
+	execResp, err := cli.ContainerExecCreate(ctx, containerID, shellExecOptions("bash"))
 	// If bash is not available, fallback to sh
 	if err != nil {
-		execResp, err = cli.ContainerExecCreate(ctx, containerID, shellExecOptionsFallback())
+		execResp, err = cli.ContainerExecCreate(ctx, containerID, shellExecOptions("sh"))
 	}
 	if err != nil {
 		return fmt.Errorf("repository.create exec: %w", err)
