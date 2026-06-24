@@ -57,7 +57,7 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 	if restore, ok := setupTerminalRaw(stdin); ok {
 		defer restore()
 	}
-	forwardResizeSignals(ctx, cli, execResp.ID, stdout)
+	defer forwardResizeSignals(ctx, cli, execResp.ID, stdout)()
 
 	// Pump I/O between the terminal and the hijacked exec connection.
 	go func() {
@@ -89,7 +89,7 @@ func setupTerminalRaw(stdin io.Reader) (func(), bool) {
 
 // forwardResizeSignals syncs the initial terminal size and forwards SIGWINCH.
 // Resize errors are best-effort — the terminal will correct itself on the next resize event.
-func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string, stdout io.Writer) {
+func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string, stdout io.Writer) func() {
 	if f, ok := stdout.(*os.File); ok {
 		fd := f.Fd()
 		if ws, sizeErr := mobyterm.GetWinsize(fd); sizeErr == nil {
@@ -101,7 +101,6 @@ func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string
 
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGWINCH)
-		defer func() { signal.Stop(sigCh); close(sigCh) }()
 		go func() {
 			for range sigCh {
 				if ws, err := mobyterm.GetWinsize(fd); err == nil {
@@ -112,5 +111,7 @@ func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string
 				}
 			}
 		}()
+		return func() { signal.Stop(sigCh); close(sigCh) }
 	}
+	return func() {}
 }
