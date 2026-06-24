@@ -101,7 +101,7 @@ func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string
 
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGWINCH)
-		defer signal.Stop(sigCh)
+		defer func() { signal.Stop(sigCh); close(sigCh) }()
 		go func() {
 			for range sigCh {
 				if ws, err := mobyterm.GetWinsize(fd); err == nil {
