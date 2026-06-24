@@ -13,23 +13,13 @@ import (
 	mobyterm "github.com/moby/term"
 )
 
-func shellExecOptions() container.ExecOptions {
+func shellExecOptions(shell string) container.ExecOptions {
 	return container.ExecOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          true,
-		Cmd:          []string{"bash"},
-	}
-}
-
-func shellExecOptionsFallback() container.ExecOptions {
-	return container.ExecOptions{
-		AttachStdin:  true,
-		AttachStdout: true,
-		AttachStderr: true,
-		Tty:          true,
-		Cmd:          []string{"sh"},
+		Cmd:          []string{shell},
 	}
 }
 
@@ -39,10 +29,10 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 		return err
 	}
 
-	execResp, err := cli.ContainerExecCreate(ctx, containerID, shellExecOptions())
+	execResp, err := cli.ContainerExecCreate(ctx, containerID, shellExecOptions("bash"))
 	// If bash is not available, fallback to sh
 	if err != nil {
-		execResp, err = cli.ContainerExecCreate(ctx, containerID, shellExecOptionsFallback())
+		execResp, err = cli.ContainerExecCreate(ctx, containerID, shellExecOptions("sh"))
 	}
 	if err != nil {
 		return fmt.Errorf("repository.create exec: %w", err)
@@ -57,7 +47,7 @@ func (r *Repository) ExecShell(ctx context.Context, containerID string, stdin io
 	if restore, ok := setupTerminalRaw(stdin); ok {
 		defer restore()
 	}
-	forwardResizeSignals(ctx, cli, execResp.ID, stdout)
+	defer forwardResizeSignals(ctx, cli, execResp.ID, stdout)()
 
 	// Pump I/O between the terminal and the hijacked exec connection.
 	go func() {
@@ -89,7 +79,7 @@ func setupTerminalRaw(stdin io.Reader) (func(), bool) {
 
 // forwardResizeSignals syncs the initial terminal size and forwards SIGWINCH.
 // Resize errors are best-effort — the terminal will correct itself on the next resize event.
-func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string, stdout io.Writer) {
+func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string, stdout io.Writer) func() {
 	if f, ok := stdout.(*os.File); ok {
 		fd := f.Fd()
 		if ws, sizeErr := mobyterm.GetWinsize(fd); sizeErr == nil {
@@ -101,7 +91,6 @@ func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string
 
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGWINCH)
-		defer signal.Stop(sigCh)
 		go func() {
 			for range sigCh {
 				if ws, err := mobyterm.GetWinsize(fd); err == nil {
@@ -112,5 +101,7 @@ func forwardResizeSignals(ctx context.Context, cli *client.Client, execID string
 				}
 			}
 		}()
+		return func() { signal.Stop(sigCh); close(sigCh) }
 	}
+	return func() {}
 }

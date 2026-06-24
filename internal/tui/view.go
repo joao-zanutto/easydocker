@@ -163,7 +163,7 @@ func (m model) renderHeader() string {
 		DimTabs:          isViewer,
 		Err:              m.err,
 		Tabs: []chrome.TabSpec{
-			{Tab: tabContainers, Icon: "🐳", Name: "Containers", Count: len(m.filteredContainers())},
+			{Tab: tabContainers, Icon: "🐳", Name: "Containers", Count: len(m.browse.Snapshot.Containers)},
 			{Tab: tabImages, Icon: "💿", Name: "Images", Count: len(m.browse.Snapshot.Images)},
 			{Tab: tabNetworks, Icon: "🔌", Name: "Networks", Count: len(m.browse.Snapshot.Networks)},
 			{Tab: tabVolumes, Icon: "📂", Name: "Volumes", Count: len(m.browse.Snapshot.Volumes)},
