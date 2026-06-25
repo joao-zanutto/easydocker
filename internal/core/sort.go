@@ -3,6 +3,7 @@ package core
 import (
 	"sort"
 	"strings"
+	"time"
 )
 
 func SortContainers(rows []ContainerRow) {
@@ -51,25 +52,24 @@ func parseImageSortKey(tags string) (string, string) {
 	return repository, tag
 }
 
-func SortNetworks(rows []NetworkRow) {
-	sort.Slice(rows, func(i, j int) bool {
-		left := rows[i]
-		right := rows[j]
-		if !left.CreatedAt.Equal(right.CreatedAt) {
-			return left.CreatedAt.After(right.CreatedAt)
-		}
-		return strings.ToLower(left.Name) < strings.ToLower(right.Name)
-	})
+type byCreatedAt interface {
+	CreatedAtTime() time.Time
+	CreatedAtName() string
 }
 
-func SortVolumes(rows []VolumeRow) {
+func (r NetworkRow) CreatedAtTime() time.Time { return r.CreatedAt }
+func (r NetworkRow) CreatedAtName() string    { return r.Name }
+func (r VolumeRow) CreatedAtTime() time.Time  { return r.CreatedAt }
+func (r VolumeRow) CreatedAtName() string     { return r.Name }
+
+func SortByCreatedAt[T byCreatedAt](rows []T) {
 	sort.Slice(rows, func(i, j int) bool {
-		left := rows[i]
-		right := rows[j]
-		if !left.CreatedAt.Equal(right.CreatedAt) {
-			return left.CreatedAt.After(right.CreatedAt)
+		lt := rows[i].CreatedAtTime()
+		rt := rows[j].CreatedAtTime()
+		if !lt.Equal(rt) {
+			return lt.After(rt)
 		}
-		return strings.ToLower(left.Name) < strings.ToLower(right.Name)
+		return strings.ToLower(rows[i].CreatedAtName()) < strings.ToLower(rows[j].CreatedAtName())
 	})
 }
 

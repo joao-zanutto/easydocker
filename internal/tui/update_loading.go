@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"time"
-
 	"easydocker/internal/core"
 	"easydocker/internal/tui/screens/viewer"
 	"easydocker/internal/tui/shared"
@@ -48,7 +46,6 @@ func (m *model) handleMetricsResultMsg(msg metricsResultMsg) (tea.Model, tea.Cmd
 	m.browse.Snapshot.Containers = core.ApplyMetricsToContainers(m.browse.Snapshot.Containers, msg.metricsByID)
 	m.browse.Snapshot.TotalCPU = msg.totalCPU
 	m.browse.Snapshot.TotalMem = msg.totalMem
-	m.browse.Snapshot.Timestamp = time.Now()
 	m.metricsLoaded = true
 	var cmds []tea.Cmd
 	if !m.tickStarted {

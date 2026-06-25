@@ -41,7 +41,7 @@ var rootCmd = &cobra.Command{
 
 		repo := docker.NewRepository()
 		svc := core.NewService(repo)
-		p := tea.NewProgram(tui.New(svc, appliedConfig, cfgPath, cfg.Viewer.Log.Lines))
+		p := tea.NewProgram(tui.New(svc, appliedConfig, cfg.Viewer.Log.Lines))
 		if _, err := p.Run(); err != nil {
 			return fmt.Errorf("run easydocker: %v", err)
 		}

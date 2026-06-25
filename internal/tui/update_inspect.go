@@ -20,20 +20,14 @@ func (m *model) handleInspectTransition() (tea.Model, tea.Cmd) {
 	m.viewer.Vp.Follow = false
 	m.viewer.Vp.GotoTop()
 	m.viewer.Inspect.ResourceName = resourceName
-	return m, m.loadInspectCmd(resourceType, resourceID, resourceName)
+	return m, m.loadInspectCmd(resourceType, resourceID)
 }
 
-func (m *model) loadInspectCmd(resourceType core.ResourceType, resourceID, resourceName string) tea.Cmd {
+func (m *model) loadInspectCmd(resourceType core.ResourceType, resourceID string) tea.Cmd {
 	svc := m.service
 	return func() tea.Msg {
 		data, err := svc.InspectResource(context.Background(), resourceType, resourceID)
-		return inspectResultMsg{
-			resourceType: resourceType,
-			resourceID:   resourceID,
-			resourceName: resourceName,
-			data:         data,
-			err:          err,
-		}
+		return inspectResultMsg{data: data, err: err}
 	}
 }
 

@@ -130,11 +130,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return m, func() tea.Msg { return TransitionMsg{LaunchShell: true} }
 	}
 
-	transition := Controller{}.HandleKey(m.Vp, msg, keys)
-
-	if transition.LaunchShell {
-		return m, func() tea.Msg { return TransitionMsg{LaunchShell: true} }
-	}
+	Controller{}.HandleKey(m.Vp, msg, keys)
 	return m, nil
 }
 

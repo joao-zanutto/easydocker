@@ -65,22 +65,18 @@ func mapImageRow(item image.Summary) core.ImageRow {
 
 func mapNetworkRow(item network.Inspect) core.NetworkRow {
 	return core.NetworkRow{
-		ID:         shortID(item.ID),
-		Name:       item.Name,
-		Driver:     item.Driver,
-		Scope:      item.Scope,
-		Internal:   yesNo(item.Internal),
-		Attachable: yesNo(item.Attachable),
-		Endpoints:  len(item.Containers),
-		Created:    core.HumanAge(item.Created),
-		CreatedAt:  item.Created,
+		ID:        shortID(item.ID),
+		Name:      item.Name,
+		Driver:    item.Driver,
+		Endpoints: len(item.Containers),
+		Created:   core.HumanAge(item.Created),
+		CreatedAt: item.Created,
 	}
 }
 
 func mapVolumeRow(item *volume.Volume) core.VolumeRow {
-	refCount, size := int64(-1), int64(-1)
+	size := int64(-1)
 	if item.UsageData != nil {
-		refCount = item.UsageData.RefCount
 		size = item.UsageData.Size
 	}
 	createdAt, parseErr := time.Parse(time.RFC3339Nano, item.CreatedAt)
@@ -90,10 +86,8 @@ func mapVolumeRow(item *volume.Volume) core.VolumeRow {
 	return core.VolumeRow{
 		Name:       item.Name,
 		Driver:     item.Driver,
-		Scope:      item.Scope,
 		Mountpoint: item.Mountpoint,
 		Size:       humanBytesUnknown(size),
-		RefCount:   refCount,
 		Created:    humanTimestamp(item.CreatedAt),
 		CreatedAt:  createdAt,
 	}
@@ -176,9 +170,4 @@ func humanTimestamp(value string) string {
 	return core.HumanAge(parsed)
 }
 
-func yesNo(value bool) string {
-	if value {
-		return "yes"
-	}
-	return "no"
-}
+

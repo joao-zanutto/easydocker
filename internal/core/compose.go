@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -27,9 +26,6 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		if container.State == StateRunning {
 			project.RunningCount++
 		}
-		if container.Healthy {
-			project.HealthyCount++
-		}
 		if container.CreatedUnix > project.CreatedUnix {
 			project.CreatedUnix = container.CreatedUnix
 		}
@@ -38,11 +34,6 @@ func AggregateComposeProjects(containers []ContainerRow) []ComposeProject {
 		}
 		if project.ConfigFiles == "" {
 			project.ConfigFiles = strings.TrimSpace(container.ComposeConfigFiles)
-		}
-		if service := strings.TrimSpace(container.ComposeService); service != "" {
-			if !slices.Contains(project.Services, service) {
-				project.Services = append(project.Services, service)
-			}
 		}
 		project.CPUPercent += maxFloat(container.CPUPercent, 0)
 		if container.MemoryUsageBytes > 0 {

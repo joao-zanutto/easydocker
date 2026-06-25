@@ -60,14 +60,6 @@ type MenuStyles struct {
 	Scrollbar       lipgloss.Style
 }
 
-type StateStyles struct {
-	StateRun   lipgloss.Style
-	StateWarn  lipgloss.Style
-	StateStop  lipgloss.Style
-	StateDead  lipgloss.Style
-	StateOther lipgloss.Style
-}
-
 type Set struct {
 	Chrome   ChromeStyles
 	Tabs     TabStyles
@@ -75,6 +67,5 @@ type Set struct {
 	Browse   BrowseStyles
 	Viewer   ViewerStyles
 	Menu     MenuStyles
-	States   StateStyles
 	ActiveBG color.Color
 }

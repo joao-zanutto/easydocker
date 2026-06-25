@@ -64,17 +64,14 @@ func TestAggregateComposeProjects_GroupsSortsAndRollsUpMetrics(t *testing.T) {
 	if project.Name != "shop" {
 		t.Fatalf("project name = %q, want shop", project.Name)
 	}
-	if project.ContainerCount != 3 || project.RunningCount != 2 || project.HealthyCount != 1 {
-		t.Fatalf("project counts = %#v, want 3/2/1", project)
+	if project.ContainerCount != 3 || project.RunningCount != 2 {
+		t.Fatalf("project counts = %#v, want 3/2", project)
 	}
 	if project.Network != "shop_default,shop_internal" {
 		t.Fatalf("project network = %q, want shop_default,shop_internal", project.Network)
 	}
 	if project.WorkingDir != "/srv/shop" || project.ConfigFiles != "compose.yaml" {
 		t.Fatalf("project metadata = workingDir %q configFiles %q", project.WorkingDir, project.ConfigFiles)
-	}
-	if len(project.Services) != 3 {
-		t.Fatalf("project services len = %d, want 3", len(project.Services))
 	}
 	if project.Created == "" || project.Created == "-" {
 		t.Fatalf("project created time should be populated, got %q", project.Created)

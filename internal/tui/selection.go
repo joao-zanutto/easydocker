@@ -68,18 +68,6 @@ func (m *model) filteredContainers() []core.ContainerRow {
 	return core.FilterContainersByQuery(scoped, m.browse.Filter.Query)
 }
 
-func (m *model) filteredImages() []core.ImageRow {
-	return core.FilterImagesByQuery(m.browse.Snapshot.Images, m.browse.Filter.Query)
-}
-
-func (m *model) filteredNetworks() []core.NetworkRow {
-	return core.FilterNetworksByQuery(m.browse.Snapshot.Networks, m.browse.Filter.Query)
-}
-
-func (m *model) filteredVolumes() []core.VolumeRow {
-	return core.FilterVolumesByQuery(m.browse.Snapshot.Volumes, m.browse.Filter.Query)
-}
-
 func (m *model) findContainerIndexByID(id string) (int, bool) {
 	for index, row := range m.browse.Data.ContainerListRows {
 		if row.Kind != tables.RowContainer {

@@ -11,7 +11,6 @@ const (
 	StateExited     ContainerState = "exited"
 	StatePaused     ContainerState = "paused"
 	StateCreated    ContainerState = "created"
-	StateRemoving   ContainerState = "removing"
 	StateDead       ContainerState = "dead"
 	StateRestarting ContainerState = "restarting"
 )
@@ -54,7 +53,6 @@ type Snapshot struct {
 	TotalCPU        float64
 	TotalMem        uint64
 	TotalLimit      uint64
-	Timestamp       time.Time
 }
 
 type ContainerRow struct {
@@ -87,13 +85,11 @@ type ComposeProject struct {
 	Containers       []ContainerRow
 	ContainerCount   int
 	RunningCount     int
-	HealthyCount     int
 	CreatedUnix      int64
 	Created          string
 	Network          string
 	WorkingDir       string
 	ConfigFiles      string
-	Services         []string
 	CPUPercent       float64
 	MemoryPercent    float64
 	MemoryUsage      string
@@ -115,9 +111,6 @@ type NetworkRow struct {
 	ID         string
 	Name       string
 	Driver     string
-	Scope      string
-	Internal   string
-	Attachable string
 	Endpoints  int
 	Created    string
 	CreatedAt  time.Time
@@ -126,10 +119,8 @@ type NetworkRow struct {
 type VolumeRow struct {
 	Name       string
 	Driver     string
-	Scope      string
 	Mountpoint string
 	Size       string
-	RefCount   int64
 	Created    string
 	CreatedAt  time.Time
 }

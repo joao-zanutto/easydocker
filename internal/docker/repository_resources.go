@@ -12,79 +12,71 @@ import (
 	"github.com/docker/docker/client"
 )
 
-type imagesResult struct {
-	items []image.Summary
+type result[T any] struct {
+	value T
 	err   error
-}
-
-type networksResult struct {
-	items []network.Inspect
-	err   error
-}
-
-type volumesResult struct {
-	items []*volume.Volume
-	err   error
-}
-
-type infoResult struct {
-	item system.Info
-	err  error
 }
 
 func (r *Repository) loadSupportingResourcesData(ctx context.Context, cli *client.Client) ([]image.Summary, []network.Inspect, []*volume.Volume, system.Info, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	imagesCh := make(chan imagesResult, 1)
-	networksCh := make(chan networksResult, 1)
-	volumesCh := make(chan volumesResult, 1)
-	infoCh := make(chan infoResult, 1)
+	imagesCh := make(chan result[[]image.Summary], 1)
+	networksCh := make(chan result[[]network.Inspect], 1)
+	volumesCh := make(chan result[[]*volume.Volume], 1)
+	infoCh := make(chan result[system.Info], 1)
 
 	go func() {
 		items, err := cli.ImageList(ctx, image.ListOptions{})
-		imagesCh <- imagesResult{items: items, err: err}
+		imagesCh <- result[[]image.Summary]{value: items, err: err}
 	}()
 	go func() {
 		items, err := cli.NetworkList(ctx, network.ListOptions{})
-		networksCh <- networksResult{items: items, err: err}
+		networksCh <- result[[]network.Inspect]{value: items, err: err}
 	}()
 	go func() {
 		du, err := cli.DiskUsage(ctx, types.DiskUsageOptions{Types: []types.DiskUsageObject{types.VolumeObject}})
 		if err != nil {
-			volumesCh <- volumesResult{items: nil, err: err}
+			volumesCh <- result[[]*volume.Volume]{value: nil, err: err}
 			return
 		}
-		volumesCh <- volumesResult{items: du.Volumes, err: nil}
+		volumesCh <- result[[]*volume.Volume]{value: du.Volumes, err: nil}
 	}()
 	go func() {
 		item, err := cli.Info(ctx)
-		infoCh <- infoResult{item: item, err: err}
+		infoCh <- result[system.Info]{value: item, err: err}
 	}()
 
-	imagesRes := <-imagesCh
-	if imagesRes.err != nil {
-		cancel()
-		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list images: %w", imagesRes.err)
+	imagesRes, err := mustReceive(imagesCh, cancel)
+	if err != nil {
+		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list images: %w", err)
 	}
 
-	networksRes := <-networksCh
-	if networksRes.err != nil {
-		cancel()
-		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list networks: %w", networksRes.err)
+	networksRes, err := mustReceive(networksCh, cancel)
+	if err != nil {
+		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list networks: %w", err)
 	}
 
-	volumesRes := <-volumesCh
-	if volumesRes.err != nil {
-		cancel()
-		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list volumes: %w", volumesRes.err)
+	volumesRes, err := mustReceive(volumesCh, cancel)
+	if err != nil {
+		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list volumes: %w", err)
 	}
 
 	infoRes := <-infoCh
-	info := infoRes.item
+	info := infoRes.value
 	if infoRes.err != nil {
 		info = system.Info{}
 	}
 
-	return imagesRes.items, networksRes.items, volumesRes.items, info, nil
+	return imagesRes.value, networksRes.value, volumesRes.value, info, nil
+}
+
+func mustReceive[T any](ch <-chan result[T], cancel func()) (result[T], error) {
+	res := <-ch
+	if res.err != nil {
+		cancel()
+		var zero result[T]
+		return zero, res.err
+	}
+	return res, nil
 }

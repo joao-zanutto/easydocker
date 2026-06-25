@@ -12,9 +12,9 @@ func (m model) syncBrowseData() model {
 	pruneComposeExpanded(m.browse.ComposeExpanded, activeProjects)
 	m.browse.Data = browse.BrowseData{
 		ContainerListRows:       tables.BuildContainerListRows(filteredContainers, m.browse.ComposeExpanded),
-		FilteredImages:          m.filteredImages(),
-		FilteredNetworks:        m.filteredNetworks(),
-		FilteredVolumes:         m.filteredVolumes(),
+		FilteredImages:          core.FilterImagesByQuery(m.browse.Snapshot.Images, m.browse.Filter.Query),
+		FilteredNetworks:        core.FilterNetworksByQuery(m.browse.Snapshot.Networks, m.browse.Filter.Query),
+		FilteredVolumes:         core.FilterVolumesByQuery(m.browse.Snapshot.Volumes, m.browse.Filter.Query),
 		MetricsLoadingIndicator: m.metricsLoadingIndicator(),
 	}
 	m.browse = m.browse.ClampCursors()

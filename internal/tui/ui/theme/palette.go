@@ -25,7 +25,6 @@ var (
 	// Accent colors
 	Gold           = lipgloss.Color("186")
 	Teal           = lipgloss.Color("109")
-	Cyan           = lipgloss.Color("86")
 	BlueGray       = lipgloss.Color("110")
 	Periwinkle     = lipgloss.Color("67")
 	SteelBlue      = lipgloss.Color("31")

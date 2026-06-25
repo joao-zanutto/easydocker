@@ -120,9 +120,6 @@ func TestMapNetworkRow(t *testing.T) {
 	if row.ID != "1234567890ab" {
 		t.Fatalf("ID = %q, want %q", row.ID, "1234567890ab")
 	}
-	if row.Internal != "yes" || row.Attachable != "no" {
-		t.Fatalf("Internal/Attachable = %q/%q, want yes/no", row.Internal, row.Attachable)
-	}
 	if row.Endpoints != 2 {
 		t.Fatalf("Endpoints = %d, want 2", row.Endpoints)
 	}
@@ -153,9 +150,6 @@ func TestMapVolumeRow(t *testing.T) {
 	if row.Name != "cache" {
 		t.Fatalf("Name = %q, want cache", row.Name)
 	}
-	if row.RefCount != 3 {
-		t.Fatalf("RefCount = %d, want 3", row.RefCount)
-	}
 	if row.Size != "2.0 KiB" {
 		t.Fatalf("Size = %q, want 2.0 KiB", row.Size)
 	}
@@ -176,9 +170,6 @@ func TestMapVolumeRow_UnknownUsageAndInvalidTimestamp(t *testing.T) {
 
 	row := mapVolumeRow(item)
 
-	if row.RefCount != -1 {
-		t.Fatalf("RefCount = %d, want -1", row.RefCount)
-	}
 	if row.Size != "-" {
 		t.Fatalf("Size = %q, want '-'", row.Size)
 	}
