@@ -47,22 +47,19 @@ func (r *Repository) loadSupportingResourcesData(ctx context.Context, cli *clien
 		infoCh <- result[system.Info]{value: item, err: err}
 	}()
 
-	imagesRes := <-imagesCh
-	if imagesRes.err != nil {
-		cancel()
-		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list images: %w", imagesRes.err)
+	imagesRes, err := mustReceive(imagesCh, cancel)
+	if err != nil {
+		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list images: %w", err)
 	}
 
-	networksRes := <-networksCh
-	if networksRes.err != nil {
-		cancel()
-		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list networks: %w", networksRes.err)
+	networksRes, err := mustReceive(networksCh, cancel)
+	if err != nil {
+		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list networks: %w", err)
 	}
 
-	volumesRes := <-volumesCh
-	if volumesRes.err != nil {
-		cancel()
-		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list volumes: %w", volumesRes.err)
+	volumesRes, err := mustReceive(volumesCh, cancel)
+	if err != nil {
+		return nil, nil, nil, system.Info{}, fmt.Errorf("repository.list volumes: %w", err)
 	}
 
 	infoRes := <-infoCh
@@ -72,4 +69,14 @@ func (r *Repository) loadSupportingResourcesData(ctx context.Context, cli *clien
 	}
 
 	return imagesRes.value, networksRes.value, volumesRes.value, info, nil
+}
+
+func mustReceive[T any](ch <-chan result[T], cancel func()) (result[T], error) {
+	res := <-ch
+	if res.err != nil {
+		cancel()
+		var zero result[T]
+		return zero, res.err
+	}
+	return res, nil
 }

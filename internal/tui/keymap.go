@@ -52,7 +52,12 @@ func (m model) footerKeyMap() help.KeyMap {
 
 	bindings := []key.Binding{}
 	if m.browse.ActiveTab == tabContainers {
-		if row, ok := m.selectedContainerListRow(); ok && row.Kind == tables.RowComposeProject {
+		rows := m.browse.Data.ContainerListRows
+		var row tables.ContainerListRow
+		if len(rows) > 0 && m.browse.ContainerCursor >= 0 && m.browse.ContainerCursor < len(rows) {
+			row = rows[m.browse.ContainerCursor]
+		}
+		if row.Kind == tables.RowComposeProject {
 			action := "expand"
 			if row.ComposeExpanded {
 				action = "collapse"
@@ -69,15 +74,6 @@ func (m model) footerKeyMap() help.KeyMap {
 		bindings = append(bindings, browseKeys.OpenInspect)
 	}
 	return footerKeyMap{bindings: bindings}
-}
-
-func (m *model) selectedContainerListRow() (tables.ContainerListRow, bool) {
-	rows := m.browse.Data.ContainerListRows
-	var zero tables.ContainerListRow
-	if len(rows) == 0 || m.browse.ContainerCursor < 0 || m.browse.ContainerCursor >= len(rows) {
-		return zero, false
-	}
-	return rows[m.browse.ContainerCursor], true
 }
 
 type footerKeyMap struct {
