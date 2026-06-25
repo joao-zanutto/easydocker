@@ -4,9 +4,7 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type Transition struct {
-	LaunchShell bool
-}
+type Transition struct{}
 
 type ContentMsg struct {
 	SessionID   int

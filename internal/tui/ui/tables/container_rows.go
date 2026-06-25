@@ -26,11 +26,6 @@ type ContainerListRow struct {
 	TreePrefix      string
 }
 
-// ContainerColumns resolves container columns for a given table width.
-func ContainerColumns(tableWidth int) []ColumnDef {
-	return ResolveColumns(tableWidth, ContainerSchema)
-}
-
 // BuildContainerListRows creates a flat row model that includes compose project rows.
 func BuildContainerListRows(items []core.ContainerRow, composeExpanded map[string]bool) []ContainerListRow {
 	projects := core.AggregateComposeProjects(items)
@@ -87,7 +82,7 @@ func BuildContainerListRows(items []core.ContainerRow, composeExpanded map[strin
 // BuildContainerSpec builds a complete containers table spec.
 func BuildContainerSpec(width, cursor int, items []ContainerListRow, includeScopeHint bool, loadingIndicator string) Spec[ContainerListRow] {
 	tableWidth := ContentWidth(width)
-	columns := ContainerColumns(tableWidth)
+	columns := ResolveColumns(tableWidth, ContainerSchema)
 	stateWidth := ContainerStateColumnWidth(columns)
 	selectedContainerID := ""
 	selectedComposeProject := ""

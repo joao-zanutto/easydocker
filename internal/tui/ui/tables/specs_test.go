@@ -18,22 +18,22 @@ func TestTableColumnSchemas(t *testing.T) {
 	}{
 		{
 			name:       "containers",
-			columns:    ContainerColumns(tableWidth),
+			columns:    ResolveColumns(tableWidth, ContainerSchema),
 			wantHeader: []string{"NAME", "STATE", "CPU", "MEMORY", "IMAGE", "STATUS"},
 		},
 		{
 			name:       "images",
-			columns:    ImageColumns(tableWidth),
+			columns:    ResolveColumns(tableWidth, ImageSchema),
 			wantHeader: []string{"REPOSITORY", "TAGS", "SIZE", "CREATED", "IMAGE ID"},
 		},
 		{
 			name:       "networks",
-			columns:    NetworkColumns(tableWidth),
+			columns:    ResolveColumns(tableWidth, NetworkSchema),
 			wantHeader: []string{"NAME", "DRIVER", "ENDPOINTS", "CREATED"},
 		},
 		{
 			name:       "volumes",
-			columns:    VolumeColumns(tableWidth),
+			columns:    ResolveColumns(tableWidth, VolumeSchema),
 			wantHeader: []string{"NAME", "MOUNTPOINT", "SIZE", "CREATED"},
 		},
 	}

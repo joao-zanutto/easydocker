@@ -159,7 +159,6 @@ func (m model) renderHeader() string {
 		ActiveTab:        m.browse.ActiveTab,
 		ShowAll:          m.browse.ShowAll,
 		HideScope:        isViewer,
-		HideScopeKey:     m.browse.Filter.Active,
 		DimTabs:          isViewer,
 		Err:              m.err,
 		Tabs: []chrome.TabSpec{
@@ -236,21 +235,24 @@ func (m model) renderResourceList(width, height int) string {
 		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabImages:
-		spec := tables.BuildImageSpec(width, m.browse.ImageCursor, m.browse.Data.FilteredImages)
+		tw := tables.ContentWidth(width)
+		spec := tables.SimpleSpec(tw, "No images found.", m.browse.ImageCursor, m.browse.Data.FilteredImages, func(w int) []tables.ColumnDef { return tables.ResolveColumns(w, tables.ImageSchema) }, tables.ImageTableRow)
 		applyFilterToHeader(m, &spec)
 		if !hasFilter && len(spec.Columns) > 0 {
 			spec.Columns[0].Header += filterHint
 		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	case tabNetworks:
-		spec := tables.BuildNetworkSpec(width, m.browse.NetworkCursor, m.browse.Data.FilteredNetworks)
+		tw := tables.ContentWidth(width)
+		spec := tables.SimpleSpec(tw, "No networks found.", m.browse.NetworkCursor, m.browse.Data.FilteredNetworks, func(w int) []tables.ColumnDef { return tables.ResolveColumns(w, tables.NetworkSchema) }, tables.NetworkTableRow)
 		applyFilterToHeader(m, &spec)
 		if !hasFilter && len(spec.Columns) > 0 {
 			spec.Columns[0].Header += filterHint
 		}
 		return renderResourceTableFromSpec(m, width, height, spec)
 	default:
-		spec := tables.BuildVolumeSpec(width, m.browse.VolumeCursor, m.browse.Data.FilteredVolumes)
+		tw := tables.ContentWidth(width)
+		spec := tables.SimpleSpec(tw, "No volumes found.", m.browse.VolumeCursor, m.browse.Data.FilteredVolumes, func(w int) []tables.ColumnDef { return tables.ResolveColumns(w, tables.VolumeSchema) }, tables.VolumeTableRow)
 		applyFilterToHeader(m, &spec)
 		if !hasFilter && len(spec.Columns) > 0 {
 			spec.Columns[0].Header += filterHint

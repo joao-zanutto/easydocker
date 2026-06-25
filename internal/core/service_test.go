@@ -56,9 +56,6 @@ func TestServiceLoadSnapshot_ComposesDataAndMetrics(t *testing.T) {
 	if snapshot.TotalCPU != 99.9 || snapshot.TotalMem != 12345 {
 		t.Fatalf("snapshot totals = (%v, %v), want (99.9, 12345)", snapshot.TotalCPU, snapshot.TotalMem)
 	}
-	if snapshot.Timestamp.IsZero() {
-		t.Fatalf("snapshot timestamp should be populated")
-	}
 }
 
 func TestServiceLoadSnapshot_FailsOnContainerError(t *testing.T) {
@@ -94,9 +91,6 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenResourcesFail(t *testing.T) {
 	if snapshot.ComposeProjects == nil {
 		t.Fatalf("ComposeProjects should be computed even when resources fail")
 	}
-	if snapshot.Timestamp.IsZero() {
-		t.Fatalf("snapshot timestamp should be populated")
-	}
 }
 
 func TestServiceLoadSnapshot_ReturnsPartialWhenMetricsFail(t *testing.T) {
@@ -121,8 +115,5 @@ func TestServiceLoadSnapshot_ReturnsPartialWhenMetricsFail(t *testing.T) {
 	}
 	if snapshot.Containers[0].CPUPercent != 0 {
 		t.Fatalf("container CPU should be 0 when metrics fail, got %v", snapshot.Containers[0].CPUPercent)
-	}
-	if snapshot.Timestamp.IsZero() {
-		t.Fatalf("snapshot timestamp should be populated")
 	}
 }

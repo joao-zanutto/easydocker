@@ -50,11 +50,8 @@ type loadResultMsg struct {
 type shellDoneMsg struct{ err error }
 
 type inspectResultMsg struct {
-	resourceType core.ResourceType
-	resourceID   string
-	resourceName string
-	data         []string
-	err          error
+	data []string
+	err  error
 }
 
 type model struct {
@@ -84,13 +81,12 @@ type model struct {
 	menu   menu.MenuState
 	help   menu.HelpState
 
-	appliedConfig  []string
-	configFilePath string
+	appliedConfig []string
 
 	logTailLines int
 }
 
-func New(service core.ServiceInterface, appliedConfig []string, configFilePath string, logTailLines int) tea.Model {
+func New(service core.ServiceInterface, appliedConfig []string, logTailLines int) tea.Model {
 	s := spinner.New(spinner.WithSpinner(spinner.Points))
 
 	bm := browse.NewModel()
@@ -108,9 +104,8 @@ func New(service core.ServiceInterface, appliedConfig []string, configFilePath s
 		viewer:         vm,
 		menu:           menu.NewMenuState(),
 		help:           menu.NewHelpState(0, 0),
-		appliedConfig:  appliedConfig,
-		configFilePath: configFilePath,
-		logTailLines:   logTailLines,
+		appliedConfig: appliedConfig,
+		logTailLines:  logTailLines,
 		tickStarted:    false,
 	}
 }

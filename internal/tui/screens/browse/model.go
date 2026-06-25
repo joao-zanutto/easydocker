@@ -288,24 +288,15 @@ func (m Model) SelectedComposeProject() (core.ComposeProject, bool) {
 }
 
 func (m Model) SelectedImage() (core.ImageRow, bool) {
-	if len(m.Data.FilteredImages) > 0 {
-		return selectedAt(m.Data.FilteredImages, m.ImageCursor)
-	}
-	return selectedAt(m.Snapshot.Images, m.ImageCursor)
+	return selectedFrom(m.Data.FilteredImages, m.Snapshot.Images, m.ImageCursor)
 }
 
 func (m Model) SelectedNetwork() (core.NetworkRow, bool) {
-	if len(m.Data.FilteredNetworks) > 0 {
-		return selectedAt(m.Data.FilteredNetworks, m.NetworkCursor)
-	}
-	return selectedAt(m.Snapshot.Networks, m.NetworkCursor)
+	return selectedFrom(m.Data.FilteredNetworks, m.Snapshot.Networks, m.NetworkCursor)
 }
 
 func (m Model) SelectedVolume() (core.VolumeRow, bool) {
-	if len(m.Data.FilteredVolumes) > 0 {
-		return selectedAt(m.Data.FilteredVolumes, m.VolumeCursor)
-	}
-	return selectedAt(m.Snapshot.Volumes, m.VolumeCursor)
+	return selectedFrom(m.Data.FilteredVolumes, m.Snapshot.Volumes, m.VolumeCursor)
 }
 
 func (m Model) cursorOnComposeRow() bool {
@@ -341,6 +332,13 @@ func selectedAt[T any](items []T, cursor int) (T, bool) {
 		return zero, false
 	}
 	return items[cursor], true
+}
+
+func selectedFrom[T any](filtered, all []T, cursor int) (T, bool) {
+	if len(filtered) > 0 {
+		return selectedAt(filtered, cursor)
+	}
+	return selectedAt(all, cursor)
 }
 
 type TransitionMsg struct {

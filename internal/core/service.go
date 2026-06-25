@@ -196,8 +196,6 @@ func (s *Service) LoadSnapshot(ctx context.Context) (Snapshot, error) {
 	} else {
 		resources.ComposeProjects = AggregateComposeProjects(containers)
 	}
-	resources.Timestamp = time.Now()
-
 	return resources, nil
 }
 

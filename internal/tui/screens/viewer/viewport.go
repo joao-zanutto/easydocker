@@ -32,7 +32,6 @@ func init() {
 type Viewport struct {
 	*bubblesview.Model
 	WrapLines      bool
-	WrapAnchored   bool
 	Filter         components.FilterState
 	Data           []string
 	Follow         bool

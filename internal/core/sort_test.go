@@ -83,7 +83,7 @@ func TestSortNetworks_CreatedDescThenNameAsc(t *testing.T) {
 		{Name: "n", CreatedAt: newer},
 	}
 
-	SortNetworks(rows)
+	SortByCreatedAt(rows)
 
 	wantNames := []string{"n", "a", "z"}
 	for i, want := range wantNames {
@@ -100,7 +100,7 @@ func TestSortVolumes_CreatedDescThenNameAsc(t *testing.T) {
 		{Name: "n", CreatedAt: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 	}
 
-	SortVolumes(rows)
+	SortByCreatedAt(rows)
 
 	wantNames := []string{"n", "a", "z"}
 	for i, want := range wantNames {

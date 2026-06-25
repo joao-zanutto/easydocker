@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"easydocker/internal/core"
 
@@ -16,16 +15,14 @@ import (
 )
 
 type Repository struct {
-	clientMu  sync.Mutex
-	client    *client.Client
-	clientErr error
-	now       func() time.Time
+	clientMu sync.Mutex
+	client   *client.Client
 }
 
 var _ core.Repository = (*Repository)(nil)
 
 func NewRepository() *Repository {
-	return &Repository{now: time.Now}
+	return &Repository{}
 }
 
 func (r *Repository) LoadContainerRows(ctx context.Context) ([]core.ContainerRow, error) {
@@ -52,10 +49,9 @@ func (r *Repository) LoadSupportingResources(ctx context.Context) (core.Snapshot
 		}
 
 		snapshot := core.Snapshot{
-			Images:    make([]core.ImageRow, 0, len(images)),
-			Networks:  make([]core.NetworkRow, 0, len(networks)),
-			Volumes:   make([]core.VolumeRow, 0, len(volumes)),
-			Timestamp: r.now(),
+			Images:   make([]core.ImageRow, 0, len(images)),
+			Networks: make([]core.NetworkRow, 0, len(networks)),
+			Volumes:  make([]core.VolumeRow, 0, len(volumes)),
 		}
 
 		for _, item := range images {
@@ -66,12 +62,12 @@ func (r *Repository) LoadSupportingResources(ctx context.Context) (core.Snapshot
 		for _, item := range networks {
 			snapshot.Networks = append(snapshot.Networks, mapNetworkRow(item))
 		}
-		core.SortNetworks(snapshot.Networks)
+		core.SortByCreatedAt(snapshot.Networks)
 
 		for _, item := range volumes {
 			snapshot.Volumes = append(snapshot.Volumes, mapVolumeRow(item))
 		}
-		core.SortVolumes(snapshot.Volumes)
+		core.SortByCreatedAt(snapshot.Volumes)
 
 		snapshot.TotalCPU = 0
 		snapshot.TotalMem = 0
@@ -123,7 +119,6 @@ func (r *Repository) dockerClient() (*client.Client, error) {
 	}
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		r.clientErr = err
 		return nil, err
 	}
 	r.client = cli

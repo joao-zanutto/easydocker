@@ -78,8 +78,6 @@ type HeaderStyles struct {
 	ErrorText lipgloss.Style
 	Key       lipgloss.Style
 	KeyText   lipgloss.Style
-	Tab       lipgloss.Style
-	ActiveTab lipgloss.Style
 }
 
 type FooterStyles struct {
@@ -103,7 +101,6 @@ type HeaderInput struct {
 	ActiveTab        shared.Tab
 	ShowAll          bool
 	HideScope        bool
-	HideScopeKey     bool
 	DimTabs          bool
 	Err              error
 	Tabs             []TabSpec

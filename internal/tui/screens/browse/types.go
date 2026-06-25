@@ -4,8 +4,6 @@ import (
 	"easydocker/internal/tui/ui/components"
 )
 
-const FilterHeaderHeight = components.FilterHeaderHeight
-
 type State struct {
 	Filter components.FilterState
 }
