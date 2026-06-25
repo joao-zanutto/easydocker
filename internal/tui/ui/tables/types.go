@@ -3,7 +3,7 @@ package tables
 // ColumnDef defines a table column specification.
 type ColumnDef struct {
 	Header      string
-	MinWidth    int
+	Width       int
 	Desired     func(tableWidth int) int
 	PinnedRight bool
 }

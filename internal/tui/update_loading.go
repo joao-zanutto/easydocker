@@ -115,7 +115,6 @@ func (m *model) handleInspectResultMsg(msg inspectResultMsg) (tea.Model, tea.Cmd
 }
 
 func (m *model) applyLoadingTransition(transition shared.Transition) {
-	m.loading = transition.Loading
 	m.loadingStage = transition.Stage
 	m.err = transition.Err
 }

@@ -41,7 +41,7 @@ func NewKeyMap() KeyMap {
 	}
 }
 
-func (k KeyMap) ShortHelp(resourceType core.ResourceType, contentType ContentType, containerState core.ContainerState) []key.Binding {
+func (k KeyMap) ShortHelp(resourceType core.ResourceType, containerState core.ContainerState) []key.Binding {
 	bindings := []key.Binding{}
 
 	if resourceType == core.ResourceContainer && shared.CanOpenShell(containerState) {

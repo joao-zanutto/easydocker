@@ -32,27 +32,28 @@ func RenderContent(vm ViewModel) string {
 	if vm.Width == 0 || vm.Height == 0 {
 		return ""
 	}
-	layout := util.ComputeFrameLayout(vm.Width, vm.Height, vm.Styles.SubpageFrame)
+	contentWidth := util.FrameContentWidth(vm.Width, vm.Styles.SubpageFrame)
+	contentHeight := util.FrameContentHeight(vm.Height, vm.Styles.SubpageFrame)
 	headerVM := vm
-	headerVM.Width = layout.ContentWidth
+	headerVM.Width = contentWidth
 	breadcrumb := vm.Breadcrumb
 	if breadcrumb == "" {
 		resourceLabel := util.ResourceLabel(vm.ResourceType)
 		contentLabel := getContentLabel(vm.ContentType)
 		breadcrumb = util.ClampSingleLine(
 			fmt.Sprintf("%s > %s > %s |", resourceLabel, vm.ContainerName, contentLabel),
-			layout.ContentWidth,
+			contentWidth,
 		)
 	} else {
-		breadcrumb = util.ClampSingleLine(breadcrumb+" |", layout.ContentWidth)
+		breadcrumb = util.ClampSingleLine(breadcrumb+" |", contentWidth)
 	}
-	contentHeight := VisibleRowsForContent(layout.ContentHeight)
+	rows := VisibleRowsForContent(contentHeight)
 
 	header := renderHeader(headerVM, breadcrumb, vm.Vp.Filter)
-	headerDivider := components.RenderTitleDivider(vm.Styles.Divider, layout.ContentWidth)
-	panel := renderPanel(vm, layout.ContentWidth, contentHeight)
+	headerDivider := components.RenderTitleDivider(vm.Styles.Divider, contentWidth)
+	panel := renderPanel(vm, contentWidth, rows)
 
-	return util.RenderFramedContent(vm.Styles.SubpageFrame, layout, util.JoinSections(header, headerDivider, panel))
+	return util.RenderInFrame(vm.Styles.SubpageFrame, util.JoinSections(header, headerDivider, panel), vm.Width, vm.Height)
 }
 
 func VisibleRowsForContent(contentHeight int) int {

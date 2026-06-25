@@ -20,10 +20,6 @@ func (m model) footerKeyMap() help.KeyMap {
 			return footerKeyMap{bindings: []key.Binding{shared.EscBinding("back")}}
 		}
 		viewerKeys := viewer.NewKeyMap()
-		contentType := viewer.ContentTypeLogs
-		if m.screen == shared.InspectViewer {
-			contentType = viewer.ContentTypeInspect
-		}
 		if m.viewer.Vp.Filter.Active {
 			bindings := []key.Binding{
 				shared.EscBinding("clear filter"),
@@ -32,12 +28,12 @@ func (m model) footerKeyMap() help.KeyMap {
 			return footerKeyMap{bindings: bindings}
 		}
 		var containerState core.ContainerState
-		if m.browse.ActiveTab == tabContainers {
+		if m.browse.ActiveTab == shared.TabContainers {
 			if c, ok := m.selectedContainer(); ok {
 				containerState = c.State
 			}
 		}
-		return footerKeyMap{bindings: viewerKeys.ShortHelp(shared.TabToResourceType(m.browse.ActiveTab), contentType, containerState)}
+		return footerKeyMap{bindings: viewerKeys.ShortHelp(shared.TabToResourceType(m.browse.ActiveTab), containerState)}
 	}
 
 	browseKeys := browse.NewKeyMap()
@@ -51,11 +47,11 @@ func (m model) footerKeyMap() help.KeyMap {
 	}
 
 	bindings := []key.Binding{}
-	if m.browse.ActiveTab == tabContainers {
+	if m.browse.ActiveTab == shared.TabContainers {
 		rows := m.browse.Data.ContainerListRows
 		var row tables.ContainerListRow
-		if len(rows) > 0 && m.browse.ContainerCursor >= 0 && m.browse.ContainerCursor < len(rows) {
-			row = rows[m.browse.ContainerCursor]
+		if len(rows) > 0 && m.browse.Cursors.Container >= 0 && m.browse.Cursors.Container < len(rows) {
+			row = rows[m.browse.Cursors.Container]
 		}
 		if row.Kind == tables.RowComposeProject {
 			action := "expand"
@@ -70,7 +66,7 @@ func (m model) footerKeyMap() help.KeyMap {
 			}
 		}
 	}
-	if m.browse.ActiveTab == tabImages || m.browse.ActiveTab == tabNetworks || m.browse.ActiveTab == tabVolumes {
+	if m.browse.ActiveTab == shared.TabImages || m.browse.ActiveTab == shared.TabNetworks || m.browse.ActiveTab == shared.TabVolumes {
 		bindings = append(bindings, browseKeys.OpenInspect)
 	}
 	return footerKeyMap{bindings: bindings}

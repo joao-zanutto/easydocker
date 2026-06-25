@@ -17,7 +17,6 @@ type testModelBuilder struct {
 func newTestModel() testModelBuilder {
 	m := unwrapModel(model{
 		dataDirty:    true,
-		loading:      true,
 		screen:       shared.Main,
 		loadingStage: shared.StageContainers,
 		styles:       defaultStyles(),
@@ -36,15 +35,14 @@ func (b testModelBuilder) withSize(width, height int) testModelBuilder {
 	return b
 }
 
-func (b testModelBuilder) withLoading(loading bool, stage shared.Stage) testModelBuilder {
-	b.m.loading = loading
+func (b testModelBuilder) withLoading(stage shared.Stage) testModelBuilder {
 	b.m.loadingStage = stage
 	return b
 }
 
 func (b testModelBuilder) withContainers(containers ...core.ContainerRow) testModelBuilder {
 	b.m.browse.Snapshot.Containers = containers
-	b.m.browse.ActiveTab = tabContainers
+	b.m.browse.ActiveTab = shared.TabContainers
 	b.m.browse.ShowAll = true
 	return b
 }

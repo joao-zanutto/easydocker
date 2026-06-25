@@ -60,7 +60,6 @@ type ContainerRow struct {
 	FullID             string
 	Name               string
 	ComposeProject     string
-	ComposeService     string
 	ComposeWorkingDir  string
 	ComposeConfigFiles string
 	Image              string

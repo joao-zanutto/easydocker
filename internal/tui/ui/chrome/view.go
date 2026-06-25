@@ -2,7 +2,6 @@ package chrome
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"easydocker/internal/core"
@@ -18,16 +17,9 @@ func formatMemoryUsage(usage string, percent float64, limit string) string {
 		return "-"
 	}
 	if limit != "" && limit != "-" {
-		return fmt.Sprintf("%s / %s (%s)", usage, limit, renderPercent(percent))
+		return fmt.Sprintf("%s / %s (%s)", usage, limit, util.FormatPercent(percent))
 	}
-	return fmt.Sprintf("%s (%s)", usage, renderPercent(percent))
-}
-
-func renderPercent(value float64) string {
-	if math.IsNaN(value) || math.IsInf(value, 0) {
-		return "-"
-	}
-	return fmt.Sprintf("%.1f%%", value)
+	return fmt.Sprintf("%s (%s)", usage, util.FormatPercent(percent))
 }
 
 func totalsText(snapshot core.Snapshot, loadingStage shared.Stage, metricsLoaded bool, indicator string, level totalsLevel) string {
@@ -37,12 +29,12 @@ func totalsText(snapshot core.Snapshot, loadingStage shared.Stage, metricsLoaded
 	showingIndicator := !metricsLoaded && (loadingStage == shared.StageMetrics || (loadingStage != shared.StageIdle && snapshot.TotalCPU == 0 && snapshot.TotalMem == 0))
 
 	if !showingIndicator {
-		cpuVal := fmt.Sprintf("%-6s", renderPercent(snapshot.TotalCPU))
+		cpuVal := fmt.Sprintf("%-6s", util.FormatPercent(snapshot.TotalCPU))
 		switch level {
 		case totalsFull:
 			return cpuLabel + " " + cpuVal + " " + memLabel + " " + memTotal(snapshot)
 		case totalsPct:
-			memVal := fmt.Sprintf("%-6s", renderPercent(memPercent(snapshot)))
+			memVal := fmt.Sprintf("%-6s", util.FormatPercent(memPercent(snapshot)))
 			return cpuLabel + " " + cpuVal + " " + memLabel + " " + memVal
 		default:
 			return cpuLabel + " " + cpuVal
@@ -176,17 +168,7 @@ func RenderHeader(input HeaderInput) string {
 	for _, r := range ladder {
 		tabs := renderHeaderTabsVariant(input.Tabs, r.variant, input.RenderTab)
 
-		if scopePrefix != "" {
-			budget := max(1, innerWidth-6)
-			if joinedDisplayWidth(tabs)+util.DisplayWidth(scopePrefix) <= budget {
-				for i, tab := range input.Tabs {
-					if tab.Tab == shared.TabContainers {
-						tabs[i] = scopePrefix + tabs[i]
-						break
-					}
-				}
-			}
-		}
+		insertScopePrefix(tabs, scopePrefix, innerWidth, input.Tabs)
 
 		tt := strings.Join(tabs, "│ ")
 		tw := util.DisplayWidth(tt)
@@ -212,17 +194,7 @@ func RenderHeader(input HeaderInput) string {
 
 	{
 		tabs := renderHeaderTabsVariant(input.Tabs, tabLabelIconOnly, input.RenderTab)
-		if scopePrefix != "" {
-			budget := max(1, innerWidth-6)
-			if joinedDisplayWidth(tabs)+util.DisplayWidth(scopePrefix) <= budget {
-				for i, tab := range input.Tabs {
-					if tab.Tab == shared.TabContainers {
-						tabs[i] = scopePrefix + tabs[i]
-						break
-					}
-				}
-			}
-		}
+		insertScopePrefix(tabs, scopePrefix, innerWidth, input.Tabs)
 		tabsText = strings.Join(tabs, "│ ")
 		tabsWidth = util.DisplayWidth(tabsText)
 		if stageText != "" {
@@ -329,17 +301,32 @@ func RenderLoadingStageLabel(loadingStage shared.Stage, metricsLoaded bool) stri
 	}
 }
 
+func insertScopePrefix(tabs []string, scopePrefix string, innerWidth int, specs []TabSpec) {
+	if scopePrefix == "" {
+		return
+	}
+	budget := max(1, innerWidth-6)
+	if joinedDisplayWidth(tabs)+util.DisplayWidth(scopePrefix) <= budget {
+		for i, spec := range specs {
+			if spec.Tab == shared.TabContainers {
+				tabs[i] = scopePrefix + tabs[i]
+				break
+			}
+		}
+	}
+}
+
 func renderEdgeAlignedLine(left, right string, width int) string {
 	if width <= 0 {
 		return ""
 	}
 	if strings.TrimSpace(right) == "" {
-		return util.ClampSingleLine(util.ConstrainLine(left, width), width)
+		return util.ConstrainLine(left, width)
 	}
 	leftWidth := util.DisplayWidth(left)
 	rightWidth := util.DisplayWidth(right)
 	if leftWidth+rightWidth+1 > width {
-		return util.ClampSingleLine(util.ConstrainLine(left+" "+right, width), width)
+		return util.ConstrainLine(left+" "+right, width)
 	}
 	return util.ClampSingleLine(left+strings.Repeat(" ", width-leftWidth-rightWidth)+right, width)
 }

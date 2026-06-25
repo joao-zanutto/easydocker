@@ -43,7 +43,7 @@ install/                 # install scripts (sh + ps1)
 - **Dependency rules** (`dependency_rules_test.go`): `screens/`, `shared/`, `ui/` subpackages must never import `internal/tui` — enforced by test.
 - **3-stage initial load**: `containersCmd` → `resourcesCmd` → `metricsCmd` (in `model.go:Init()`). Subsequent ticks reload full snapshot in one pass (`Service.LoadSnapshot()`). Poll interval: 1s (`pollInterval` in `model.go`).
 - **Timeouts** (`core/service.go`): 5s default, 20s for tails >500 lines, 60s for >2000 lines or `tail=0` (all logs).
-- **Spinners**: `metricsSpinner` = `spinner.Points`, `containerSpinner` = `spinner.Points`, `viewer.Spinner` = `spinner.Dot` — three separate spinner instances.
+- **Spinners**: `m.spinner` = `spinner.Points` (model.go), `m.viewer.Spinner` = `spinner.Dot` (viewer/model.go) — two separate spinner instances.
 - **Partial-failure**: metrics/resources failures degrade gracefully (`core.Service`).
 
 ## Feature conventions

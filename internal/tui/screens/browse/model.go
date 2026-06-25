@@ -28,10 +28,7 @@ type Model struct {
 	Filter          FilterState
 	ComposeExpanded map[string]bool
 
-	ContainerCursor int
-	ImageCursor     int
-	NetworkCursor   int
-	VolumeCursor    int
+	Cursors shared.Cursors
 
 	Width  int
 	Height int
@@ -189,33 +186,14 @@ func (m Model) moveActiveTab(delta int) Model {
 
 func (m Model) moveCursor(delta int) Model {
 	count := m.ItemCountForTab(m.ActiveTab)
-	c := m.cursors()
-	_ = shared.MoveCursorForTab(&c, m.ActiveTab, delta, count)
-	m.ContainerCursor = c.Container
-	m.ImageCursor = c.Image
-	m.NetworkCursor = c.Network
-	m.VolumeCursor = c.Volume
+	_ = shared.MoveCursorForTab(&m.Cursors, m.ActiveTab, delta, count)
 	return m
 }
 
 func (m Model) ClampCursors() Model {
 	tabs := []shared.Tab{shared.TabContainers, shared.TabImages, shared.TabNetworks, shared.TabVolumes}
-	c := m.cursors()
-	shared.ClampAllCursors(&c, tabs, m.ItemCountForTab)
-	m.ContainerCursor = c.Container
-	m.ImageCursor = c.Image
-	m.NetworkCursor = c.Network
-	m.VolumeCursor = c.Volume
+	shared.ClampAllCursors(&m.Cursors, tabs, m.ItemCountForTab)
 	return m
-}
-
-func (m Model) cursors() shared.Cursors {
-	return shared.Cursors{
-		Container: m.ContainerCursor,
-		Image:     m.ImageCursor,
-		Network:   m.NetworkCursor,
-		Volume:    m.VolumeCursor,
-	}
 }
 
 func (m Model) ItemCountForTab(tab shared.Tab) int {
@@ -267,20 +245,20 @@ func (m Model) selections() SelectionSet {
 
 func (m Model) SelectedContainer() (core.ContainerRow, bool) {
 	if len(m.Data.ContainerListRows) > 0 {
-		row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
+		row, ok := selectedAt(m.Data.ContainerListRows, m.Cursors.Container)
 		if !ok || row.Kind != tables.RowContainer {
 			return core.ContainerRow{}, false
 		}
 		return row.Container, true
 	}
-	return selectedAt(m.Snapshot.Containers, m.ContainerCursor)
+	return selectedAt(m.Snapshot.Containers, m.Cursors.Container)
 }
 
 func (m Model) SelectedComposeProject() (core.ComposeProject, bool) {
 	if len(m.Data.ContainerListRows) == 0 {
 		return core.ComposeProject{}, false
 	}
-	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
+	row, ok := selectedAt(m.Data.ContainerListRows, m.Cursors.Container)
 	if !ok || row.Kind != tables.RowComposeProject {
 		return core.ComposeProject{}, false
 	}
@@ -288,15 +266,15 @@ func (m Model) SelectedComposeProject() (core.ComposeProject, bool) {
 }
 
 func (m Model) SelectedImage() (core.ImageRow, bool) {
-	return selectedFrom(m.Data.FilteredImages, m.Snapshot.Images, m.ImageCursor)
+	return selectedFrom(m.Data.FilteredImages, m.Snapshot.Images, m.Cursors.Image)
 }
 
 func (m Model) SelectedNetwork() (core.NetworkRow, bool) {
-	return selectedFrom(m.Data.FilteredNetworks, m.Snapshot.Networks, m.NetworkCursor)
+	return selectedFrom(m.Data.FilteredNetworks, m.Snapshot.Networks, m.Cursors.Network)
 }
 
 func (m Model) SelectedVolume() (core.VolumeRow, bool) {
-	return selectedFrom(m.Data.FilteredVolumes, m.Snapshot.Volumes, m.VolumeCursor)
+	return selectedFrom(m.Data.FilteredVolumes, m.Snapshot.Volumes, m.Cursors.Volume)
 }
 
 func (m Model) cursorOnComposeRow() bool {
@@ -306,7 +284,7 @@ func (m Model) cursorOnComposeRow() bool {
 	if len(m.Data.ContainerListRows) == 0 {
 		return false
 	}
-	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
+	row, ok := selectedAt(m.Data.ContainerListRows, m.Cursors.Container)
 	return ok && row.Kind == tables.RowComposeProject
 }
 
@@ -314,7 +292,7 @@ func (m Model) toggleCompose() Model {
 	if len(m.Data.ContainerListRows) == 0 {
 		return m
 	}
-	row, ok := selectedAt(m.Data.ContainerListRows, m.ContainerCursor)
+	row, ok := selectedAt(m.Data.ContainerListRows, m.Cursors.Container)
 	if !ok || row.Kind != tables.RowComposeProject {
 		return m
 	}

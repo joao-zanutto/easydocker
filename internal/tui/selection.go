@@ -11,7 +11,7 @@ import (
 )
 
 func (m *model) enterLogsModeIfContainerSelected() tea.Cmd {
-	if m.browse.ActiveTab != tabContainers {
+	if m.browse.ActiveTab != shared.TabContainers {
 		return nil
 	}
 	container, ok := m.selectedContainer()
@@ -22,7 +22,7 @@ func (m *model) enterLogsModeIfContainerSelected() tea.Cmd {
 }
 
 func (m *model) openShellIfContainerSelected() tea.Cmd {
-	if m.browse.ActiveTab != tabContainers {
+	if m.browse.ActiveTab != shared.TabContainers {
 		return nil
 	}
 	container, ok := m.selectedContainer()
@@ -52,15 +52,8 @@ func (m *model) selectedVolume() (core.VolumeRow, bool) {
 }
 
 func (m *model) selectedLogsContainer() (core.ContainerRow, bool) {
-	if m.viewer.ContainerID == "" {
-		return core.ContainerRow{}, false
-	}
-	for _, c := range m.browse.Snapshot.Containers {
-		if c.FullID == m.viewer.ContainerID {
-			return c, true
-		}
-	}
-	return core.ContainerRow{}, false
+	_, row, ok := m.findContainerByID(m.viewer.ContainerID)
+	return row, ok
 }
 
 func (m *model) filteredContainers() []core.ContainerRow {
@@ -68,16 +61,21 @@ func (m *model) filteredContainers() []core.ContainerRow {
 	return core.FilterContainersByQuery(scoped, m.browse.Filter.Query)
 }
 
-func (m *model) findContainerIndexByID(id string) (int, bool) {
+func (m *model) findContainerByID(id string) (int, core.ContainerRow, bool) {
 	for index, row := range m.browse.Data.ContainerListRows {
 		if row.Kind != tables.RowContainer {
 			continue
 		}
 		if row.Container.FullID == id {
-			return index, true
+			return index, row.Container, true
 		}
 	}
-	return 0, false
+	return 0, core.ContainerRow{}, false
+}
+
+func (m *model) findContainerIndexByID(id string) (int, bool) {
+	index, _, ok := m.findContainerByID(id)
+	return index, ok
 }
 
 func (m *model) reconcileLogsSelection() error {

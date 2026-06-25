@@ -58,7 +58,7 @@ func (m model) renderMain(height int) string {
 	totalWidth := max(1, m.width)
 	totalHeight := max(1, height)
 
-	if m.screen == shared.LogViewer && m.browse.ActiveTab == tabContainers {
+	if m.screen == shared.LogViewer && m.browse.ActiveTab == shared.TabContainers {
 		container, ok := m.selectedLogsContainer()
 		if !ok {
 			return m.styles.Chrome.ErrorText.Render("Selected container is no longer available.")
@@ -74,60 +74,86 @@ func (m model) renderMain(height int) string {
 		return m.renderInspectContent(totalWidth, totalHeight)
 	}
 
-	layout := util.ComputeFrameLayout(totalWidth, totalHeight, m.styles.Browse.MainFrame)
-	m.browse.Width = layout.ContentWidth
-	m.browse.Height = layout.ContentHeight
+	contentWidth := util.FrameContentWidth(totalWidth, m.styles.Browse.MainFrame)
+	contentHeight := util.FrameContentHeight(totalHeight, m.styles.Browse.MainFrame)
+	m.browse.Width = contentWidth
+	m.browse.Height = contentHeight
 
 	m.browse.RenderedList = m.renderResourceList(m.browse.Width, browse.ListHeightForContent(m.browse.Height))
 
 	content := m.browse.View()
-	return util.RenderFramedContent(m.styles.Browse.MainFrame, layout, content)
+	return util.RenderInFrame(m.styles.Browse.MainFrame, content, totalWidth, totalHeight)
+}
+
+func (m model) renderViewer(totalWidth, totalHeight int, opts ...viewerOption) string {
+	m.viewer.Width = totalWidth
+	m.viewer.Height = totalHeight
+	m.viewer.Styles = m.viewerStyles()
+	for _, opt := range opts {
+		opt(&m.viewer)
+	}
+	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
+	return m.viewer.View()
+}
+
+type viewerOption func(*viewer.Model)
+
+func viewerContentType(ct viewer.ContentType) viewerOption {
+	return func(vm *viewer.Model) { vm.Vp.ContentType = ct }
+}
+
+func viewerResourceType(rt core.ResourceType) viewerOption {
+	return func(vm *viewer.Model) { vm.ResourceType = rt }
+}
+
+func viewerBreadcrumb(b string) viewerOption {
+	return func(vm *viewer.Model) { vm.Breadcrumb = b }
+}
+
+func viewerContainerName(name string) viewerOption {
+	return func(vm *viewer.Model) { vm.ContainerName = name }
+}
+
+func viewerLoadingMsg(msg string) viewerOption {
+	return func(vm *viewer.Model) { vm.LoadingMsg = msg }
+}
+
+func viewerEmptyMsg(msg string) viewerOption {
+	return func(vm *viewer.Model) { vm.EmptyMsg = msg }
 }
 
 func (m model) renderLogsContent(container core.ContainerRow, totalWidth, totalHeight int) string {
-	m.viewer.Width = totalWidth
-	m.viewer.Height = totalHeight
-	m.viewer.ContainerName = container.Name
-	m.viewer.Breadcrumb = "Containers > " + container.Name + " > Logs"
-	m.viewer.Vp.ContentType = viewer.ContentTypeLogs
-	m.viewer.ResourceType = core.ResourceContainer
-	m.viewer.LoadingMsg = "Loading logs..."
-	m.viewer.EmptyMsg = "No logs found for this container."
-	m.viewer.Styles = m.viewerStyles()
-	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	return m.viewer.View()
+	return m.renderViewer(totalWidth, totalHeight,
+		viewerContainerName(container.Name),
+		viewerBreadcrumb("Containers > "+container.Name+" > Logs"),
+		viewerContentType(viewer.ContentTypeLogs),
+		viewerResourceType(core.ResourceContainer),
+		viewerLoadingMsg("Loading logs..."),
+		viewerEmptyMsg("No logs found for this container."),
+	)
 }
 
 func (m model) renderInspectContent(totalWidth, totalHeight int) string {
 	resourceLabel := util.ResourceLabel(shared.TabToResourceType(m.browse.ActiveTab))
 	containerName := m.viewer.Inspect.ResourceName
-	breadcrumb := resourceLabel + " > " + containerName + " > Inspect"
-
-	m.viewer.Width = totalWidth
-	m.viewer.Height = totalHeight
-	m.viewer.ContainerName = containerName
-	m.viewer.Breadcrumb = breadcrumb
-	m.viewer.Vp.ContentType = viewer.ContentTypeInspect
-	m.viewer.ResourceType = shared.TabToResourceType(m.browse.ActiveTab)
-	m.viewer.LoadingMsg = "Loading inspect..."
-	m.viewer.EmptyMsg = "No inspect data available."
-	m.viewer.Styles = m.viewerStyles()
-	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	return m.viewer.View()
+	return m.renderViewer(totalWidth, totalHeight,
+		viewerContainerName(containerName),
+		viewerBreadcrumb(resourceLabel+" > "+containerName+" > Inspect"),
+		viewerContentType(viewer.ContentTypeInspect),
+		viewerResourceType(shared.TabToResourceType(m.browse.ActiveTab)),
+		viewerLoadingMsg("Loading inspect..."),
+		viewerEmptyMsg("No inspect data available."),
+	)
 }
 
 func (m model) renderConfigContent(totalWidth, totalHeight int) string {
-	m.viewer.Width = totalWidth
-	m.viewer.Height = totalHeight
-	m.viewer.ContainerName = ""
-	m.viewer.Breadcrumb = "Configuration"
-	m.viewer.Vp.ContentType = viewer.ContentTypeConfig
-	m.viewer.ResourceType = 0
-	m.viewer.LoadingMsg = "Loading..."
-	m.viewer.EmptyMsg = "No configuration data available."
-	m.viewer.Styles = m.viewerStyles()
-	m.viewer.Vp.SyncFromData(m.viewer.VisibleWidth(), m.viewer.VisibleRows())
-	return m.viewer.View()
+	return m.renderViewer(totalWidth, totalHeight,
+		viewerContainerName(""),
+		viewerBreadcrumb("Configuration"),
+		viewerContentType(viewer.ContentTypeConfig),
+		viewerLoadingMsg("Loading..."),
+		viewerEmptyMsg("No configuration data available."),
+	)
 }
 
 func (m model) viewerStyles() viewer.Styles {
@@ -162,10 +188,10 @@ func (m model) renderHeader() string {
 		DimTabs:          isViewer,
 		Err:              m.err,
 		Tabs: []chrome.TabSpec{
-			{Tab: tabContainers, Icon: "🐳", Name: "Containers", Count: len(m.browse.Snapshot.Containers)},
-			{Tab: tabImages, Icon: "💿", Name: "Images", Count: len(m.browse.Snapshot.Images)},
-			{Tab: tabNetworks, Icon: "🔌", Name: "Networks", Count: len(m.browse.Snapshot.Networks)},
-			{Tab: tabVolumes, Icon: "📂", Name: "Volumes", Count: len(m.browse.Snapshot.Volumes)},
+			{Tab: shared.TabContainers, Icon: "🐳", Name: "Containers", Count: len(m.browse.Snapshot.Containers)},
+			{Tab: shared.TabImages, Icon: "💿", Name: "Images", Count: len(m.browse.Snapshot.Images)},
+			{Tab: shared.TabNetworks, Icon: "🔌", Name: "Networks", Count: len(m.browse.Snapshot.Networks)},
+			{Tab: shared.TabVolumes, Icon: "📂", Name: "Volumes", Count: len(m.browse.Snapshot.Volumes)},
 		},
 		Styles: chrome.HeaderStyles{
 			Header:    m.styles.Chrome.Header,
@@ -227,38 +253,30 @@ func (m model) renderResourceList(width, height int) string {
 	}
 
 	switch m.browse.ActiveTab {
-	case tabContainers:
-		spec := tables.BuildContainerSpec(width, m.browse.ContainerCursor, m.browse.Data.ContainerListRows, m.browse.ActiveTab == tabContainers, m.browse.Data.MetricsLoadingIndicator)
+	case shared.TabContainers:
+		spec := tables.BuildContainerSpec(width, m.browse.Cursors.Container, m.browse.Data.ContainerListRows, m.browse.ActiveTab == shared.TabContainers, m.browse.Data.MetricsLoadingIndicator)
 		applyFilterToHeader(m, &spec)
 		if !hasFilter && len(spec.Columns) > 0 {
 			spec.Columns[0].Header += filterHint
 		}
 		return renderResourceTableFromSpec(m, width, height, spec)
-	case tabImages:
-		tw := tables.ContentWidth(width)
-		spec := tables.SimpleSpec(tw, "No images found.", m.browse.ImageCursor, m.browse.Data.FilteredImages, func(w int) []tables.ColumnDef { return tables.ResolveColumns(w, tables.ImageSchema) }, tables.ImageTableRow)
-		applyFilterToHeader(m, &spec)
-		if !hasFilter && len(spec.Columns) > 0 {
-			spec.Columns[0].Header += filterHint
-		}
-		return renderResourceTableFromSpec(m, width, height, spec)
-	case tabNetworks:
-		tw := tables.ContentWidth(width)
-		spec := tables.SimpleSpec(tw, "No networks found.", m.browse.NetworkCursor, m.browse.Data.FilteredNetworks, func(w int) []tables.ColumnDef { return tables.ResolveColumns(w, tables.NetworkSchema) }, tables.NetworkTableRow)
-		applyFilterToHeader(m, &spec)
-		if !hasFilter && len(spec.Columns) > 0 {
-			spec.Columns[0].Header += filterHint
-		}
-		return renderResourceTableFromSpec(m, width, height, spec)
+	case shared.TabImages:
+		return renderSimpleResourceTable(m, width, height, m.browse.Cursors.Image, m.browse.Data.FilteredImages, tables.ImageSchema, tables.ImageTableRow, "No images found.", hasFilter, filterHint)
+	case shared.TabNetworks:
+		return renderSimpleResourceTable(m, width, height, m.browse.Cursors.Network, m.browse.Data.FilteredNetworks, tables.NetworkSchema, tables.NetworkTableRow, "No networks found.", hasFilter, filterHint)
 	default:
-		tw := tables.ContentWidth(width)
-		spec := tables.SimpleSpec(tw, "No volumes found.", m.browse.VolumeCursor, m.browse.Data.FilteredVolumes, func(w int) []tables.ColumnDef { return tables.ResolveColumns(w, tables.VolumeSchema) }, tables.VolumeTableRow)
-		applyFilterToHeader(m, &spec)
-		if !hasFilter && len(spec.Columns) > 0 {
-			spec.Columns[0].Header += filterHint
-		}
-		return renderResourceTableFromSpec(m, width, height, spec)
+		return renderSimpleResourceTable(m, width, height, m.browse.Cursors.Volume, m.browse.Data.FilteredVolumes, tables.VolumeSchema, tables.VolumeTableRow, "No volumes found.", hasFilter, filterHint)
 	}
+}
+
+func renderSimpleResourceTable[T any](m model, width, height int, cursor int, items []T, schema []tables.ColumnDef, rowBuilder func(T) []string, emptyMsg string, hasFilter bool, filterHint string) string {
+	tw := tables.ContentWidth(width)
+	spec := tables.SimpleSpec(tw, emptyMsg, cursor, items, func(w int) []tables.ColumnDef { return tables.ResolveColumns(w, schema) }, rowBuilder)
+	applyFilterToHeader(m, &spec)
+	if !hasFilter && len(spec.Columns) > 0 {
+		spec.Columns[0].Header += filterHint
+	}
+	return renderResourceTableFromSpec(m, width, height, spec)
 }
 
 func applyFilterToHeader[T any](m model, spec *tables.Spec[T]) {
@@ -266,8 +284,8 @@ func applyFilterToHeader[T any](m model, spec *tables.Spec[T]) {
 		return
 	}
 	input := m.browse.Filter.Input
-	input.SetWidth(components.DynamicInputWidth(input.Prompt, spec.Columns[0].MinWidth))
-	spec.Columns[0].Header = components.PadVisibleWidth(input.View(), spec.Columns[0].MinWidth)
+	input.SetWidth(components.DynamicInputWidth(input.Prompt, spec.Columns[0].Width))
+	spec.Columns[0].Header = components.PadVisibleWidth(input.View(), spec.Columns[0].Width)
 }
 
 func renderResourceTableFromSpec[T any](m model, width, height int, spec tables.Spec[T]) string {

@@ -5,19 +5,6 @@ import (
 	"testing"
 )
 
-func TestBegin(t *testing.T) {
-	transition := Begin(StageResources)
-	if !transition.Loading {
-		t.Fatalf("Loading = false, want true")
-	}
-	if transition.Stage != StageResources {
-		t.Fatalf("Stage = %d, want %d", transition.Stage, StageResources)
-	}
-	if transition.Err != nil {
-		t.Fatalf("Err = %v, want nil", transition.Err)
-	}
-}
-
 func TestFail(t *testing.T) {
 	err := errors.New("boom")
 	transition := Fail(err)

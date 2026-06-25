@@ -66,8 +66,8 @@ func TestIntegration_UpdateCrossModeRouting(t *testing.T) {
 	if current.screen != shared.Main {
 		t.Fatalf("screen = %v, want browse", current.screen)
 	}
-	if current.browse.ActiveTab != tabContainers {
-		t.Fatalf("ActiveTab = %d, want %d", current.browse.ActiveTab, tabContainers)
+	if current.browse.ActiveTab != shared.TabContainers {
+		t.Fatalf("ActiveTab = %d, want %d", current.browse.ActiveTab, shared.TabContainers)
 	}
 }
 
@@ -116,7 +116,7 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("metrics stage should schedule tickCmd")
 	}
-	if current.loading || current.loadingStage != shared.StageIdle {
+	if current.loadingStage != shared.StageIdle {
 		t.Fatalf("expected load flow to finish at idle")
 	}
 	if current.browse.Snapshot.TotalCPU != 12.5 || current.browse.Snapshot.TotalMem != 10 {
@@ -130,7 +130,7 @@ func TestIntegration_UpdateResultFlow(t *testing.T) {
 func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 	m := newTestModel().
 		withSize(120, 30).
-		withLoading(false, shared.StageIdle).
+		withLoading(shared.StageIdle).
 		withContainers(core.ContainerRow{
 			FullID:           "ctr-1",
 			Name:             "api",
@@ -163,7 +163,7 @@ func TestIntegration_ContainerRefreshPreservesRunningMetrics(t *testing.T) {
 func TestIntegration_LoadingIndicatorOnlyBeforeInitialMetrics(t *testing.T) {
 	m := newTestModel().
 		withSize(200, 30).
-		withLoading(true, shared.StageMetrics).
+		withLoading(shared.StageMetrics).
 		withContainers(core.ContainerRow{FullID: "ctr-1", Name: "api", State: "running", CPUPercent: -1, MemoryUsage: "-", MemoryLimit: "-"}).
 		build()
 
@@ -216,7 +216,7 @@ func TestIntegration_LogsWrapToggleWithW(t *testing.T) {
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.screen = shared.LogViewer
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
@@ -253,7 +253,7 @@ func TestIntegration_LogsWrapTogglePreservesRawLineAnchorWhenNotFollowing(t *tes
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.screen = shared.LogViewer
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
@@ -289,7 +289,7 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 	m := newTestModel().m
 	m.viewer.Vp.SetXOffset(24)
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.Snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -307,7 +307,7 @@ func TestIntegration_ViewerEntryResetsHorizontalPosition(t *testing.T) {
 	}
 
 	current.viewer.Vp.SetXOffset(32)
-	current.browse.ActiveTab = tabContainers
+	current.browse.ActiveTab = shared.TabContainers
 	current.screen = shared.Main
 	current.browse.Snapshot = core.Snapshot{Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}}}
 
@@ -331,9 +331,9 @@ func TestIntegration_FilterPromptIcon(t *testing.T) {
 func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 	m := newTestModel().m
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.ShowAll = true
-	m.browse.ContainerCursor = 0
+	m.browse.Cursors.Container = 0
 	m.browse.Filter.Active = true
 	m.browse.Filter.Input.Focus()
 	m.browse.Filter.Input.SetValue("api")
@@ -347,8 +347,8 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	after := unwrapModel(updated)
-	if after.browse.ContainerCursor != 1 {
-		t.Fatalf("filter mode down should move cursor to 1, got %d", after.browse.ContainerCursor)
+	if after.browse.Cursors.Container != 1 {
+		t.Fatalf("filter mode down should move cursor to 1, got %d", after.browse.Cursors.Container)
 	}
 	if !after.browse.Filter.Active {
 		t.Fatalf("filter mode should remain active while navigating")
@@ -361,7 +361,7 @@ func TestIntegration_FilterMode_AllowsVerticalNavigation(t *testing.T) {
 func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 	m := newTestModel().m
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{
@@ -372,21 +372,21 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 	m = m.syncBrowseData()
 	m.dataDirty = false
 
-	if got := m.browse.ItemCountForTab(tabContainers); got != 1 {
+	if got := m.browse.ItemCountForTab(shared.TabContainers); got != 1 {
 		t.Fatalf("collapsed compose list should show one row, got %d", got)
 	}
 
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	afterExpand := unwrapModel(updated)
 	*afterExpand = afterExpand.syncBrowseData()
-	if got := afterExpand.browse.ItemCountForTab(tabContainers); got != 3 {
+	if got := afterExpand.browse.ItemCountForTab(shared.TabContainers); got != 3 {
 		t.Fatalf("expanded compose list should show project + 2 containers, got %d", got)
 	}
 
 	updated, _ = afterExpand.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	afterCollapse := unwrapModel(updated)
 	*afterCollapse = afterCollapse.syncBrowseData()
-	if got := afterCollapse.browse.ItemCountForTab(tabContainers); got != 1 {
+	if got := afterCollapse.browse.ItemCountForTab(shared.TabContainers); got != 1 {
 		t.Fatalf("collapsed compose list should return to one row, got %d", got)
 	}
 }
@@ -394,7 +394,7 @@ func TestIntegration_ContainersComposeRow_CollapsesAndExpands(t *testing.T) {
 func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 	m := newTestModel().m
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
@@ -410,7 +410,7 @@ func TestIntegration_ContainersComposeRow_EnterDoesNotOpenLogs(t *testing.T) {
 		t.Fatalf("screen = %v, want browse", after.screen)
 	}
 	*after = after.syncBrowseData()
-	if got := after.browse.ItemCountForTab(tabContainers); got != 2 {
+	if got := after.browse.ItemCountForTab(shared.TabContainers); got != 2 {
 		t.Fatalf("enter on compose project should expand row, got item count %d", got)
 	}
 }
@@ -420,7 +420,7 @@ func TestIntegration_ContainersComposeFooterShowsContextualEnterHelp(t *testing.
 	m.width = 120
 	m.height = 34
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", ComposeProject: "shop", State: "running"}},
 	}
@@ -444,7 +444,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 	m.width = 120
 	m.height = 34
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{
@@ -459,7 +459,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 	if !strings.Contains(util.StripANSI(view), "Containers") {
 		t.Fatalf("header should show containers, got %q", view)
 	}
-	if got := m.browse.ItemCountForTab(tabContainers); got != 1 {
+	if got := m.browse.ItemCountForTab(shared.TabContainers); got != 1 {
 		t.Fatalf("collapsed compose list should still render one row, got %d", got)
 	}
 }
@@ -467,7 +467,7 @@ func TestIntegration_ContainersTabCount_UsesTotalContainersWhenComposeCollapsed(
 func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
 	m := newTestModel().m
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.ShowAll = true
 	m.browse.Filter.Query = "redis"
 	m.browse.Filter.Input.SetValue("redis")
@@ -475,8 +475,8 @@ func TestIntegration_HorizontalTabSwitchClearsFilter(t *testing.T) {
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	after := unwrapModel(updated)
 
-	if after.browse.ActiveTab != tabImages {
-		t.Fatalf("active tab = %d, want %d", after.browse.ActiveTab, tabImages)
+	if after.browse.ActiveTab != shared.TabImages {
+		t.Fatalf("active tab = %d, want %d", after.browse.ActiveTab, shared.TabImages)
 	}
 	if after.browse.Filter.Query != "" {
 		t.Fatalf("filter query should be cleared on horizontal tab switch, got %q", after.browse.Filter.Query)
@@ -493,7 +493,7 @@ func TestIntegration_LogsFiltering_ByContainsAndClearOnEsc(t *testing.T) {
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.screen = shared.LogViewer
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
@@ -541,7 +541,7 @@ func TestIntegration_LogsFilterMode_AllowsVerticalNavigation(t *testing.T) {
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.screen = shared.LogViewer
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
@@ -577,7 +577,7 @@ func TestIntegration_LogsFilterOpen_ReducesRowsFromTop(t *testing.T) {
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.screen = shared.LogViewer
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
@@ -613,7 +613,7 @@ func TestIntegration_LogsFilterOpenClose_NoViewportDrift(t *testing.T) {
 	m.viewer.Width = m.width
 	m.viewer.Height = max(1, m.height-4)
 	m.screen = shared.LogViewer
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{{FullID: "ctr-1", Name: "api", State: "running"}},
 	}
@@ -737,7 +737,7 @@ func TestIntegration_TickPrefersHistoryLoadAtTop(t *testing.T) {
 func TestIntegration_FirstEnterOnComposeRow_ExpandsNotLogs(t *testing.T) {
 	m := newTestModel().m
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{
@@ -767,7 +767,7 @@ func TestIntegration_FirstEnterOnComposeRow_ExpandsNotLogs(t *testing.T) {
 func TestIntegration_ComposeExpandThenDownThenEnter(t *testing.T) {
 	m := newTestModel().m
 	m.screen = shared.Main
-	m.browse.ActiveTab = tabContainers
+	m.browse.ActiveTab = shared.TabContainers
 	m.browse.ShowAll = true
 	m.browse.Snapshot = core.Snapshot{
 		Containers: []core.ContainerRow{
