@@ -244,14 +244,14 @@ func (m Model) selections() SelectionSet {
 }
 
 func (m Model) SelectedContainer() (core.ContainerRow, bool) {
-	if len(m.Data.ContainerListRows) > 0 {
-		row, ok := selectedAt(m.Data.ContainerListRows, m.Cursors.Container)
-		if !ok || row.Kind != tables.RowContainer {
-			return core.ContainerRow{}, false
-		}
-		return row.Container, true
+	if len(m.Data.ContainerListRows) == 0 {
+		return core.ContainerRow{}, false
 	}
-	return selectedAt(m.Snapshot.Containers, m.Cursors.Container)
+	row, ok := selectedAt(m.Data.ContainerListRows, m.Cursors.Container)
+	if !ok || row.Kind != tables.RowContainer {
+		return core.ContainerRow{}, false
+	}
+	return row.Container, true
 }
 
 func (m Model) SelectedComposeProject() (core.ComposeProject, bool) {
@@ -266,15 +266,15 @@ func (m Model) SelectedComposeProject() (core.ComposeProject, bool) {
 }
 
 func (m Model) SelectedImage() (core.ImageRow, bool) {
-	return selectedFrom(m.Data.FilteredImages, m.Snapshot.Images, m.Cursors.Image)
+	return selectedFrom(m.Data.FilteredImages, m.Cursors.Image)
 }
 
 func (m Model) SelectedNetwork() (core.NetworkRow, bool) {
-	return selectedFrom(m.Data.FilteredNetworks, m.Snapshot.Networks, m.Cursors.Network)
+	return selectedFrom(m.Data.FilteredNetworks, m.Cursors.Network)
 }
 
 func (m Model) SelectedVolume() (core.VolumeRow, bool) {
-	return selectedFrom(m.Data.FilteredVolumes, m.Snapshot.Volumes, m.Cursors.Volume)
+	return selectedFrom(m.Data.FilteredVolumes, m.Cursors.Volume)
 }
 
 func (m Model) cursorOnComposeRow() bool {
@@ -312,11 +312,8 @@ func selectedAt[T any](items []T, cursor int) (T, bool) {
 	return items[cursor], true
 }
 
-func selectedFrom[T any](filtered, all []T, cursor int) (T, bool) {
-	if len(filtered) > 0 {
-		return selectedAt(filtered, cursor)
-	}
-	return selectedAt(all, cursor)
+func selectedFrom[T any](filtered []T, cursor int) (T, bool) {
+	return selectedAt(filtered, cursor)
 }
 
 type TransitionMsg struct {
