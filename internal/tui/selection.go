@@ -52,13 +52,21 @@ func (m *model) selectedVolume() (core.VolumeRow, bool) {
 }
 
 func (m *model) selectedLogsContainer() (core.ContainerRow, bool) {
-	_, row, ok := m.findContainerByID(m.viewer.ContainerID)
-	return row, ok
+	return m.findContainerInSnapshot(m.viewer.ContainerID)
 }
 
 func (m *model) filteredContainers() []core.ContainerRow {
 	scoped := core.FilterContainersRunningOnly(m.browse.Snapshot.Containers, m.browse.ShowAll)
 	return core.FilterContainersByQuery(scoped, m.browse.Filter.Query)
+}
+
+func (m *model) findContainerInSnapshot(id string) (core.ContainerRow, bool) {
+	for _, c := range m.browse.Snapshot.Containers {
+		if c.FullID == id {
+			return c, true
+		}
+	}
+	return core.ContainerRow{}, false
 }
 
 func (m *model) findContainerByID(id string) (int, core.ContainerRow, bool) {
@@ -82,9 +90,9 @@ func (m *model) reconcileLogsSelection() error {
 	if m.screen != shared.LogViewer {
 		return nil
 	}
-	if _, ok := m.findContainerIndexByID(m.viewer.ContainerID); ok {
-		return nil
+	if _, ok := m.findContainerInSnapshot(m.viewer.ContainerID); !ok {
+		m.screen = m.popScreen()
+		return fmt.Errorf("selected container is no longer available")
 	}
-	m.screen = m.popScreen()
-	return fmt.Errorf("selected container is no longer available")
+	return nil
 }
