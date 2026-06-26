@@ -168,5 +168,3 @@ func humanTimestamp(value string) string {
 	}
 	return core.HumanAge(parsed)
 }
-
-

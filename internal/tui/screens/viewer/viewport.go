@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	bvLinesOffset          = uintptr(0)
+	bvLinesOffset            = uintptr(0)
 	bvLongestLineWidthOffset = uintptr(0)
 )
 
@@ -31,24 +31,24 @@ func init() {
 
 type Viewport struct {
 	*bubblesview.Model
-	WrapLines      bool
-	Filter         components.FilterState
-	Data           []string
-	Follow         bool
-	ContentType    ContentType
-	InitialLoad    bool
-	sanitizedLines    []string
-	needFullSan       bool
-	dataGen           int
-	longestLineWidth  int
-	savedYOffset      int
-	wrappedLines      []string
-	wrappedWidth      int
+	WrapLines          bool
+	Filter             components.FilterState
+	Data               []string
+	Follow             bool
+	ContentType        ContentType
+	InitialLoad        bool
+	sanitizedLines     []string
+	needFullSan        bool
+	dataGen            int
+	longestLineWidth   int
+	savedYOffset       int
+	wrappedLines       []string
+	wrappedWidth       int
 	wrappedSourceCount int
-	wrapCanAppend     bool
-	wrapTotalRows     int
-	wrapCacheWidth    int
-	wrapCacheGen      int
+	wrapCanAppend      bool
+	wrapTotalRows      int
+	wrapCacheWidth     int
+	wrapCacheGen       int
 }
 
 func NewViewport() *Viewport {

@@ -107,12 +107,12 @@ type ImageRow struct {
 }
 
 type NetworkRow struct {
-	ID         string
-	Name       string
-	Driver     string
-	Endpoints  int
-	Created    string
-	CreatedAt  time.Time
+	ID        string
+	Name      string
+	Driver    string
+	Endpoints int
+	Created   string
+	CreatedAt time.Time
 }
 
 type VolumeRow struct {

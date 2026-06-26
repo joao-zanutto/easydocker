@@ -133,5 +133,3 @@ func withClientResult[T any](r *Repository, fn func(*client.Client) (T, error)) 
 	}
 	return fn(cli)
 }
-
-

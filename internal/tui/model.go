@@ -87,16 +87,16 @@ func New(service core.ServiceInterface, appliedConfig []string, logTailLines int
 	vm := viewer.NewModel()
 
 	return model{
-		service:        service,
-		dataDirty:      true,
-		screen:         shared.Main,
-		loadingStage:   shared.StageContainers,
-		styles:         defaultStyles(),
-		spinner:        s,
-		browse:         bm,
-		viewer:         vm,
-		menu:           menu.NewMenuState(),
-		help:           menu.NewHelpState(0, 0),
+		service:       service,
+		dataDirty:     true,
+		screen:        shared.Main,
+		loadingStage:  shared.StageContainers,
+		styles:        defaultStyles(),
+		spinner:       s,
+		browse:        bm,
+		viewer:        vm,
+		menu:          menu.NewMenuState(),
+		help:          menu.NewHelpState(0, 0),
 		appliedConfig: appliedConfig,
 		logTailLines:  logTailLines,
 	}
