@@ -5,7 +5,6 @@ import (
 
 	"easydocker/internal/core"
 	"easydocker/internal/tui/shared"
-	"easydocker/internal/tui/ui/tables"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -67,23 +66,6 @@ func (m *model) findContainerInSnapshot(id string) (core.ContainerRow, bool) {
 		}
 	}
 	return core.ContainerRow{}, false
-}
-
-func (m *model) findContainerByID(id string) (int, core.ContainerRow, bool) {
-	for index, row := range m.browse.Data.ContainerListRows {
-		if row.Kind != tables.RowContainer {
-			continue
-		}
-		if row.Container.FullID == id {
-			return index, row.Container, true
-		}
-	}
-	return 0, core.ContainerRow{}, false
-}
-
-func (m *model) findContainerIndexByID(id string) (int, bool) {
-	index, _, ok := m.findContainerByID(id)
-	return index, ok
 }
 
 func (m *model) reconcileLogsSelection() error {
