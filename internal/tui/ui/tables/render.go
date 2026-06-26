@@ -23,9 +23,6 @@ func DefaultStyles() Styles {
 }
 
 // ResolveColumns computes final column widths based on available space.
-// All columns are guaranteed their MinWidth. Left-aligned columns absorb
-// any deficit first, protecting pinned-right columns from falling below
-// their MinWidth. Surplus space is distributed to left columns first.
 func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 	firstPinned := len(defs)
 	for i, def := range defs {
@@ -45,7 +42,7 @@ func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 
 	desired := make([]int, len(defs))
 	for i, def := range defs {
-		w := def.MinWidth
+		w := def.Width
 		if def.Desired != nil {
 			w = max(w, def.Desired(tableWidth))
 		}
@@ -57,7 +54,7 @@ func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 	nonPinnedSum := 0
 	for i := 0; i < firstPinned; i++ {
 		nonPinnedDesired[i] = desired[i]
-		nonPinnedMin += defs[i].MinWidth
+		nonPinnedMin += defs[i].Width
 		nonPinnedSum += desired[i]
 	}
 
@@ -65,7 +62,7 @@ func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 	pinnedMin := 0
 	pinnedSum := 0
 	for i := firstPinned; i < len(defs); i++ {
-		pinnedMin += defs[i].MinWidth
+		pinnedMin += defs[i].Width
 		pinnedSum += desired[i]
 	}
 
@@ -99,9 +96,9 @@ func ResolveColumns(tableWidth int, defs []ColumnDef) []ColumnDef {
 	resolved := make([]ColumnDef, 0, len(defs))
 	for i, def := range defs {
 		if def.PinnedRight {
-			def.MinWidth = pinnedWidths[i-firstPinned]
+			def.Width = pinnedWidths[i-firstPinned]
 		} else {
-			def.MinWidth = nonPinnedWidths[i]
+			def.Width = nonPinnedWidths[i]
 		}
 		resolved = append(resolved, def)
 	}
@@ -131,17 +128,14 @@ func RenderOrEmpty(width, height int, emptyMessage string, columns []ColumnDef, 
 		if hideHeader || len(columns) == 0 {
 			return util.ConstrainLine(emptyMessage, width)
 		}
-		cols := make([]tableColumn, 0, len(columns))
-		for _, def := range columns {
-			cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth, PinnedRight: def.PinnedRight})
-		}
-		t := newTable(
-			withColumns(cols),
-			withStyles(styles),
-			withWidth(max(1, width)),
-			withHeight(0),
-			withHideHeader(false),
-		)
+		resolved := ResolveColumns(max(1, width), columns)
+		t := newTable()
+		t.cols = resolved
+		t.styles = styles
+		t.viewport.SetWidth(max(1, width))
+		t.viewport.SetHeight(0)
+		t.hideHeader = false
+		t.updateViewport()
 		header := t.view()
 		if header != "" {
 			return header + "\n" + util.ConstrainLine(emptyMessage, width)
@@ -153,10 +147,6 @@ func RenderOrEmpty(width, height int, emptyMessage string, columns []ColumnDef, 
 
 // renderTable creates a rendered table with styled rows and cursor.
 func renderTable(styles Styles, width, height int, defs []ColumnDef, rows []Row, cursor int, hideHeader bool) string {
-	cols := make([]tableColumn, 0, len(defs))
-	for _, def := range defs {
-		cols = append(cols, tableColumn{Title: def.Header, Width: def.MinWidth, PinnedRight: def.PinnedRight})
-	}
 	privateRows := make([]tableRow, 0, len(rows))
 	for _, row := range rows {
 		privateRows = append(privateRows, tableRow(row))
@@ -165,14 +155,14 @@ func renderTable(styles Styles, width, height int, defs []ColumnDef, rows []Row,
 	if !hideHeader {
 		viewportHeight = max(1, height-1)
 	}
-	t := newTable(
-		withColumns(cols),
-		withRows(privateRows),
-		withStyles(styles),
-		withWidth(max(1, width)),
-		withHeight(viewportHeight),
-		withHideHeader(hideHeader),
-	)
+	t := newTable()
+	t.cols = defs
+	t.rows = privateRows
+	t.styles = styles
+	t.viewport.SetWidth(max(1, width))
+	t.viewport.SetHeight(viewportHeight)
+	t.hideHeader = hideHeader
+	t.updateViewport()
 	if len(rows) > 0 {
 		t.setCursor(util.Clamp(cursor, 0, len(rows)-1))
 	}

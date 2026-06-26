@@ -34,7 +34,6 @@ func mapContainerRow(item types.Container) core.ContainerRow {
 		FullID:             item.ID,
 		Name:               primaryName(item.Names),
 		ComposeProject:     strings.TrimSpace(item.Labels["com.docker.compose.project"]),
-		ComposeService:     strings.TrimSpace(item.Labels["com.docker.compose.service"]),
 		ComposeWorkingDir:  strings.TrimSpace(item.Labels["com.docker.compose.project.working_dir"]),
 		ComposeConfigFiles: strings.TrimSpace(item.Labels["com.docker.compose.project.config_files"]),
 		Image:              item.Image,
@@ -169,5 +168,3 @@ func humanTimestamp(value string) string {
 	}
 	return core.HumanAge(parsed)
 }
-
-

@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"easydocker/internal/core"
@@ -54,6 +55,13 @@ func metricsLoadingValue(loadingIndicator string) string {
 
 func ResourceLabel(rt core.ResourceType) string {
 	return rt.String()
+}
+
+func FormatPercent(value float64) string {
+	if math.IsNaN(value) || math.IsInf(value, 0) || value <= 0 {
+		return "-"
+	}
+	return fmt.Sprintf("%.1f%%", value)
 }
 
 func ContainerStateText(container core.ContainerRow) string {

@@ -190,18 +190,11 @@ func composeProjectDetailLines(project core.ComposeProject, provider DetailProvi
 		provider.DetailLine("Working dir", project.WorkingDir, width),
 		provider.DetailLine("Compose file", project.ConfigFiles, width),
 		provider.DetailLine("Created at", project.Created, width),
-		provider.DetailLine("CPU", composeMetricText(project.CPUPercent), width),
+		provider.DetailLine("CPU", util.FormatPercent(project.CPUPercent), width),
 		provider.DetailLine("Memory", composeMemoryText(project), width),
 	}
 	lines = append(lines, composeProjectNetworkDetailLines(project, provider, width)...)
 	return lines
-}
-
-func composeMetricText(value float64) string {
-	if value <= 0 {
-		return "-"
-	}
-	return fmt.Sprintf("%.1f%%", value)
 }
 
 func composeMemoryText(project core.ComposeProject) string {

@@ -11,14 +11,8 @@ import (
 
 type tableRow []string
 
-type tableColumn struct {
-	Title       string
-	Width       int
-	PinnedRight bool
-}
-
 type tableModel struct {
-	cols       []tableColumn
+	cols       []ColumnDef
 	rows       []tableRow
 	cursor     int
 	styles     Styles
@@ -27,53 +21,10 @@ type tableModel struct {
 	viewport viewport.Model
 }
 
-type tableOption func(*tableModel)
-
-func newTable(opts ...tableOption) tableModel {
-	m := tableModel{
+func newTable() tableModel {
+	return tableModel{
 		styles:   DefaultStyles(),
 		viewport: viewport.New(viewport.WithWidth(0), viewport.WithHeight(20)),
-	}
-	for _, opt := range opts {
-		opt(&m)
-	}
-	m.updateViewport()
-	return m
-}
-
-func withColumns(cols []tableColumn) tableOption {
-	return func(m *tableModel) {
-		m.cols = cols
-	}
-}
-
-func withRows(rows []tableRow) tableOption {
-	return func(m *tableModel) {
-		m.rows = rows
-	}
-}
-
-func withHeight(h int) tableOption {
-	return func(m *tableModel) {
-		m.viewport.SetHeight(max(1, h))
-	}
-}
-
-func withHideHeader(hide bool) tableOption {
-	return func(m *tableModel) {
-		m.hideHeader = hide
-	}
-}
-
-func withWidth(w int) tableOption {
-	return func(m *tableModel) {
-		m.viewport.SetWidth(max(1, w))
-	}
-}
-
-func withStyles(s Styles) tableOption {
-	return func(m *tableModel) {
-		m.styles = s
 	}
 }
 
@@ -136,7 +87,7 @@ func (m tableModel) headersView() string {
 		if col.Width <= 0 {
 			continue
 		}
-		cell := lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true).Render(util.TruncateWithEllipsis(col.Title, col.Width))
+		cell := lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true).Render(util.TruncateWithEllipsis(col.Header, col.Width))
 		if col.PinnedRight {
 			rightParts = append(rightParts, cell)
 		} else {

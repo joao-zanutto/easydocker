@@ -1,6 +1,7 @@
 package viewer
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -320,26 +321,14 @@ func MergePolledLogs(prev, polled []string) ([]string, bool) {
 		normPolled[i] = strings.TrimRight(l, "\r")
 	}
 
-	if equalLogSlices(normPrev, normPolled) {
+	if slices.Equal(normPrev, normPolled) {
 		return normPrev, true
 	}
-	if len(normPolled) < len(normPrev) && equalLogSlices(normPrev[len(normPrev)-len(normPolled):], normPolled) {
+	if len(normPolled) < len(normPrev) && slices.Equal(normPrev[len(normPrev)-len(normPolled):], normPolled) {
 		return normPrev, true
 	}
 
 	return normPolled, false
-}
-
-func equalLogSlices(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func (vp *Viewport) PrepareContentLines(wrapWidth int, wrapEnabled bool) []string {

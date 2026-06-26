@@ -22,10 +22,6 @@ type Transition struct {
 	Err     error
 }
 
-func Begin(stage Stage) Transition {
-	return Transition{Loading: true, Stage: stage}
-}
-
 func Fail(err error) Transition {
 	return Transition{Loading: false, Stage: StageIdle, Err: err}
 }

@@ -30,7 +30,7 @@ func TestTableContentWidth(t *testing.T) {
 func TestRenderTableOrEmpty_EmptyRows(t *testing.T) {
 	spec := Spec[int]{
 		EmptyMessage: "No rows available.",
-		Columns:      []ColumnDef{{Header: "NAME", MinWidth: 10, Desired: func(int) int { return 10 }}},
+		Columns:      []ColumnDef{{Header: "NAME", Width: 10, Desired: func(int) int { return 10 }}},
 		Items:        nil,
 		RowBuilder:   func(int) []string { return nil },
 	}
@@ -45,7 +45,7 @@ func TestRenderTableOrEmpty_EmptyRows(t *testing.T) {
 }
 
 func TestRenderFromSpec_CursorClampBehavior(t *testing.T) {
-	columns := []ColumnDef{{Header: "VALUE", MinWidth: 10, Desired: func(int) int { return 10 }}}
+	columns := []ColumnDef{{Header: "VALUE", Width: 10, Desired: func(int) int { return 10 }}}
 
 	specClamped := Spec[int]{
 		EmptyMessage: "No rows",

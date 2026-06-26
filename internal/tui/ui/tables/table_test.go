@@ -6,12 +6,12 @@ import (
 )
 
 func TestRenderRow_ColoredCellDoesNotSpillIntoNextColumn(t *testing.T) {
-	m := newTable(
-		withColumns([]tableColumn{{Title: "STATE", Width: 4}, {Title: "STATUS", Width: 6}}),
-		withRows([]tableRow{{"\x1b[32mrunning\x1b[39m", "ok"}}),
-		withWidth(20),
-		withHeight(2),
-	)
+	m := newTable()
+	m.cols = []ColumnDef{{Header: "STATE", Width: 4}, {Header: "STATUS", Width: 6}}
+	m.rows = []tableRow{{"\x1b[32mrunning\x1b[39m", "ok"}}
+	m.viewport.SetWidth(20)
+	m.viewport.SetHeight(2)
+	m.updateViewport()
 
 	row := m.renderRow(0)
 	statusIndex := strings.Index(row, "ok")

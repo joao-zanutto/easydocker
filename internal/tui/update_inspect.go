@@ -33,25 +33,25 @@ func (m *model) loadInspectCmd(resourceType core.ResourceType, resourceID string
 
 func (m *model) selectedInspectResource() (core.ResourceType, string, string, bool) {
 	switch m.browse.ActiveTab {
-	case tabContainers:
+	case shared.TabContainers:
 		c, ok := m.selectedContainer()
 		if !ok {
 			return 0, "", "", false
 		}
 		return core.ResourceContainer, c.FullID, c.Name, true
-	case tabImages:
+	case shared.TabImages:
 		img, ok := m.selectedImage()
 		if !ok {
 			return 0, "", "", false
 		}
 		return core.ResourceImage, img.ID, img.Tags, true
-	case tabNetworks:
+	case shared.TabNetworks:
 		net, ok := m.selectedNetwork()
 		if !ok {
 			return 0, "", "", false
 		}
 		return core.ResourceNetwork, net.ID, net.Name, true
-	case tabVolumes:
+	case shared.TabVolumes:
 		vol, ok := m.selectedVolume()
 		if !ok {
 			return 0, "", "", false

@@ -50,10 +50,10 @@ func TestTableColumnSchemas(t *testing.T) {
 				if col.Header != tt.wantHeader[i] {
 					t.Fatalf("header[%d] = %q, want %q", i, col.Header, tt.wantHeader[i])
 				}
-				if col.MinWidth <= 0 {
-					t.Fatalf("minWidth[%d] = %d, want > 0", i, col.MinWidth)
+				if col.Width <= 0 {
+					t.Fatalf("minWidth[%d] = %d, want > 0", i, col.Width)
 				}
-				totalWidth += col.MinWidth
+				totalWidth += col.Width
 				if col.PinnedRight && i < firstPinned {
 					firstPinned = i
 				}
@@ -73,17 +73,17 @@ func TestContainerStateColumnWidth(t *testing.T) {
 	if got := ContainerStateColumnWidth(nil); got != 0 {
 		t.Fatalf("ContainerStateColumnWidth(nil) = %d, want 0", got)
 	}
-	if got := ContainerStateColumnWidth([]ColumnDef{{Header: "NAME", MinWidth: 10}}); got != 0 {
+	if got := ContainerStateColumnWidth([]ColumnDef{{Header: "NAME", Width: 10}}); got != 0 {
 		t.Fatalf("ContainerStateColumnWidth(one column) = %d, want 0", got)
 	}
-	if got := ContainerStateColumnWidth([]ColumnDef{{Header: "NAME", MinWidth: 10}, {Header: "STATE", MinWidth: 12}}); got != 12 {
+	if got := ContainerStateColumnWidth([]ColumnDef{{Header: "NAME", Width: 10}, {Header: "STATE", Width: 12}}); got != 12 {
 		t.Fatalf("ContainerStateColumnWidth(two columns) = %d, want 12", got)
 	}
 }
 
 func TestSimpleResourceTableSpec_UsesSharedWidthAndFields(t *testing.T) {
 	seenWidth := 0
-	columns := []ColumnDef{{Header: "VALUE", MinWidth: 7, Desired: func(int) int { return 7 }}}
+	columns := []ColumnDef{{Header: "VALUE", Width: 7, Desired: func(int) int { return 7 }}}
 	spec := SimpleSpec(
 		3,
 		"No rows.",
